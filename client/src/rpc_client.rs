@@ -27,7 +27,7 @@ use {
     mundis_sdk::{
         account::Account,
         clock::{Epoch, Slot, UnixTimestamp, DEFAULT_MS_PER_SLOT, MAX_HASH_AGE_IN_SECONDS},
-        commitment_config::{CommitmentConfig, CommitmentLevel},
+        commitment_config::CommitmentConfig,
         epoch_info::EpochInfo,
         epoch_schedule::EpochSchedule,
         fee_calculator::{FeeCalculator, FeeRateGovernor},
@@ -485,26 +485,6 @@ impl RpcClient {
         self.config.commitment_config
     }
 
-    fn use_deprecated_commitment(&self) -> Result<bool, RpcError> {
-        Ok(self.get_node_version()? < semver::Version::new(1, 5, 5))
-    }
-
-    fn maybe_map_commitment(
-        &self,
-        requested_commitment: CommitmentConfig,
-    ) -> Result<CommitmentConfig, RpcError> {
-        if matches!(
-            requested_commitment.commitment,
-            CommitmentLevel::Finalized | CommitmentLevel::Confirmed | CommitmentLevel::Processed
-        ) && self.use_deprecated_commitment()?
-        {
-            return Ok(CommitmentConfig::use_deprecated_commitment(
-                requested_commitment,
-            ));
-        }
-        Ok(requested_commitment)
-    }
-
     #[allow(deprecated)]
     fn maybe_map_request(&self, mut request: RpcRequest) -> Result<RpcRequest, RpcError> {
         if self.get_node_version()? < semver::Version::new(1, 7, 0) {
@@ -747,9 +727,7 @@ impl RpcClient {
         self.send_transaction_with_config(
             transaction,
             RpcSendTransactionConfig {
-                preflight_commitment: Some(
-                    self.maybe_map_commitment(self.commitment())?.commitment,
-                ),
+                preflight_commitment: Some(self.commitment().commitment),
                 ..RpcSendTransactionConfig::default()
             },
         )
@@ -846,7 +824,6 @@ impl RpcClient {
         let preflight_commitment = CommitmentConfig {
             commitment: config.preflight_commitment.unwrap_or_default(),
         };
-        let preflight_commitment = self.maybe_map_commitment(preflight_commitment)?;
         let config = RpcSendTransactionConfig {
             encoding: Some(encoding),
             preflight_commitment: Some(preflight_commitment.commitment),
@@ -1288,7 +1265,6 @@ impl RpcClient {
             self.default_cluster_transaction_encoding()?
         };
         let commitment = config.commitment.unwrap_or_default();
-        let commitment = self.maybe_map_commitment(commitment)?;
         let config = RpcSimulateTransactionConfig {
             encoding: Some(encoding),
             commitment: Some(commitment),
@@ -1759,7 +1735,7 @@ impl RpcClient {
     ) -> ClientResult<Slot> {
         self.send(
             RpcRequest::GetSlot,
-            json!([self.maybe_map_commitment(commitment_config)?]),
+            json!([commitment_config]),
         )
     }
 
@@ -1819,7 +1795,7 @@ impl RpcClient {
     ) -> ClientResult<u64> {
         self.send(
             RpcRequest::GetBlockHeight,
-            json!([self.maybe_map_commitment(commitment_config)?]),
+            json!([commitment_config]),
         )
     }
 
@@ -2078,7 +2054,7 @@ impl RpcClient {
     ) -> RpcResult<RpcSupply> {
         self.send(
             RpcRequest::GetSupply,
-            json!([self.maybe_map_commitment(commitment_config)?]),
+            json!([commitment_config]),
         )
     }
 
@@ -2117,7 +2093,6 @@ impl RpcClient {
         config: RpcLargestAccountsConfig,
     ) -> RpcResult<Vec<RpcAccountBalance>> {
         let commitment = config.commitment.unwrap_or_default();
-        let commitment = self.maybe_map_commitment(commitment)?;
         let config = RpcLargestAccountsConfig {
             commitment: Some(commitment),
             ..config
@@ -2183,7 +2158,7 @@ impl RpcClient {
         commitment_config: CommitmentConfig,
     ) -> ClientResult<RpcVoteAccountStatus> {
         self.get_vote_accounts_with_config(RpcGetVoteAccountsConfig {
-            commitment: Some(self.maybe_map_commitment(commitment_config)?),
+            commitment: Some(commitment_config),
             ..RpcGetVoteAccountsConfig::default()
         })
     }
@@ -2521,10 +2496,10 @@ impl RpcClient {
             json!([
                 start_slot,
                 end_slot,
-                self.maybe_map_commitment(commitment_config)?
+                commitment_config
             ])
         } else {
-            json!([start_slot, self.maybe_map_commitment(commitment_config)?])
+            json!([start_slot, commitment_config])
         };
         self.send(self.maybe_map_request(RpcRequest::GetBlocks)?, json)
     }
@@ -2622,7 +2597,7 @@ impl RpcClient {
             json!([
                 start_slot,
                 limit,
-                self.maybe_map_commitment(commitment_config)?
+                commitment_config
             ]),
         )
     }
@@ -2957,7 +2932,7 @@ impl RpcClient {
     ) -> ClientResult<EpochInfo> {
         self.send(
             RpcRequest::GetEpochInfo,
-            json!([self.maybe_map_commitment(commitment_config)?]),
+            json!([commitment_config]),
         )
     }
 
@@ -3028,7 +3003,7 @@ impl RpcClient {
         self.get_leader_schedule_with_config(
             slot,
             RpcLeaderScheduleConfig {
-                commitment: Some(self.maybe_map_commitment(commitment_config)?),
+                commitment: Some(commitment_config),
                 ..RpcLeaderScheduleConfig::default()
             },
         )
@@ -3411,7 +3386,7 @@ impl RpcClient {
     ) -> RpcResult<Option<Account>> {
         let config = RpcAccountInfoConfig {
             encoding: Some(UiAccountEncoding::Base64Zstd),
-            commitment: Some(self.maybe_map_commitment(commitment_config)?),
+            commitment: Some(commitment_config),
             data_slice: None,
         };
         let response = self.sender.send(
@@ -3568,7 +3543,7 @@ impl RpcClient {
             pubkeys,
             RpcAccountInfoConfig {
                 encoding: Some(UiAccountEncoding::Base64Zstd),
-                commitment: Some(self.maybe_map_commitment(commitment_config)?),
+                commitment: Some(commitment_config),
                 data_slice: None,
             },
         )
@@ -3784,7 +3759,7 @@ impl RpcClient {
             RpcRequest::GetBalance,
             json!([
                 pubkey.to_string(),
-                self.maybe_map_commitment(commitment_config)?
+                commitment_config
             ]),
         )
     }
@@ -3895,7 +3870,6 @@ impl RpcClient {
             .account_config
             .commitment
             .unwrap_or_else(|| self.commitment());
-        let commitment = self.maybe_map_commitment(commitment)?;
         let account_config = RpcAccountInfoConfig {
             commitment: Some(commitment),
             ..config.account_config
@@ -3922,7 +3896,7 @@ impl RpcClient {
     ) -> ClientResult<u64> {
         self.send(
             RpcRequest::GetTransactionCount,
-            json!([self.maybe_map_commitment(commitment_config)?]),
+            json!([commitment_config]),
         )
     }
 
@@ -3947,7 +3921,7 @@ impl RpcClient {
             value: fees,
         } = self.send::<Response<RpcFees>>(
             RpcRequest::GetFees,
-            json!([self.maybe_map_commitment(commitment_config)?]),
+            json!([commitment_config]),
         )?;
         let blockhash = fees.blockhash.parse().map_err(|_| {
             ClientError::new_with_request(
@@ -3996,7 +3970,7 @@ impl RpcClient {
         }) = self
             .send::<Response<RpcFees>>(
                 RpcRequest::GetFees,
-                json!([self.maybe_map_commitment(commitment_config)?]),
+                json!([commitment_config]),
             ) {
             (context, blockhash, fee_calculator, last_valid_slot)
         } else if let Ok(Response {
@@ -4009,7 +3983,7 @@ impl RpcClient {
                 },
         }) = self.send::<Response<DeprecatedRpcFees>>(
             RpcRequest::GetFees,
-            json!([self.maybe_map_commitment(commitment_config)?]),
+            json!([commitment_config]),
         ) {
             (context, blockhash, fee_calculator, last_valid_slot)
         } else if let Ok(Response {
@@ -4021,7 +3995,7 @@ impl RpcClient {
                 },
         }) = self.send::<Response<RpcBlockhashFeeCalculator>>(
             RpcRequest::GetRecentBlockhash,
-            json!([self.maybe_map_commitment(commitment_config)?]),
+            json!([commitment_config]),
         ) {
             (context, blockhash, fee_calculator, 0)
         } else {
@@ -4069,7 +4043,7 @@ impl RpcClient {
             RpcRequest::GetFeeCalculatorForBlockhash,
             json!([
                 blockhash.to_string(),
-                self.maybe_map_commitment(commitment_config)?
+                commitment_config
             ]),
         )?;
 
@@ -4160,7 +4134,7 @@ impl RpcClient {
     ) -> RpcResult<Option<UiTokenAccount>> {
         let config = RpcAccountInfoConfig {
             encoding: Some(UiAccountEncoding::JsonParsed),
-            commitment: Some(self.maybe_map_commitment(commitment_config)?),
+            commitment: Some(commitment_config),
             data_slice: None,
         };
         let response = self.sender.send(
@@ -4223,7 +4197,7 @@ impl RpcClient {
             RpcRequest::GetTokenAccountBalance,
             json!([
                 pubkey.to_string(),
-                self.maybe_map_commitment(commitment_config)?
+                commitment_config
             ]),
         )
     }
@@ -4257,7 +4231,7 @@ impl RpcClient {
 
         let config = RpcAccountInfoConfig {
             encoding: Some(UiAccountEncoding::JsonParsed),
-            commitment: Some(self.maybe_map_commitment(commitment_config)?),
+            commitment: Some(commitment_config),
             data_slice: None,
         };
 
@@ -4296,7 +4270,7 @@ impl RpcClient {
 
         let config = RpcAccountInfoConfig {
             encoding: Some(UiAccountEncoding::JsonParsed),
-            commitment: Some(self.maybe_map_commitment(commitment_config)?),
+            commitment: Some(commitment_config),
             data_slice: None,
         };
 
@@ -4321,7 +4295,7 @@ impl RpcClient {
             RpcRequest::GetTokenSupply,
             json!([
                 mint.to_string(),
-                self.maybe_map_commitment(commitment_config)?
+                commitment_config
             ]),
         )
     }
@@ -4360,7 +4334,6 @@ impl RpcClient {
         config: RpcRequestAirdropConfig,
     ) -> ClientResult<Signature> {
         let commitment = config.commitment.unwrap_or_default();
-        let commitment = self.maybe_map_commitment(commitment)?;
         let config = RpcRequestAirdropConfig {
             commitment: Some(commitment),
             ..config
@@ -4579,7 +4552,7 @@ impl RpcClient {
                 } = self
                     .send::<Response<RpcBlockhash>>(
                         RpcRequest::GetLatestBlockhash,
-                        json!([self.maybe_map_commitment(commitment)?]),
+                        json!([commitment]),
                     )?
                     .value;
                 let blockhash = blockhash.parse().map_err(|_| {
