@@ -1855,7 +1855,7 @@ impl JsonRpcRequestProcessor {
         if self
             .config
             .account_indexes
-            .contains(&AccountIndex::SplTokenOwner)
+            .contains(&AccountIndex::AnimaTokenOwner)
         {
             if !self.config.account_indexes.include_key(owner_key) {
                 return Err(RpcCustomError::KeyExcludedFromSecondaryIndex {
@@ -1913,7 +1913,7 @@ impl JsonRpcRequestProcessor {
         if self
             .config
             .account_indexes
-            .contains(&AccountIndex::SplTokenMint)
+            .contains(&AccountIndex::AnimaTokenMint)
         {
             if !self.config.account_indexes.include_key(mint_key) {
                 return Err(RpcCustomError::KeyExcludedFromSecondaryIndex {

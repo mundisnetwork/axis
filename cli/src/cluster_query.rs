@@ -938,7 +938,6 @@ pub fn process_fees(
     blockhash: Option<&Hash>,
 ) -> ProcessResult {
     let fees = if let Some(recent_blockhash) = blockhash {
-        #[allow(deprecated)]
         let result = rpc_client.get_fee_calculator_for_blockhash_with_commitment(
             recent_blockhash,
             config.commitment,
@@ -955,7 +954,6 @@ pub fn process_fees(
             CliFees::none()
         }
     } else {
-        #[allow(deprecated)]
         let result = rpc_client.get_fees_with_commitment(config.commitment)?;
         CliFees::some(
             result.context.slot,

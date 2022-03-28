@@ -2723,8 +2723,8 @@ fn process_account_indexes(matches: &ArgMatches) -> AccountSecondaryIndexes {
         .unwrap_or_default()
         .map(|value| match value {
             "program-id" => AccountIndex::ProgramId,
-            "spl-token-mint" => AccountIndex::SplTokenMint,
-            "spl-token-owner" => AccountIndex::SplTokenOwner,
+            "anima-token-mint" => AccountIndex::AnimaTokenMint,
+            "anima-token-owner" => AccountIndex::AnimaTokenOwner,
             _ => unreachable!(),
         })
         .collect();

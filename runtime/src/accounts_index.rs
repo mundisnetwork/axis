@@ -130,8 +130,8 @@ pub enum IndexKey {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AccountIndex {
     ProgramId,
-    SplTokenMint,
-    SplTokenOwner,
+    AnimaTokenMint,
+    AnimaTokenOwner,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -1560,7 +1560,7 @@ impl<T: IndexValue> AccountsIndex<T> {
         account_indexes: &AccountSecondaryIndexes,
     ) {
         if *account_owner == *token_id {
-            if account_indexes.contains(&AccountIndex::SplTokenOwner) {
+            if account_indexes.contains(&AccountIndex::AnimaTokenOwner) {
                 if let Some(owner_key) = G::unpack_account_owner(account_data) {
                     if account_indexes.include_key(owner_key) {
                         self.anima_token_owner_index.insert(owner_key, pubkey);
@@ -1568,7 +1568,7 @@ impl<T: IndexValue> AccountsIndex<T> {
                 }
             }
 
-            if account_indexes.contains(&AccountIndex::SplTokenMint) {
+            if account_indexes.contains(&AccountIndex::AnimaTokenMint) {
                 if let Some(mint_key) = G::unpack_account_mint(account_data) {
                     if account_indexes.include_key(mint_key) {
                         self.anima_token_mint_index.insert(mint_key, pubkey);
@@ -1767,11 +1767,11 @@ impl<T: IndexValue> AccountsIndex<T> {
             self.program_id_index.remove_by_inner_key(inner_key);
         }
 
-        if account_indexes.contains(&AccountIndex::SplTokenOwner) {
+        if account_indexes.contains(&AccountIndex::AnimaTokenOwner) {
             self.anima_token_owner_index.remove_by_inner_key(inner_key);
         }
 
-        if account_indexes.contains(&AccountIndex::SplTokenMint) {
+        if account_indexes.contains(&AccountIndex::AnimaTokenMint) {
             self.anima_token_mint_index.remove_by_inner_key(inner_key);
         }
     }
@@ -2015,7 +2015,7 @@ pub mod tests {
 
     pub fn anima_token_mint_index_enabled() -> AccountSecondaryIndexes {
         let mut account_indexes = HashSet::new();
-        account_indexes.insert(AccountIndex::SplTokenMint);
+        account_indexes.insert(AccountIndex::AnimaTokenMint);
         AccountSecondaryIndexes {
             indexes: account_indexes,
             keys: None,
@@ -2024,7 +2024,7 @@ pub mod tests {
 
     pub fn anima_token_owner_index_enabled() -> AccountSecondaryIndexes {
         let mut account_indexes = HashSet::new();
-        account_indexes.insert(AccountIndex::SplTokenOwner);
+        account_indexes.insert(AccountIndex::AnimaTokenOwner);
         AccountSecondaryIndexes {
             indexes: account_indexes,
             keys: None,

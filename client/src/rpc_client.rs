@@ -30,7 +30,6 @@ use {
         commitment_config::CommitmentConfig,
         epoch_info::EpochInfo,
         epoch_schedule::EpochSchedule,
-        fee_calculator::{FeeCalculator, FeeRateGovernor},
         hash::Hash,
         message::Message,
         pubkey::Pubkey,
@@ -51,6 +50,7 @@ use {
         time::{Duration, Instant},
     },
 };
+use mundis_sdk::fee_calculator::FeeCalculator;
 
 #[derive(Default)]
 pub struct RpcClientConfig {
@@ -485,23 +485,6 @@ impl RpcClient {
         self.config.commitment_config
     }
 
-    #[allow(deprecated)]
-    fn maybe_map_request(&self, mut request: RpcRequest) -> Result<RpcRequest, RpcError> {
-        if self.get_node_version()? < semver::Version::new(1, 7, 0) {
-            request = match request {
-                RpcRequest::GetBlock => RpcRequest::GetConfirmedBlock,
-                RpcRequest::GetBlocks => RpcRequest::GetConfirmedBlocks,
-                RpcRequest::GetBlocksWithLimit => RpcRequest::GetConfirmedBlocksWithLimit,
-                RpcRequest::GetSignaturesForAddress => {
-                    RpcRequest::GetConfirmedSignaturesForAddress2
-                }
-                RpcRequest::GetTransaction => RpcRequest::GetConfirmedTransaction,
-                _ => request,
-            };
-        }
-        Ok(request)
-    }
-
     /// Submit a transaction and wait for confirmation.
     ///
     /// Once this function returns successfully, the given transaction is
@@ -609,7 +592,7 @@ impl RpcClient {
              and insufficient fee-payer funds"
                 .to_string(),
         )
-        .into())
+            .into())
     }
 
     pub fn send_and_confirm_transaction_with_spinner(
@@ -837,10 +820,10 @@ impl RpcClient {
             Ok(signature_base58_str) => signature_base58_str,
             Err(err) => {
                 if let ClientErrorKind::RpcError(RpcError::RpcResponseError {
-                    code,
-                    message,
-                    data,
-                }) = &err.kind
+                                                     code,
+                                                     message,
+                                                     data,
+                                                 }) = &err.kind
                 {
                     debug!("{} {}", code, message);
                     if let RpcResponseErrorData::SendTransactionPreflightFailure(
@@ -871,15 +854,15 @@ impl RpcClient {
                 "RPC node returned mismatched signature {:?}, expected {:?}",
                 signature, transaction.signatures[0]
             ))
-            .into())
+                .into())
         } else {
             Ok(transaction.signatures[0])
         }
     }
 
     pub fn send<T>(&self, request: RpcRequest, params: Value) -> ClientResult<T>
-    where
-        T: serde::de::DeserializeOwned,
+        where
+            T: serde::de::DeserializeOwned,
     {
         assert!(params.is_array() || params.is_null());
 
@@ -1074,7 +1057,7 @@ impl RpcClient {
                                       and insufficient fee-payer funds"
                     .to_string(),
             )
-            .into());
+                .into());
         }
         let now = Instant::now();
         loop {
@@ -1300,24 +1283,7 @@ impl RpcClient {
     /// # Ok::<(), ClientError>(())
     /// ```
     pub fn get_highest_snapshot_slot(&self) -> ClientResult<RpcSnapshotSlotInfo> {
-        if self.get_node_version()? < semver::Version::new(1, 9, 0) {
-            #[allow(deprecated)]
-            self.get_snapshot_slot().map(|full| RpcSnapshotSlotInfo {
-                full,
-                incremental: None,
-            })
-        } else {
-            self.send(RpcRequest::GetHighestSnapshotSlot, Value::Null)
-        }
-    }
-
-    #[deprecated(
-        since = "1.8.0",
-        note = "Please use RpcClient::get_highest_snapshot_slot() instead"
-    )]
-    #[allow(deprecated)]
-    pub fn get_snapshot_slot(&self) -> ClientResult<Slot> {
-        self.send(RpcRequest::GetSnapshotSlot, Value::Null)
+        self.send(RpcRequest::GetHighestSnapshotSlot, Value::Null)
     }
 
     /// Check if a transaction has been processed with the default [commitment level][cl].
@@ -1832,7 +1798,7 @@ impl RpcClient {
                                 "pubkey deserialization failed: {}",
                                 err
                             ))
-                            .into()
+                                .into()
                         })
                     })
                     .collect()
@@ -2328,7 +2294,7 @@ impl RpcClient {
         encoding: UiTransactionEncoding,
     ) -> ClientResult<EncodedConfirmedBlock> {
         self.send(
-            self.maybe_map_request(RpcRequest::GetBlock)?,
+            RpcRequest::GetBlock,
             json!([slot, encoding]),
         )
     }
@@ -2373,7 +2339,7 @@ impl RpcClient {
         config: RpcBlockConfig,
     ) -> ClientResult<UiConfirmedBlock> {
         self.send(
-            self.maybe_map_request(RpcRequest::GetBlock)?,
+            RpcRequest::GetBlock,
             json!([slot, config]),
         )
     }
@@ -2425,7 +2391,7 @@ impl RpcClient {
     /// ```
     pub fn get_blocks(&self, start_slot: Slot, end_slot: Option<Slot>) -> ClientResult<Vec<Slot>> {
         self.send(
-            self.maybe_map_request(RpcRequest::GetBlocks)?,
+            RpcRequest::GetBlocks,
             json!([start_slot, end_slot]),
         )
     }
@@ -2501,7 +2467,7 @@ impl RpcClient {
         } else {
             json!([start_slot, commitment_config])
         };
-        self.send(self.maybe_map_request(RpcRequest::GetBlocks)?, json)
+        self.send(RpcRequest::GetBlocks, json)
     }
 
     /// Returns a list of finalized blocks starting at the given slot.
@@ -2540,7 +2506,7 @@ impl RpcClient {
     /// ```
     pub fn get_blocks_with_limit(&self, start_slot: Slot, limit: usize) -> ClientResult<Vec<Slot>> {
         self.send(
-            self.maybe_map_request(RpcRequest::GetBlocksWithLimit)?,
+            RpcRequest::GetBlocksWithLimit,
             json!([start_slot, limit]),
         )
     }
@@ -2593,7 +2559,7 @@ impl RpcClient {
         commitment_config: CommitmentConfig,
     ) -> ClientResult<Vec<Slot>> {
         self.send(
-            self.maybe_map_request(RpcRequest::GetBlocksWithLimit)?,
+            RpcRequest::GetBlocksWithLimit,
             json!([
                 start_slot,
                 limit,
@@ -2714,7 +2680,7 @@ impl RpcClient {
         };
 
         let result: Vec<RpcConfirmedTransactionStatusWithSignature> = self.send(
-            self.maybe_map_request(RpcRequest::GetSignaturesForAddress)?,
+            RpcRequest::GetSignaturesForAddress,
             json!([address.to_string(), config]),
         )?;
 
@@ -2770,7 +2736,7 @@ impl RpcClient {
         encoding: UiTransactionEncoding,
     ) -> ClientResult<EncodedConfirmedTransaction> {
         self.send(
-            self.maybe_map_request(RpcRequest::GetTransaction)?,
+            RpcRequest::GetTransaction,
             json!([signature.to_string(), encoding]),
         )
     }
@@ -2833,7 +2799,7 @@ impl RpcClient {
         config: RpcTransactionConfig,
     ) -> ClientResult<EncodedConfirmedTransaction> {
         self.send(
-            self.maybe_map_request(RpcRequest::GetTransaction)?,
+            RpcRequest::GetTransaction,
             json!([signature.to_string(), config]),
         )
     }
@@ -3890,31 +3856,6 @@ impl RpcClient {
         self.get_transaction_count_with_commitment(self.commitment())
     }
 
-    pub fn get_transaction_count_with_commitment(
-        &self,
-        commitment_config: CommitmentConfig,
-    ) -> ClientResult<u64> {
-        self.send(
-            RpcRequest::GetTransactionCount,
-            json!([commitment_config]),
-        )
-    }
-
-    #[deprecated(
-        since = "1.9.0",
-        note = "Please use `get_latest_blockhash` and `get_fee_for_message` instead"
-    )]
-    #[allow(deprecated)]
-    pub fn get_fees(&self) -> ClientResult<Fees> {
-        #[allow(deprecated)]
-        Ok(self.get_fees_with_commitment(self.commitment())?.value)
-    }
-
-    #[deprecated(
-        since = "1.9.0",
-        note = "Please use `get_latest_blockhash_with_commitment` and `get_fee_for_message` instead"
-    )]
-    #[allow(deprecated)]
     pub fn get_fees_with_commitment(&self, commitment_config: CommitmentConfig) -> RpcResult<Fees> {
         let Response {
             context,
@@ -3939,101 +3880,6 @@ impl RpcClient {
         })
     }
 
-    #[deprecated(since = "1.9.0", note = "Please use `get_latest_blockhash` instead")]
-    #[allow(deprecated)]
-    pub fn get_recent_blockhash(&self) -> ClientResult<(Hash, FeeCalculator)> {
-        #[allow(deprecated)]
-        let (blockhash, fee_calculator, _last_valid_slot) = self
-            .get_recent_blockhash_with_commitment(self.commitment())?
-            .value;
-        Ok((blockhash, fee_calculator))
-    }
-
-    #[deprecated(
-        since = "1.9.0",
-        note = "Please use `get_latest_blockhash_with_commitment` instead"
-    )]
-    #[allow(deprecated)]
-    pub fn get_recent_blockhash_with_commitment(
-        &self,
-        commitment_config: CommitmentConfig,
-    ) -> RpcResult<(Hash, FeeCalculator, Slot)> {
-        let (context, blockhash, fee_calculator, last_valid_slot) = if let Ok(Response {
-            context,
-            value:
-                RpcFees {
-                    blockhash,
-                    fee_calculator,
-                    last_valid_slot,
-                    ..
-                },
-        }) = self
-            .send::<Response<RpcFees>>(
-                RpcRequest::GetFees,
-                json!([commitment_config]),
-            ) {
-            (context, blockhash, fee_calculator, last_valid_slot)
-        } else if let Ok(Response {
-            context,
-            value:
-                DeprecatedRpcFees {
-                    blockhash,
-                    fee_calculator,
-                    last_valid_slot,
-                },
-        }) = self.send::<Response<DeprecatedRpcFees>>(
-            RpcRequest::GetFees,
-            json!([commitment_config]),
-        ) {
-            (context, blockhash, fee_calculator, last_valid_slot)
-        } else if let Ok(Response {
-            context,
-            value:
-                RpcBlockhashFeeCalculator {
-                    blockhash,
-                    fee_calculator,
-                },
-        }) = self.send::<Response<RpcBlockhashFeeCalculator>>(
-            RpcRequest::GetRecentBlockhash,
-            json!([commitment_config]),
-        ) {
-            (context, blockhash, fee_calculator, 0)
-        } else {
-            return Err(ClientError::new_with_request(
-                RpcError::ParseError("RpcBlockhashFeeCalculator or RpcFees".to_string()).into(),
-                RpcRequest::GetRecentBlockhash,
-            ));
-        };
-
-        let blockhash = blockhash.parse().map_err(|_| {
-            ClientError::new_with_request(
-                RpcError::ParseError("Hash".to_string()).into(),
-                RpcRequest::GetRecentBlockhash,
-            )
-        })?;
-        Ok(Response {
-            context,
-            value: (blockhash, fee_calculator, last_valid_slot),
-        })
-    }
-
-    #[deprecated(since = "1.9.0", note = "Please `get_fee_for_message` instead")]
-    #[allow(deprecated)]
-    pub fn get_fee_calculator_for_blockhash(
-        &self,
-        blockhash: &Hash,
-    ) -> ClientResult<Option<FeeCalculator>> {
-        #[allow(deprecated)]
-        Ok(self
-            .get_fee_calculator_for_blockhash_with_commitment(blockhash, self.commitment())?
-            .value)
-    }
-
-    #[deprecated(
-        since = "1.9.0",
-        note = "Please `get_latest_blockhash_with_commitment` and `get_fee_for_message` instead"
-    )]
-    #[allow(deprecated)]
     pub fn get_fee_calculator_for_blockhash_with_commitment(
         &self,
         blockhash: &Hash,
@@ -4053,52 +3899,14 @@ impl RpcClient {
         })
     }
 
-    #[deprecated(
-        since = "1.9.0",
-        note = "Please do not use, will no longer be available in the future"
-    )]
-    #[allow(deprecated)]
-    pub fn get_fee_rate_governor(&self) -> RpcResult<FeeRateGovernor> {
-        let Response {
-            context,
-            value: RpcFeeRateGovernor { fee_rate_governor },
-        } =
-            self.send::<Response<RpcFeeRateGovernor>>(RpcRequest::GetFeeRateGovernor, Value::Null)?;
-
-        Ok(Response {
-            context,
-            value: fee_rate_governor,
-        })
-    }
-
-    #[deprecated(
-        since = "1.9.0",
-        note = "Please do not use, will no longer be available in the future"
-    )]
-    #[allow(deprecated)]
-    pub fn get_new_blockhash(&self, blockhash: &Hash) -> ClientResult<(Hash, FeeCalculator)> {
-        let mut num_retries = 0;
-        let start = Instant::now();
-        while start.elapsed().as_secs() < 5 {
-            #[allow(deprecated)]
-            if let Ok((new_blockhash, fee_calculator)) = self.get_recent_blockhash() {
-                if new_blockhash != *blockhash {
-                    return Ok((new_blockhash, fee_calculator));
-                }
-            }
-            debug!("Got same blockhash ({:?}), will retry...", blockhash);
-
-            // Retry ~twice during a slot
-            sleep(Duration::from_millis(DEFAULT_MS_PER_SLOT / 2));
-            num_retries += 1;
-        }
-        Err(RpcError::ForUser(format!(
-            "Unable to get new blockhash after {}ms (retried {} times), stuck at {}",
-            start.elapsed().as_millis(),
-            num_retries,
-            blockhash
-        ))
-        .into())
+    pub fn get_transaction_count_with_commitment(
+        &self,
+        commitment_config: CommitmentConfig,
+    ) -> ClientResult<u64> {
+        self.send(
+            RpcRequest::GetTransactionCount,
+            json!([commitment_config]),
+        )
     }
 
     pub fn get_first_available_block(&self) -> ClientResult<Slot> {
@@ -4342,19 +4150,19 @@ impl RpcClient {
             RpcRequest::RequestAirdrop,
             json!([pubkey.to_string(), lamports, config]),
         )
-        .and_then(|signature: String| {
-            Signature::from_str(&signature).map_err(|err| {
-                ClientErrorKind::Custom(format!("signature deserialization failed: {}", err)).into()
+            .and_then(|signature: String| {
+                Signature::from_str(&signature).map_err(|err| {
+                    ClientErrorKind::Custom(format!("signature deserialization failed: {}", err)).into()
+                })
             })
-        })
-        .map_err(|_| {
-            RpcError::ForUser(
-                "airdrop request failed. \
+            .map_err(|_| {
+                RpcError::ForUser(
+                    "airdrop request failed. \
                 This can happen when the rate limit is reached."
-                    .to_string(),
-            )
-            .into()
-        })
+                        .to_string(),
+                )
+                    .into()
+            })
     }
 
     fn poll_balance_with_timeout_and_commitment(
@@ -4435,7 +4243,7 @@ impl RpcClient {
         let now = Instant::now();
         loop {
             if let Ok(Some(_)) =
-                self.get_signature_status_with_commitment(signature, commitment_config)
+            self.get_signature_status_with_commitment(signature, commitment_config)
             {
                 break;
             }
@@ -4444,7 +4252,7 @@ impl RpcClient {
                     "signature not found after {} seconds",
                     now.elapsed().as_secs()
                 ))
-                .into());
+                    .into());
             }
             sleep(Duration::from_millis(250));
         }
@@ -4497,7 +4305,7 @@ impl RpcClient {
                         "signature not found after {} seconds",
                         now.elapsed().as_secs()
                     ))
-                    .into());
+                        .into());
                 }
             }
             sleep(Duration::from_millis(250));
@@ -4537,75 +4345,50 @@ impl RpcClient {
         &self,
         commitment: CommitmentConfig,
     ) -> ClientResult<(Hash, u64)> {
-        let (blockhash, last_valid_block_height) =
-            if self.get_node_version()? < semver::Version::new(1, 9, 0) {
-                let Fees {
-                    blockhash,
-                    last_valid_block_height,
-                    ..
-                } = self.get_fees_with_commitment(commitment)?.value;
-                (blockhash, last_valid_block_height)
-            } else {
-                let RpcBlockhash {
-                    blockhash,
-                    last_valid_block_height,
-                } = self
-                    .send::<Response<RpcBlockhash>>(
-                        RpcRequest::GetLatestBlockhash,
-                        json!([commitment]),
-                    )?
-                    .value;
-                let blockhash = blockhash.parse().map_err(|_| {
-                    ClientError::new_with_request(
-                        RpcError::ParseError("Hash".to_string()).into(),
-                        RpcRequest::GetLatestBlockhash,
-                    )
-                })?;
-                (blockhash, last_valid_block_height)
-            };
+        let RpcBlockhash {
+            blockhash,
+            last_valid_block_height,
+        } = self
+            .send::<Response<RpcBlockhash>>(
+                RpcRequest::GetLatestBlockhash,
+                json!([commitment]),
+            )?
+            .value;
+        let blockhash = blockhash.parse().map_err(|_| {
+            ClientError::new_with_request(
+                RpcError::ParseError("Hash".to_string()).into(),
+                RpcRequest::GetLatestBlockhash,
+            )
+        })?;
+
         Ok((blockhash, last_valid_block_height))
     }
 
-    #[allow(deprecated)]
     pub fn is_blockhash_valid(
         &self,
         blockhash: &Hash,
         commitment: CommitmentConfig,
     ) -> ClientResult<bool> {
-        let result = if self.get_node_version()? < semver::Version::new(1, 9, 0) {
-            self.get_fee_calculator_for_blockhash_with_commitment(blockhash, commitment)?
-                .value
-                .is_some()
-        } else {
-            self.send::<Response<bool>>(
-                RpcRequest::IsBlockhashValid,
-                json!([blockhash.to_string(), commitment,]),
-            )?
-            .value
-        };
+        let result = self.send::<Response<bool>>(
+            RpcRequest::IsBlockhashValid,
+            json!([blockhash.to_string(), commitment,]),
+        )?
+            .value;
+
         Ok(result)
     }
 
     #[allow(deprecated)]
     pub fn get_fee_for_message(&self, message: &Message) -> ClientResult<u64> {
-        if self.get_node_version()? < semver::Version::new(1, 9, 0) {
-            let fee_calculator = self
-                .get_fee_calculator_for_blockhash(&message.recent_blockhash)?
-                .ok_or_else(|| ClientErrorKind::Custom("Invalid blockhash".to_string()))?;
-            Ok(fee_calculator
-                .lamports_per_signature
-                .saturating_mul(message.header.num_required_signatures as u64))
-        } else {
-            let serialized_encoded =
-                serialize_and_encode::<Message>(message, UiTransactionEncoding::Base64)?;
-            let result = self.send::<Response<Option<u64>>>(
-                RpcRequest::GetFeeForMessage,
-                json!([serialized_encoded, self.commitment()]),
-            )?;
-            result
-                .value
-                .ok_or_else(|| ClientErrorKind::Custom("Invalid blockhash".to_string()).into())
-        }
+        let serialized_encoded =
+            serialize_and_encode::<Message>(message, UiTransactionEncoding::Base64)?;
+        let result = self.send::<Response<Option<u64>>>(
+            RpcRequest::GetFeeForMessage,
+            json!([serialized_encoded, self.commitment()]),
+        )?;
+        result
+            .value
+            .ok_or_else(|| ClientErrorKind::Custom("Invalid blockhash".to_string()).into())
     }
 
     pub fn get_new_latest_blockhash(&self, blockhash: &Hash) -> ClientResult<Hash> {
@@ -4629,7 +4412,7 @@ impl RpcClient {
             num_retries,
             blockhash
         ))
-        .into())
+            .into())
     }
 
     pub fn get_transport_stats(&self) -> RpcTransportStats {
@@ -4638,8 +4421,8 @@ impl RpcClient {
 }
 
 pub fn serialize_and_encode<T>(input: &T, encoding: UiTransactionEncoding) -> ClientResult<String>
-where
-    T: serde::ser::Serialize,
+    where
+        T: serde::ser::Serialize,
 {
     let serialized = serialize(input)
         .map_err(|e| ClientErrorKind::Custom(format!("Serialization failed: {}", e)))?;
@@ -4651,7 +4434,7 @@ where
                 "unsupported encoding: {}. Supported encodings: base58, base64",
                 encoding
             ))
-            .into())
+                .into());
         }
     };
     Ok(encoded)
@@ -4718,7 +4501,7 @@ pub fn create_rpc_client_mocks() -> crate::mock_sender::Mocks {
             UiAccount::encode(&pubkey, &account, UiAccountEncoding::Base64, None, None)
         },
     })
-    .unwrap();
+        .unwrap();
 
     mocks.insert(get_account_request, get_account_response);
 
@@ -4800,18 +4583,6 @@ mod tests {
             )
             .unwrap();
         assert_eq!(balance, 50);
-
-        #[allow(deprecated)]
-        let blockhash: String = rpc_client
-            .send(RpcRequest::GetRecentBlockhash, Value::Null)
-            .unwrap();
-        assert_eq!(blockhash, "deadbeefXjn8o3yroDHxUtKsZZgoy4GPkPPXfouKNHhx");
-
-        // Send erroneous parameter
-        #[allow(deprecated)]
-        let blockhash: ClientResult<String> =
-            rpc_client.send(RpcRequest::GetRecentBlockhash, json!(["parameter"]));
-        assert!(blockhash.is_err());
     }
 
     #[test]
@@ -4849,7 +4620,7 @@ mod tests {
         let rpc_client = RpcClient::new_mock("fails".to_string());
 
         #[allow(deprecated)]
-        let result = rpc_client.get_recent_blockhash();
+            let result = rpc_client.get_recent_blockhash();
         assert!(result.is_err());
     }
 
@@ -4953,7 +4724,7 @@ mod tests {
         let rpc_client = RpcClient::new_mock("fails".to_string());
 
         #[allow(deprecated)]
-        let is_err = rpc_client.get_latest_blockhash().is_err();
+            let is_err = rpc_client.get_latest_blockhash().is_err();
         assert!(is_err);
     }
 }
