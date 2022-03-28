@@ -385,7 +385,6 @@ fn retain_staked(values: &mut Vec<CrdsValue>, stakes: &HashMap<Pubkey, u64>) {
             // getHealth fails if account hashes are not propagated.
             CrdsData::AccountsHashes(_) => true,
             CrdsData::LowestSlot(_, _)
-            | CrdsData::LegacyVersion(_)
             | CrdsData::DuplicateShred(_, _) => {
                 let stake = stakes.get(&value.pubkey()).copied();
                 stake.unwrap_or_default() >= MIN_STAKE_FOR_GOSSIP
@@ -1199,8 +1198,7 @@ impl ClusterInfo {
         if let Some(version) = gossip_crds.get::<&Version>(*pubkey) {
             return Some(version.version.clone());
         }
-        let version: &crds_value::LegacyVersion = gossip_crds.get(*pubkey)?;
-        Some(version.version.clone().into())
+        return None
     }
 
     /// all validators that have a valid rpc port regardless of `shred_version`.

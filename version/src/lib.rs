@@ -9,17 +9,6 @@ use {
 #[macro_use]
 extern crate mundis_frozen_abi_macro;
 
-// Older version structure used earlier 1.3.x releases
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, AbiExample)]
-pub struct LegacyVersion {
-    major: u16,
-    minor: u16,
-    patch: u16,
-    commit: Option<u32>, // first 4 bytes of the sha1 commit hash
-}
-
-impl Sanitize for LegacyVersion {}
-
 #[derive(Serialize, Deserialize, Clone, PartialEq, AbiExample)]
 pub struct Version {
     pub major: u16,
@@ -27,18 +16,6 @@ pub struct Version {
     pub patch: u16,
     pub commit: Option<u32>, // first 4 bytes of the sha1 commit hash
     pub feature_set: u32,    // first 4 bytes of the FeatureSet identifier
-}
-
-impl From<LegacyVersion> for Version {
-    fn from(legacy_version: LegacyVersion) -> Self {
-        Self {
-            major: legacy_version.major,
-            minor: legacy_version.minor,
-            patch: legacy_version.patch,
-            commit: legacy_version.commit,
-            feature_set: 0,
-        }
-    }
 }
 
 fn compute_commit(sha1: Option<&'static str>) -> Option<u32> {

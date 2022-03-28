@@ -648,11 +648,10 @@ impl CrdsDataStats {
             CrdsData::SnapshotHashes(_) => 3,
             CrdsData::AccountsHashes(_) => 4,
             CrdsData::EpochSlots(_, _) => 5,
-            CrdsData::LegacyVersion(_) => 6,
-            CrdsData::Version(_) => 7,
-            CrdsData::NodeInstance(_) => 8,
-            CrdsData::DuplicateShred(_, _) => 9,
-            CrdsData::IncrementalSnapshotHashes(_) => 10,
+            CrdsData::Version(_) => 6,
+            CrdsData::NodeInstance(_) => 7,
+            CrdsData::DuplicateShred(_, _) => 8,
+            CrdsData::IncrementalSnapshotHashes(_) => 9,
         }
     }
 }

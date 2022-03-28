@@ -234,37 +234,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 ),
         )
         .arg(
-            Arg::with_name("lamports_per_byte_year")
-                .long("lamports-per-byte-year")
-                .value_name("LAMPORTS")
-                .takes_value(true)
-                .default_value(default_lamports_per_byte_year)
-                .help(
-                    "The cost in lamports that the cluster will charge per byte per year \
-                     for accounts with data",
-                ),
-        )
-        .arg(
-            Arg::with_name("rent_exemption_threshold")
-                .long("rent-exemption-threshold")
-                .value_name("NUMBER")
-                .takes_value(true)
-                .default_value(default_rent_exemption_threshold)
-                .help(
-                    "amount of time (in years) the balance has to include rent for \
-                     to qualify as rent exempted account",
-                ),
-        )
-        .arg(
-            Arg::with_name("rent_burn_percentage")
-                .long("rent-burn-percentage")
-                .value_name("NUMBER")
-                .takes_value(true)
-                .default_value(default_rent_burn_percentage)
-                .help("percentage of collected rent to burn")
-                .validator(is_valid_percentage),
-        )
-        .arg(
             Arg::with_name("fee_burn_percentage")
                 .long("fee-burn-percentage")
                 .value_name("NUMBER")

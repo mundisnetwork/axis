@@ -87,7 +87,6 @@ pub enum CrdsData {
     SnapshotHashes(SnapshotHashes),
     AccountsHashes(SnapshotHashes),
     EpochSlots(EpochSlotsIndex, EpochSlots),
-    LegacyVersion(LegacyVersion),
     Version(Version),
     NodeInstance(NodeInstance),
     DuplicateShred(DuplicateShredIndex, DuplicateShred),
@@ -118,7 +117,6 @@ impl Sanitize for CrdsData {
                 }
                 val.sanitize()
             }
-            CrdsData::LegacyVersion(version) => version.sanitize(),
             CrdsData::Version(version) => version.sanitize(),
             CrdsData::NodeInstance(node) => node.sanitize(),
             CrdsData::DuplicateShred(ix, shred) => {
@@ -355,21 +353,6 @@ impl<'de> Deserialize<'de> for Vote {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, AbiExample)]
-pub struct LegacyVersion {
-    pub from: Pubkey,
-    pub wallclock: u64,
-    pub version: mundis_version::LegacyVersion,
-}
-
-impl Sanitize for LegacyVersion {
-    fn sanitize(&self) -> Result<(), SanitizeError> {
-        sanitize_wallclock(self.wallclock)?;
-        self.from.sanitize()?;
-        self.version.sanitize()
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, AbiExample)]
 pub struct Version {
     pub from: Pubkey,
     pub wallclock: u64,
@@ -571,7 +554,6 @@ impl CrdsValue {
             CrdsData::SnapshotHashes(hash) => hash.wallclock,
             CrdsData::AccountsHashes(hash) => hash.wallclock,
             CrdsData::EpochSlots(_, p) => p.wallclock,
-            CrdsData::LegacyVersion(version) => version.wallclock,
             CrdsData::Version(version) => version.wallclock,
             CrdsData::NodeInstance(node) => node.wallclock,
             CrdsData::DuplicateShred(_, shred) => shred.wallclock,
@@ -586,7 +568,6 @@ impl CrdsValue {
             CrdsData::SnapshotHashes(hash) => hash.from,
             CrdsData::AccountsHashes(hash) => hash.from,
             CrdsData::EpochSlots(_, p) => p.from,
-            CrdsData::LegacyVersion(version) => version.from,
             CrdsData::Version(version) => version.from,
             CrdsData::NodeInstance(node) => node.from,
             CrdsData::DuplicateShred(_, shred) => shred.from,
@@ -601,7 +582,6 @@ impl CrdsValue {
             CrdsData::SnapshotHashes(_) => CrdsValueLabel::SnapshotHashes(self.pubkey()),
             CrdsData::AccountsHashes(_) => CrdsValueLabel::AccountsHashes(self.pubkey()),
             CrdsData::EpochSlots(ix, _) => CrdsValueLabel::EpochSlots(*ix, self.pubkey()),
-            CrdsData::LegacyVersion(_) => CrdsValueLabel::LegacyVersion(self.pubkey()),
             CrdsData::Version(_) => CrdsValueLabel::Version(self.pubkey()),
             CrdsData::NodeInstance(node) => CrdsValueLabel::NodeInstance(node.from),
             CrdsData::DuplicateShred(ix, shred) => CrdsValueLabel::DuplicateShred(*ix, shred.from),

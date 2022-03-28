@@ -15,15 +15,11 @@ pub struct Rent {
     pub burn_percent: u8,
 }
 
-/// default rental rate in lamports/byte-year, based on:
-///  10^9 lamports per MUN
-///  $1 per MUN
-///  $0.01 per megabyte day
-///  $3.65 per megabyte year
-pub const DEFAULT_LAMPORTS_PER_BYTE_YEAR: u64 = 1_000_000_000 / 100 * 365 / (1024 * 1024);
+/// default rental rate in lamports/byte-year, set to 0 since we don't collect any rent
+pub const DEFAULT_LAMPORTS_PER_BYTE_YEAR: u64 = 0;
 
 /// default amount of time (in years) the balance has to include rent for
-pub const DEFAULT_EXEMPTION_THRESHOLD: f64 = 2.0;
+pub const DEFAULT_EXEMPTION_THRESHOLD: f64 = 0.0;
 
 /// default percentage of rent to burn (Valid values are 0 to 100)
 pub const DEFAULT_BURN_PERCENT: u8 = 50;
