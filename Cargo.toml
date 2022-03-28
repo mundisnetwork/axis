@@ -1,0 +1,70 @@
+[workspace]
+members = [
+    "account-decoder",
+    "banks-client",
+    "banks-interface",
+    "banks-server",
+    "bucket_map",
+    "bloom",
+    "clap-utils",
+    "cli-config",
+    "cli-output",
+    "client",
+    "core",
+    "download-utils",
+    "entry",
+    "faucet",
+    "frozen-abi",
+    "perf",
+    "validator",
+    "genesis",
+    "genesis-utils",
+    "geyser-plugin-interface",
+    "geyser-plugin-manager",
+    "gossip",
+    "keygen",
+    "ledger",
+    "logger",
+    "merkle-tree",
+    "storage-bigtable",
+    "storage-proto",
+    "streamer",
+    "measure",
+    "metrics",
+    "poh",
+    "program-test",
+    "programs/address-lookup-table",
+    "programs/bpf_loader",
+    "programs/bpf_loader/gen-syscall-list",
+    "programs/compute-budget",
+    "programs/config",
+    "programs/stake",
+    "programs/vote",
+    "remote-wallet",
+    "rpc",
+    "runtime",
+    "sdk",
+    "sdk/cargo-build-bpf",
+    "sdk/cargo-test-bpf",
+    "send-transaction-service",
+    "transaction-status",
+    "net-utils",
+    "version",
+    "cli",
+    "rayon-threadlimit",
+    "replica-lib",
+    "test-validator",
+
+    "anima-services/memo",
+    "anima-services/token",
+    "anima-services/token-account"
+]
+
+exclude = [
+    "programs/bpf",
+]
+
+# TODO: Remove once the "simd-accel" feature from the reed-solomon-erasure
+# dependency is supported on Apple M1. v2 of the feature resolver is needed to
+# specify arch-specific features.
+resolver = "2"

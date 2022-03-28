@@ -1,0 +1,18 @@
+[package]
+name = "mundis-send-transaction-service"
+version = "1.9.14"
+authors = ["Mundis Maintainers <maintainers@mundis.io>"]
+repository = "https://github.com/mundisnetwork/axis"
+homepage = "https://mundis.io/"
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+log = "0.4.14"
+mundis-logger = { path = "../logger", version = "=1.9.14" }
+mundis-metrics = { path = "../metrics", version = "=1.9.14" }
+mundis-runtime = { path = "../runtime", version = "=1.9.14" }
+mundis-sdk = { path = "../sdk", version = "=1.9.14" }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

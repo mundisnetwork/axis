@@ -1,0 +1,26 @@
+[package]
+name = "mundis-merkle-tree"
+version = "1.9.14"
+authors = ["Mundis Maintainers <maintainers@mundis.io>"]
+repository = "https://github.com/mundisnetwork/axis"
+license = "Apache-2.0"
+homepage = "https://mundis.io/"
+edition = "2021"
+
+[dependencies]
+mundis-program = { path = "../sdk/program", version = "=1.9.14" }
+fast-math = "0.1"
+
+# This can go once the BPF toolchain target Rust 1.42.0+
+[target.bpfel-unknown-unknown.dependencies]
+matches = "0.1.9"
+
+[dev-dependencies]
+hex = "0.4.3"
+
+[lib]
+crate-type = ["lib"]
+name = "mundis_merkle_tree"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

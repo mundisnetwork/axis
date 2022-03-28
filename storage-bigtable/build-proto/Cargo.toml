@@ -1,0 +1,14 @@
+[package]
+authors = ["Mundis Maintainers <maintainers@mundis.io>"]
+edition = "2021"
+homepage = "https://mundis.io/"
+license = "Apache-2.0"
+name = "proto"
+publish = false
+repository = "https://github.com/mundisnetwork/axis"
+version = "1.9.14"
+
+[workspace]
+
+[dependencies]
+tonic-build = "0.6.0"

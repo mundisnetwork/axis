@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+here=$(dirname "$0")
+there="$here/.."
+
+maybe_bpf_sdk="--bpf-sdk $there/sdk/bpf"
+for a in "$@"; do
+  if [[ $a = --bpf-sdk ]]; then
+    maybe_bpf_sdk=
+  fi
+done
+
+set -ex
+if [[ ! -f "$there"/sdk/bpf/syscalls.txt ]]; then
+  "$there"/cargo build --manifest-path "$there"/programs/bpf_loader/gen-syscall-list/Cargo.toml
+fi
+exec "$there"/cargo run --manifest-path "$there"/sdk/cargo-build-bpf/Cargo.toml -- $maybe_bpf_sdk "$@"

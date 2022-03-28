@@ -1,0 +1,26 @@
+[package]
+name = "mundis-bucket-map"
+version = "1.9.14"
+homepage = "https://mundis.io/"
+repository = "https://github.com/mundisnetwork/axis"
+authors = ["Mundis Maintainers <maintainers@mundis.io>"]
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+rayon = "1.5.0"
+mundis-logger = { path = "../logger", version = "=1.9.14" }
+mundis-sdk = { path = "../sdk", version = "=1.9.14" }
+memmap2 = "0.5.0"
+log = { version = "0.4.11" }
+mundis-measure = { path = "../measure", version = "=1.9.14" }
+rand = "0.7.0"
+fs_extra = "1.2.0"
+tempfile = "3.2.0"
+
+[lib]
+crate-type = ["lib"]
+name = "mundis_bucket_map"
+
+[[bench]]
+name = "bucket_map"

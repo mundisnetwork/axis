@@ -1,0 +1,29 @@
+[package]
+name = "mundis-cli-output"
+version = "1.9.14"
+authors = ["Mundis Maintainers <maintainers@mundis.io>"]
+repository = "https://github.com/mundisnetwork/axis"
+license = "Apache-2.0"
+homepage = "https://mundis.io/"
+edition = "2021"
+
+[dependencies]
+base64 = "0.13.0"
+chrono = { version = "0.4.11", features = ["serde"] }
+clap = "2.33.0"
+console = "0.15.0"
+humantime = "2.0.1"
+Inflector = "0.11.4"
+indicatif = "0.16.2"
+serde = "1.0.130"
+serde_json = "1.0.72"
+mundis-account-decoder = { path = "../account-decoder", version = "=1.9.14" }
+mundis-clap-utils = { path = "../clap-utils", version = "=1.9.14" }
+mundis-client = { path = "../client", version = "=1.9.14" }
+mundis-sdk = { path = "../sdk", version = "=1.9.14" }
+mundis-transaction-status = { path = "../transaction-status", version = "=1.9.14" }
+mundis-vote-program = { path = "../programs/vote", version = "=1.9.14" }
+anima-memo = { path = "../anima-services/memo", version = "=3.0.1", features = ["no-entrypoint"] }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

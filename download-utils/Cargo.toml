@@ -1,0 +1,23 @@
+[package]
+name = "mundis-download-utils"
+version = "1.9.14"
+authors = ["Mundis Maintainers <maintainers@mundis.io>"]
+repository = "https://github.com/mundisnetwork/axis"
+license = "Apache-2.0"
+homepage = "https://mundis.io/"
+edition = "2021"
+
+[dependencies]
+console = "0.15.0"
+indicatif = "0.16.2"
+log = "0.4.14"
+reqwest = { version = "0.11.6", default-features = false, features = ["blocking", "rustls-tls", "json"] }
+mundis-sdk = { path = "../sdk", version = "=1.9.14" }
+mundis-runtime = { path = "../runtime", version = "=1.9.14" }
+
+[lib]
+crate-type = ["lib"]
+name = "mundis_download_utils"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

@@ -1,0 +1,31 @@
+[package]
+name = "mundis-test-validator"
+version = "1.9.14"
+homepage = "https://mundis.io/"
+documentation = "https://docs.rs/mundis-test-validator"
+readme = "../README.md"
+repository = "https://github.com/mundisnetwork/axis"
+authors = ["Mundis Maintainers <maintainers@mundis.io>"]
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+base64 = "0.12.3"
+log = "0.4.14"
+serde_derive = "1.0.103"
+serde_json = "1.0.72"
+mundis-cli-output = { path = "../cli-output", version = "=1.9.14" }
+mundis-client = { path = "../client", version = "=1.9.14" }
+mundis-core = { path = "../core", version = "=1.9.14" }
+mundis-gossip = { path = "../gossip", version = "=1.9.14" }
+mundis-ledger = { path = "../ledger", version = "=1.9.14" }
+mundis-logger = { path = "../logger", version = "=1.9.14" }
+mundis-net-utils = { path = "../net-utils", version = "=1.9.14" }
+mundis-program-test = { path = "../program-test", version = "=1.9.14" }
+mundis-rpc = { path = "../rpc", version = "=1.9.14" }
+mundis-runtime = { path = "../runtime", version = "=1.9.14" }
+mundis-sdk = { path = "../sdk", version = "=1.9.14" }
+mundis-streamer = { path = "../streamer", version = "=1.9.14" }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
