@@ -117,17 +117,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     };
 
     let rent = Rent::default();
-    let (
-        default_lamports_per_byte_year,
-        default_rent_exemption_threshold,
-        default_rent_burn_percentage,
-    ) = {
-        (
-            &rent.lamports_per_byte_year.to_string(),
-            &rent.exemption_threshold.to_string(),
-            &rent.burn_percent.to_string(),
-        )
-    };
 
     // vote account
     let default_bootstrap_validator_lamports = &mun_to_lamports(500.0)
