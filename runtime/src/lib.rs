@@ -17,6 +17,7 @@ pub mod bank_forks;
 pub mod bank_utils;
 pub mod block_cost_limits;
 pub mod blockhash_queue;
+pub mod bucket_map;
 pub mod bucket_map_holder;
 pub mod bucket_map_holder_stats;
 pub mod builtins;

@@ -1,10 +1,6 @@
 [workspace]
 members = [
     "account-decoder",
-    "banks-client",
-    "banks-interface",
-    "banks-server",
-    "bucket_map",
     "bloom",
     "clap-utils",
     "cli-config",
@@ -18,7 +14,6 @@ members = [
     "perf",
     "validator",
     "genesis",
-    "genesis-utils",
     "geyser-plugin-interface",
     "geyser-plugin-manager",
     "gossip",
@@ -57,7 +52,9 @@ members = [
 
     "anima-services/memo",
     "anima-services/token",
-    "anima-services/token-account"
+    "anima-services/token-account",
+    "anima-services/hello",
+    "anima-services/hello2",
 ]
 
 exclude = [

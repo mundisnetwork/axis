@@ -1,5 +1,5 @@
 use {
-    crate::{
+    crate::bucket_map::{
         bucket::Bucket, bucket_item::BucketItem, bucket_map::BucketMapError,
         bucket_stats::BucketMapStats, MaxSearch, RefCount,
     },

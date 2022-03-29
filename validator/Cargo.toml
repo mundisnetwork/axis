@@ -30,7 +30,6 @@ mundis-core = { path = "../core", version = "=1.9.14" }
 mundis-download-utils = { path = "../download-utils", version = "=1.9.14" }
 mundis-entry = { path = "../entry", version = "=1.9.14" }
 mundis-faucet = { path = "../faucet", version = "=1.9.14" }
-mundis-genesis-utils = { path = "../genesis-utils", version = "=1.9.14" }
 mundis-gossip = { path = "../gossip", version = "=1.9.14" }
 mundis-ledger = { path = "../ledger", version = "=1.9.14" }
 mundis-logger = { path = "../logger", version = "=1.9.14" }

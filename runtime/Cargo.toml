@@ -43,7 +43,6 @@ mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.14" }
 mundis-logger = { path = "../logger", version = "=1.9.14" }
 mundis-measure = { path = "../measure", version = "=1.9.14" }
 mundis-metrics = { path = "../metrics", version = "=1.9.14" }
-mundis-bucket-map = { path = "../bucket_map", version = "=1.9.14" }
 mundis-program-runtime = { path = "../program-runtime", version = "=1.9.14" }
 mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.14" }
 mundis-sdk = { path = "../sdk", version = "=1.9.14" }
@@ -51,6 +50,7 @@ mundis-stake-program = { path = "../programs/stake", version = "=1.9.14" }
 mundis-vote-program = { path = "../programs/vote", version = "=1.9.14" }
 symlink = "0.1.0"
 tar = "0.4.37"
+fs_extra = "1.2.0"
 tempfile = "3.2.0"
 thiserror = "1.0"
 zstd = "0.9.0"

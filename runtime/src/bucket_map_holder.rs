@@ -4,8 +4,8 @@ use {
         bucket_map_holder_stats::BucketMapHolderStats,
         in_mem_accounts_index::{InMemAccountsIndex, SlotT},
         waitable_condvar::WaitableCondvar,
+        bucket_map::bucket_map::{BucketMap, BucketMapConfig},
     },
-    mundis_bucket_map::bucket_map::{BucketMap, BucketMapConfig},
     mundis_measure::measure::Measure,
     mundis_sdk::{clock::SLOT_MS, timing::AtomicInterval},
     std::{

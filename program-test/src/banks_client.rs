@@ -6,11 +6,11 @@
 //! cumbersome to use.
 
 pub use crate::error::BanksClientError;
-pub use mundis_banks_interface::{BanksClient as TarpcClient, TransactionStatus};
+pub use crate::banks_interface::{BanksClient as TarpcClient, TransactionStatus};
 use {
     borsh::BorshDeserialize,
     futures::{future::join_all, Future, FutureExt, TryFutureExt},
-    mundis_banks_interface::{BanksRequest, BanksResponse, BanksTransactionResultWithSimulation},
+    crate::banks_interface::{BanksRequest, BanksResponse, BanksTransactionResultWithSimulation},
     mundis_program::{
         clock::Slot, fee_calculator::FeeCalculator, hash::Hash, program_pack::Pack, pubkey::Pubkey,
         rent::Rent, sysvar::Sysvar,
@@ -34,8 +34,6 @@ use {
     tokio_serde::formats::Bincode,
 };
 
-mod error;
-
 // This exists only for backward compatibility
 pub trait BanksClientExt {}
 
@@ -50,8 +48,8 @@ impl BanksClient {
         config: client::Config,
         transport: C,
     ) -> NewClient<TarpcClient, RequestDispatch<BanksRequest, BanksResponse, C>>
-    where
-        C: Transport<ClientMessage<BanksRequest>, Response<BanksResponse>>,
+        where
+            C: Transport<ClientMessage<BanksRequest>, Response<BanksResponse>>,
     {
         TarpcClient::new(config, transport)
     }
@@ -68,8 +66,8 @@ impl BanksClient {
     }
 
     #[deprecated(
-        since = "1.9.0",
-        note = "Please use `get_fee_for_message` or `is_blockhash_valid` instead"
+    since = "1.9.0",
+    note = "Please use `get_fee_for_message` or `is_blockhash_valid` instead"
     )]
     pub fn get_fees_with_commitment_and_context(
         &mut self,
@@ -170,8 +168,8 @@ impl BanksClient {
     /// will use the transaction's blockhash to look up these same fee parameters and
     /// use them to calculate the transaction fee.
     #[deprecated(
-        since = "1.9.0",
-        note = "Please use `get_fee_for_message` or `is_blockhash_valid` instead"
+    since = "1.9.0",
+    note = "Please use `get_fee_for_message` or `is_blockhash_valid` instead"
     )]
     pub fn get_fees(
         &mut self,
@@ -241,26 +239,26 @@ impl BanksClient {
             transaction,
             commitment,
         )
-        .map(|result| match result? {
-            BanksTransactionResultWithSimulation {
-                result: None,
-                simulation_details: _,
-            } => Err(BanksClientError::ClientError(
-                "invalid blockhash or fee-payer",
-            )),
-            BanksTransactionResultWithSimulation {
-                result: Some(Err(err)),
-                simulation_details: Some(simulation_details),
-            } => Err(BanksClientError::SimulationError {
-                err,
-                logs: simulation_details.logs,
-                units_consumed: simulation_details.units_consumed,
-            }),
-            BanksTransactionResultWithSimulation {
-                result: Some(result),
-                simulation_details: _,
-            } => result.map_err(Into::into),
-        })
+            .map(|result| match result? {
+                BanksTransactionResultWithSimulation {
+                    result: None,
+                    simulation_details: _,
+                } => Err(BanksClientError::ClientError(
+                    "invalid blockhash or fee-payer",
+                )),
+                BanksTransactionResultWithSimulation {
+                    result: Some(Err(err)),
+                    simulation_details: Some(simulation_details),
+                } => Err(BanksClientError::SimulationError {
+                    err,
+                    logs: simulation_details.logs,
+                    units_consumed: simulation_details.units_consumed,
+                }),
+                BanksTransactionResultWithSimulation {
+                    result: Some(result),
+                    simulation_details: _,
+                } => result.map_err(Into::into),
+            })
     }
 
     /// Send a transaction and return any preflight (sanitization or simulation) errors, or return
@@ -458,8 +456,8 @@ impl BanksClient {
 }
 
 pub async fn start_client<C>(transport: C) -> io::Result<BanksClient>
-where
-    C: Transport<ClientMessage<BanksRequest>, Response<BanksResponse>> + Send + 'static,
+    where
+        C: Transport<ClientMessage<BanksRequest>, Response<BanksResponse>> + Send + 'static,
 {
     Ok(BanksClient {
         inner: TarpcClient::new(client::Config::default(), transport).spawn(),

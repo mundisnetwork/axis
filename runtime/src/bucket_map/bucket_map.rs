@@ -1,7 +1,7 @@
 //! BucketMap is a mostly contention free concurrent map backed by MmapMut
 
 use {
-    crate::{bucket_api::BucketApi, bucket_stats::BucketMapStats, MaxSearch, RefCount},
+    crate::bucket_map::{bucket_api::BucketApi, bucket_stats::BucketMapStats, MaxSearch, RefCount},
     mundis_sdk::pubkey::Pubkey,
     std::{convert::TryInto, fmt::Debug, fs, path::PathBuf, sync::Arc},
     tempfile::TempDir,

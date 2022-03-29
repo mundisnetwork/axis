@@ -7,8 +7,8 @@ use {
     async_trait::async_trait,
     chrono_humanize::{Accuracy, HumanTime, Tense},
     log::*,
-    mundis_banks_client::start_client,
-    mundis_banks_server::banks_server::start_local_server,
+    crate::banks_client::start_client,
+    crate::banks_server::start_local_server,
     mundis_program_runtime::{
         compute_budget::ComputeBudget, ic_msg, invoke_context::ProcessInstructionWithContext,
         stable_log, timings::ExecuteTimings,
@@ -60,11 +60,16 @@ use {
 };
 // Export types so test clients can limit their mundis crate dependencies
 pub use {
-    mundis_banks_client::{BanksClient, BanksClientError},
+    crate::banks_client::{BanksClient, BanksClientError},
     mundis_program_runtime::invoke_context::InvokeContext,
 };
 
 pub mod programs;
+pub mod banks_client;
+pub mod banks_interface;
+pub mod banks_server;
+pub mod rpc_banks_service;
+mod error;
 
 #[macro_use]
 extern crate mundis_bpf_loader_program;
@@ -820,7 +825,7 @@ impl ProgramTest {
             add_builtin!(mundis_bpf_loader_upgradeable_program!());
         }
 
-        // Add commonly-used SPL programs as a convenience to the user
+        // Add commonly-used programs as a convenience to the user
         for (program_id, account) in programs::anima_programs(&Rent::default()).iter() {
             bank.store_account(program_id, account);
         }

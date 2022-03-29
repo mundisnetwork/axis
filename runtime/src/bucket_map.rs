@@ -9,3 +9,4 @@ mod index_entry;
 
 pub type MaxSearch = u8;
 pub type RefCount = u64;
+

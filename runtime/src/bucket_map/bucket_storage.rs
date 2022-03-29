@@ -1,5 +1,5 @@
 use {
-    crate::{bucket_stats::BucketStats, MaxSearch},
+    crate::bucket_map::{bucket_stats::BucketStats, MaxSearch},
     memmap2::MmapMut,
     rand::{thread_rng, Rng},
     mundis_measure::measure::Measure,

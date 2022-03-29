@@ -1,5 +1,5 @@
 use {
-    crate::{
+    crate::bucket_map::{
         bucket::Bucket,
         bucket_storage::{BucketStorage, Uid},
         RefCount,

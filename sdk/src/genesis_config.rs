@@ -2,6 +2,8 @@
 
 #![cfg(feature = "full")]
 
+use num_format::{Locale, ToFormattedString};
+use num_traits::ToPrimitive;
 use {
     crate::{
         account::{Account, AccountSharedData},
@@ -282,7 +284,7 @@ impl fmt::Display for GenesisConfig {
                         account.lamports
                     })
                     .sum::<u64>()
-            ),
+            ).to_u64().unwrap().to_formatted_string(&Locale::en),
             self.accounts.len(),
             self.native_instruction_processors,
             self.rewards_pools,

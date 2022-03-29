@@ -1,7 +1,7 @@
 use {
     bincode::{deserialize, serialize},
     futures::{future, prelude::stream::StreamExt},
-    mundis_banks_interface::{
+    crate::banks_interface::{
         Banks, BanksRequest, BanksResponse, BanksTransactionResultWithSimulation,
         TransactionConfirmationStatus, TransactionSimulationDetails, TransactionStatus,
     },

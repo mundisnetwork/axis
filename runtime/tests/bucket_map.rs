@@ -1,10 +1,11 @@
 use {
     rayon::prelude::*,
-    mundis_bucket_map::bucket_map::{BucketMap, BucketMapConfig},
     mundis_measure::measure::Measure,
     mundis_sdk::pubkey::Pubkey,
     std::path::PathBuf,
 };
+use mundis_runtime::bucket_map::bucket_map::{BucketMap, BucketMapConfig};
+
 #[test]
 #[ignore]
 fn bucket_map_test_mt() {

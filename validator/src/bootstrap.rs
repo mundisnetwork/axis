@@ -4,7 +4,7 @@ use {
     mundis_client::rpc_client::RpcClient,
     mundis_core::validator::{ValidatorConfig, ValidatorStartProgress},
     mundis_download_utils::{download_snapshot_archive, DownloadProgressRecord},
-    mundis_genesis_utils::download_then_check_genesis_hash,
+    crate::genesis_utils::download_then_check_genesis_hash,
     mundis_gossip::{
         cluster_info::{ClusterInfo, Node},
         contact_info::ContactInfo,

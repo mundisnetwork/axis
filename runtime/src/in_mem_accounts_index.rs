@@ -6,9 +6,9 @@ use {
         },
         bucket_map_holder::{Age, BucketMapHolder},
         bucket_map_holder_stats::BucketMapHolderStats,
+        bucket_map::bucket_api::BucketApi
     },
     rand::{thread_rng, Rng},
-    mundis_bucket_map::bucket_api::BucketApi,
     mundis_measure::measure::Measure,
     mundis_sdk::{clock::Slot, pubkey::Pubkey},
     std::{

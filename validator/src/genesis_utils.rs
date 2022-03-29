@@ -52,14 +52,14 @@ pub fn download_then_check_genesis_hash(
 
     let genesis_package = ledger_path.join(DEFAULT_GENESIS_ARCHIVE);
     let genesis_config = if let Ok(tmp_genesis_package) =
-        download_genesis_if_missing(rpc_addr, &genesis_package, use_progress_bar)
+    download_genesis_if_missing(rpc_addr, &genesis_package, use_progress_bar)
     {
         unpack_genesis_archive(
             &tmp_genesis_package,
             ledger_path,
             max_genesis_archive_unpacked_size,
         )
-        .map_err(|err| format!("Failed to unpack downloaded genesis config: {}", err))?;
+            .map_err(|err| format!("Failed to unpack downloaded genesis config: {}", err))?;
 
         let downloaded_genesis = GenesisConfig::load(ledger_path)
             .map_err(|err| format!("Failed to load downloaded genesis config: {}", err))?;
