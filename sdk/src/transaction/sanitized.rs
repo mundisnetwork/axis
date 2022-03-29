@@ -1,4 +1,5 @@
 #![cfg(feature = "full")]
+
 use {
     crate::{
         hash::Hash,

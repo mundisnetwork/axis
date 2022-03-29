@@ -1,3 +1,4 @@
+use clap::AppSettings;
 use {
     clap::{crate_name, value_t, value_t_or_exit, values_t_or_exit, App, Arg},
     log::*,
@@ -62,8 +63,9 @@ fn main() {
     let default_faucet_sol = DEFAULT_FAUCET_SOL.to_string();
 
     let matches = App::new("mundis-test-validator")
-        .about("Test Validator")
+        .about("Mundis Test Validator")
         .version(mundis_version::version!())
+        .setting(AppSettings::ArgRequiredElseHelp)
         .arg({
             let arg = Arg::with_name("config_file")
                 .short("C")
@@ -522,7 +524,7 @@ fn main() {
         None
     };
 
-    let faucet_lamports = mun_to_lamports(value_of(&matches, "faucet_sol").unwrap());
+    let faucet_lamports = mun_to_lamports(value_of(&matches, "faucet_mun").unwrap());
     let faucet_keypair_file = ledger_path.join("faucet-keypair.json");
     if !faucet_keypair_file.exists() {
         write_keypair_file(&Keypair::new(), faucet_keypair_file.to_str().unwrap()).unwrap_or_else(

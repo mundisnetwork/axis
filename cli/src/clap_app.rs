@@ -66,11 +66,6 @@ pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> A
                     "processed",
                     "confirmed",
                     "finalized",
-                    "recent", // Deprecated as of v1.5.5
-                    "single", // Deprecated as of v1.5.5
-                    "singleGossip", // Deprecated as of v1.5.5
-                    "root", // Deprecated as of v1.5.5
-                    "max", // Deprecated as of v1.5.5
                 ])
                 .value_name("COMMITMENT_LEVEL")
                 .hide_possible_values(true)

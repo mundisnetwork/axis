@@ -13,7 +13,7 @@
 
 use {
     crate::{
-        bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable,
+        bpf_loader, bpf_loader_upgradeable,
         hash::Hash,
         instruction::{AccountMeta, CompiledInstruction, Instruction},
         message::MessageHeader,
@@ -27,7 +27,7 @@ use {
 
 lazy_static! {
     // Copied keys over since direct references create cyclical dependency.
-    pub static ref BUILTIN_PROGRAMS_KEYS: [Pubkey; 10] = {
+    pub static ref BUILTIN_PROGRAMS_KEYS: [Pubkey; 9] = {
         let parse = |s| Pubkey::from_str(s).unwrap();
         [
             parse("Config1111111111111111111111111111111111111"),
@@ -38,7 +38,6 @@ lazy_static! {
             parse("Vote111111111111111111111111111111111111111"),
             system_program::id(),
             bpf_loader::id(),
-            bpf_loader_deprecated::id(),
             bpf_loader_upgradeable::id(),
         ]
     };

@@ -35,7 +35,7 @@ use {
     mundis_sdk::{
         account::{ReadableAccount, WritableAccount},
         account_utils::State,
-        bpf_loader, bpf_loader_deprecated,
+        bpf_loader,
         bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         clock::Clock,
         entrypoint::{HEAP_LENGTH, SUCCESS},
@@ -211,7 +211,6 @@ fn write_program_data(
 
 fn check_loader_id(id: &Pubkey) -> bool {
     bpf_loader::check_id(id)
-        || bpf_loader_deprecated::check_id(id)
         || bpf_loader_upgradeable::check_id(id)
 }
 
@@ -376,7 +375,7 @@ fn process_instruction_common(
                 invoke_context,
                 use_jit,
             )
-        } else if bpf_loader::check_id(program_id) || bpf_loader_deprecated::check_id(program_id) {
+        } else if bpf_loader::check_id(program_id) {
             process_loader_instruction(
                 first_instruction_account,
                 instruction_data,
@@ -1040,10 +1039,8 @@ impl Executor for BpfExecutor {
         let mut serialize_time = Measure::start("serialize");
         let keyed_accounts = invoke_context.get_keyed_accounts()?;
         let program = keyed_account_at_index(keyed_accounts, first_instruction_account)?;
-        let loader_id = program.owner()?;
         let program_id = *program.unsigned_key();
         let (mut parameter_bytes, account_lengths) = serialize_parameters(
-            &loader_id,
             &program_id,
             &keyed_accounts[first_instruction_account + 1..],
             instruction_data,
@@ -1133,7 +1130,6 @@ impl Executor for BpfExecutor {
         let execute_or_deserialize_result = execution_result.and_then(|_| {
             let keyed_accounts = invoke_context.get_keyed_accounts()?;
             deserialize_parameters(
-                &loader_id,
                 &keyed_accounts[first_instruction_account + 1..],
                 parameter_bytes.as_slice(),
                 &account_lengths,
@@ -1419,35 +1415,6 @@ mod tests {
                     )
                 },
             ),
-        );
-    }
-
-    #[test]
-    fn test_bpf_loader_serialize_unaligned() {
-        let loader_id = bpf_loader_deprecated::id();
-        let program_key = Pubkey::new_unique();
-        let program_account =
-            load_program_account_from_elf(&loader_id, "test_elfs/noop_unaligned.so");
-
-        // Case: With program and parameter account
-        let parameter_account = AccountSharedData::new_ref(1, 0, &loader_id);
-        let mut keyed_accounts = vec![
-            (false, false, program_key, program_account),
-            (false, false, program_key, parameter_account),
-        ];
-        assert_eq!(
-            Ok(()),
-            process_instruction(&loader_id, &[0], &[], &keyed_accounts),
-        );
-
-        // Case: With duplicate accounts
-        let duplicate_key = Pubkey::new_unique();
-        let parameter_account = AccountSharedData::new_ref(1, 0, &loader_id);
-        keyed_accounts[1] = (false, false, duplicate_key, parameter_account.clone());
-        keyed_accounts.push((false, false, duplicate_key, parameter_account));
-        assert_eq!(
-            Ok(()),
-            process_instruction(&loader_id, &[0], &[], &keyed_accounts),
         );
     }
 

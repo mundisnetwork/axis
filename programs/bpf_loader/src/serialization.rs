@@ -3,7 +3,6 @@ use {
     solana_rbpf::{aligned_memory::AlignedMemory, ebpf::HOST_ALIGN},
     mundis_sdk::{
         account::{ReadableAccount, WritableAccount},
-        bpf_loader_deprecated,
         entrypoint::{BPF_ALIGN_OF_U128, MAX_PERMITTED_DATA_INCREASE},
         instruction::InstructionError,
         keyed_account::KeyedAccount,
@@ -24,37 +23,27 @@ pub fn is_dup(accounts: &[KeyedAccount], keyed_account: &KeyedAccount) -> (bool,
 }
 
 pub fn serialize_parameters(
-    loader_id: &Pubkey,
     program_id: &Pubkey,
     keyed_accounts: &[KeyedAccount],
     data: &[u8],
 ) -> Result<(AlignedMemory, Vec<usize>), InstructionError> {
-    if *loader_id == bpf_loader_deprecated::id() {
-        serialize_parameters_unaligned(program_id, keyed_accounts, data)
-    } else {
-        serialize_parameters_aligned(program_id, keyed_accounts, data)
-    }
-    .and_then(|buffer| {
-        let account_lengths = keyed_accounts
-            .iter()
-            .map(|keyed_account| keyed_account.data_len())
-            .collect::<Result<Vec<usize>, InstructionError>>()?;
-        Ok((buffer, account_lengths))
-    })
+    serialize_parameters_aligned(program_id, keyed_accounts, data)
+        .and_then(|buffer| {
+            let account_lengths = keyed_accounts
+                .iter()
+                .map(|keyed_account| keyed_account.data_len())
+                .collect::<Result<Vec<usize>, InstructionError>>()?;
+            Ok((buffer, account_lengths))
+        })
 }
 
 pub fn deserialize_parameters(
-    loader_id: &Pubkey,
     keyed_accounts: &[KeyedAccount],
     buffer: &[u8],
     account_lengths: &[usize],
     do_support_realloc: bool,
 ) -> Result<(), InstructionError> {
-    if *loader_id == bpf_loader_deprecated::id() {
-        deserialize_parameters_unaligned(keyed_accounts, buffer, account_lengths)
-    } else {
-        deserialize_parameters_aligned(keyed_accounts, buffer, account_lengths, do_support_realloc)
-    }
+    deserialize_parameters_aligned(keyed_accounts, buffer, account_lengths, do_support_realloc)
 }
 
 pub fn get_serialized_account_size_unaligned(
@@ -89,8 +78,8 @@ pub fn serialize_parameters_unaligned(
         }
     }
     size += size_of::<u64>() // instruction data len
-         + instruction_data.len() // instruction data
-         + size_of::<Pubkey>(); // program id
+        + instruction_data.len() // instruction data
+        + size_of::<Pubkey>(); // program id
     let mut v = AlignedMemory::new(size, HOST_ALIGN);
 
     v.write_u64::<LittleEndian>(keyed_accounts.len() as u64)
@@ -204,8 +193,8 @@ pub fn serialize_parameters_aligned(
         }
     }
     size += size_of::<u64>() // data len
-    + instruction_data.len()
-    + size_of::<Pubkey>(); // program id;
+        + instruction_data.len()
+        + size_of::<Pubkey>(); // program id;
     let mut v = AlignedMemory::new(size, HOST_ALIGN);
 
     // Serialize into the buffer
@@ -244,7 +233,7 @@ pub fn serialize_parameters_aligned(
                     + (v.write_index() as *const u8).align_offset(BPF_ALIGN_OF_U128),
                 0,
             )
-            .map_err(|_| InstructionError::InvalidArgument)?;
+                .map_err(|_| InstructionError::InvalidArgument)?;
             v.write_u64::<LittleEndian>(keyed_account.rent_epoch()? as u64)
                 .map_err(|_| InstructionError::InvalidArgument)?;
         }
@@ -319,14 +308,12 @@ mod tests {
         mundis_program_runtime::invoke_context::{prepare_mock_invoke_context, InvokeContext},
         mundis_sdk::{
             account::{Account, AccountSharedData},
-            account_info::AccountInfo,
             bpf_loader,
             entrypoint::deserialize,
         },
         std::{
             cell::RefCell,
             rc::Rc,
-            slice::{from_raw_parts, from_raw_parts_mut},
         },
     };
 
@@ -463,12 +450,11 @@ mod tests {
 
         let ser_keyed_accounts = invoke_context.get_keyed_accounts().unwrap();
         let (mut serialized, account_lengths) = serialize_parameters(
-            &bpf_loader::id(),
             &program_id,
             &ser_keyed_accounts[1..],
             &instruction_data,
         )
-        .unwrap();
+            .unwrap();
 
         let (de_program_id, de_accounts, de_instruction_data) =
             unsafe { deserialize(&mut serialized.as_slice_mut()[0] as *mut u8) };
@@ -504,13 +490,12 @@ mod tests {
 
         let de_keyed_accounts = invoke_context.get_keyed_accounts().unwrap();
         deserialize_parameters(
-            &bpf_loader::id(),
             &de_keyed_accounts[1..],
             serialized.as_slice(),
             &account_lengths,
             true,
         )
-        .unwrap();
+            .unwrap();
         for ((_, _, key, account), de_keyed_account) in keyed_accounts.iter().zip(de_keyed_accounts)
         {
             assert_eq!(key, de_keyed_account.unsigned_key());
@@ -518,140 +503,5 @@ mod tests {
             assert_eq!(account.executable(), de_keyed_account.executable().unwrap());
             assert_eq!(account.rent_epoch(), de_keyed_account.rent_epoch().unwrap());
         }
-
-        // check serialize_parameters_unaligned
-
-        let ser_keyed_accounts = invoke_context.get_keyed_accounts().unwrap();
-        let (mut serialized, account_lengths) = serialize_parameters(
-            &bpf_loader_deprecated::id(),
-            &program_id,
-            &ser_keyed_accounts[1..],
-            &instruction_data,
-        )
-        .unwrap();
-
-        let (de_program_id, de_accounts, de_instruction_data) =
-            unsafe { deserialize_unaligned(&mut serialized.as_slice_mut()[0] as *mut u8) };
-        assert_eq!(&program_id, de_program_id);
-        assert_eq!(instruction_data, de_instruction_data);
-        for ((_, _, key, account), account_info) in keyed_accounts.iter().skip(1).zip(de_accounts) {
-            assert_eq!(key, account_info.key);
-            let account = account.borrow();
-            assert_eq!(account.lamports(), account_info.lamports());
-            assert_eq!(account.data(), &account_info.data.borrow()[..]);
-            assert_eq!(account.owner(), account_info.owner);
-            assert_eq!(account.executable(), account_info.executable);
-            assert_eq!(account.rent_epoch(), account_info.rent_epoch);
-        }
-
-        let de_keyed_accounts = invoke_context.get_keyed_accounts().unwrap();
-        deserialize_parameters(
-            &bpf_loader_deprecated::id(),
-            &de_keyed_accounts[1..],
-            serialized.as_slice(),
-            &account_lengths,
-            true,
-        )
-        .unwrap();
-        for ((_, _, key, account), de_keyed_account) in keyed_accounts.iter().zip(de_keyed_accounts)
-        {
-            assert_eq!(key, de_keyed_account.unsigned_key());
-            let account = account.borrow();
-            assert_eq!(account.lamports(), de_keyed_account.lamports().unwrap());
-            assert_eq!(
-                account.data(),
-                de_keyed_account.try_account_ref().unwrap().data()
-            );
-            assert_eq!(*account.owner(), de_keyed_account.owner().unwrap());
-            assert_eq!(account.executable(), de_keyed_account.executable().unwrap());
-            assert_eq!(account.rent_epoch(), de_keyed_account.rent_epoch().unwrap());
-        }
-    }
-
-    // the old bpf_loader in-program deserializer bpf_loader::id()
-    #[allow(clippy::type_complexity)]
-    pub unsafe fn deserialize_unaligned<'a>(
-        input: *mut u8,
-    ) -> (&'a Pubkey, Vec<AccountInfo<'a>>, &'a [u8]) {
-        let mut offset: usize = 0;
-
-        // number of accounts present
-
-        #[allow(clippy::cast_ptr_alignment)]
-        let num_accounts = *(input.add(offset) as *const u64) as usize;
-        offset += size_of::<u64>();
-
-        // account Infos
-
-        let mut accounts = Vec::with_capacity(num_accounts);
-        for _ in 0..num_accounts {
-            let dup_info = *(input.add(offset) as *const u8);
-            offset += size_of::<u8>();
-            if dup_info == std::u8::MAX {
-                #[allow(clippy::cast_ptr_alignment)]
-                let is_signer = *(input.add(offset) as *const u8) != 0;
-                offset += size_of::<u8>();
-
-                #[allow(clippy::cast_ptr_alignment)]
-                let is_writable = *(input.add(offset) as *const u8) != 0;
-                offset += size_of::<u8>();
-
-                let key: &Pubkey = &*(input.add(offset) as *const Pubkey);
-                offset += size_of::<Pubkey>();
-
-                #[allow(clippy::cast_ptr_alignment)]
-                let lamports = Rc::new(RefCell::new(&mut *(input.add(offset) as *mut u64)));
-                offset += size_of::<u64>();
-
-                #[allow(clippy::cast_ptr_alignment)]
-                let data_len = *(input.add(offset) as *const u64) as usize;
-                offset += size_of::<u64>();
-
-                let data = Rc::new(RefCell::new({
-                    from_raw_parts_mut(input.add(offset), data_len)
-                }));
-                offset += data_len;
-
-                let owner: &Pubkey = &*(input.add(offset) as *const Pubkey);
-                offset += size_of::<Pubkey>();
-
-                #[allow(clippy::cast_ptr_alignment)]
-                let executable = *(input.add(offset) as *const u8) != 0;
-                offset += size_of::<u8>();
-
-                #[allow(clippy::cast_ptr_alignment)]
-                let rent_epoch = *(input.add(offset) as *const u64);
-                offset += size_of::<u64>();
-
-                accounts.push(AccountInfo {
-                    key,
-                    is_signer,
-                    is_writable,
-                    lamports,
-                    data,
-                    owner,
-                    executable,
-                    rent_epoch,
-                });
-            } else {
-                // duplicate account, clone the original
-                accounts.push(accounts[dup_info as usize].clone());
-            }
-        }
-
-        // instruction data
-
-        #[allow(clippy::cast_ptr_alignment)]
-        let instruction_data_len = *(input.add(offset) as *const u64) as usize;
-        offset += size_of::<u64>();
-
-        let instruction_data = { from_raw_parts(input.add(offset), instruction_data_len) };
-        offset += instruction_data_len;
-
-        // program Id
-
-        let program_id: &Pubkey = &*(input.add(offset) as *const Pubkey);
-
-        (program_id, accounts, instruction_data)
     }
 }

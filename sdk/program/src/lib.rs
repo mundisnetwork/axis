@@ -10,7 +10,6 @@ pub(crate) mod atomic_u64;
 pub mod blake3;
 pub mod borsh;
 pub mod bpf_loader;
-pub mod bpf_loader_deprecated;
 pub mod bpf_loader_upgradeable;
 pub mod clock;
 pub mod debug_account_data;

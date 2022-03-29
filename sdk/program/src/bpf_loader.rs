@@ -14,4 +14,4 @@
 //! version.  An example is `bpf_loader_deprecated.rs` which requires
 //! `entrypoint_deprecated.rs`.
 
-crate::declare_id!("BPFLoader2111111111111111111111111111111111");
+crate::declare_id!("BPFLoader1111111111111111111111111111111111");
