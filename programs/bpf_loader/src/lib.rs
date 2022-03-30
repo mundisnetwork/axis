@@ -493,6 +493,8 @@ fn process_loader_upgradeable_instruction(
                 return Err(InstructionError::InvalidArgument);
             }
 
+            // TODO: Mundis: validate authority
+
             let buffer_data_offset = UpgradeableLoaderState::buffer_data_offset()?;
             let buffer_data_len = buffer.data_len()?.saturating_sub(buffer_data_offset);
             let programdata_data_offset = UpgradeableLoaderState::programdata_data_offset()?;

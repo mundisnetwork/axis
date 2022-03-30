@@ -536,7 +536,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .map(|(_key, account)| account.lamports)
         .sum::<u64>();
 
-    add_genesis_accounts(&mut genesis_config, issued_lamports - faucet_lamports);
+    add_genesis_accounts(&mut genesis_config);
 
     if let Some(values) = matches.values_of("bpf_program") {
         let values: Vec<&str> = values.collect::<Vec<_>>();

@@ -53,8 +53,6 @@ members = [
     "anima-services/memo",
     "anima-services/token",
     "anima-services/token-account",
-    "anima-services/hello",
-    "anima-services/hello2",
 ]
 
 exclude = [

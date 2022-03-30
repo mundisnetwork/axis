@@ -30,7 +30,7 @@ use {
     mundis_sdk::{
         account::Account,
         account_utils::StateMut,
-        bpf_loader, bpf_loader_deprecated,
+        bpf_loader,
         bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         instruction::{Instruction, InstructionError},
         loader_instruction,
@@ -1298,7 +1298,7 @@ fn process_show(
             .get_account_with_commitment(&account_pubkey, config.commitment)?
             .value
         {
-            if account.owner == bpf_loader::id() || account.owner == bpf_loader_deprecated::id() {
+            if account.owner == bpf_loader::id() {
                 Ok(config.output_format.formatted_string(&CliProgram {
                     program_id: account_pubkey.to_string(),
                     owner: account.owner.to_string(),
@@ -1391,7 +1391,7 @@ fn process_dump(
             .get_account_with_commitment(&account_pubkey, config.commitment)?
             .value
         {
-            if account.owner == bpf_loader::id() || account.owner == bpf_loader_deprecated::id() {
+            if account.owner == bpf_loader::id() {
                 let mut f = File::create(output_location)?;
                 f.write_all(&account.data)?;
                 Ok(format!("Wrote program to {}", output_location))
@@ -1633,7 +1633,6 @@ pub fn process_deploy(
     config: &CliConfig,
     program_location: &str,
     buffer_signer_index: Option<SignerIndex>,
-    use_deprecated_loader: bool,
     allow_excessive_balance: bool,
 ) -> ProcessResult {
     // Create ephemeral keypair to use for Buffer account, if not provided
@@ -1646,11 +1645,7 @@ pub fn process_deploy(
 
     let program_data = read_and_verify_elf(program_location)?;
     let minimum_balance = rpc_client.get_minimum_balance_for_rent_exemption(program_data.len())?;
-    let loader_id = if use_deprecated_loader {
-        bpf_loader_deprecated::id()
-    } else {
-        bpf_loader::id()
-    };
+    let loader_id = bpf_loader::id();
 
     let result = do_process_program_write_and_deploy(
         rpc_client,

@@ -60,24 +60,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
 
 [[package]]
-name = "anima-hello"
-version = "3.0.1"
-dependencies = [
- "mundis-program",
- "mundis-program-test",
- "mundis-sdk",
-]
-
-[[package]]
-name = "anima-hello2"
-version = "3.0.1"
-dependencies = [
- "mundis-program",
- "mundis-program-test",
- "mundis-sdk",
-]
-
-[[package]]
 name = "anima-memo"
 version = "3.0.1"
 dependencies = [

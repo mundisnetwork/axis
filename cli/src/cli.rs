@@ -159,7 +159,6 @@ pub enum CliCommand {
     Deploy {
         program_location: String,
         address: Option<SignerIndex>,
-        use_deprecated_loader: bool,
         allow_excessive_balance: bool,
     },
     Program(ProgramCliCommand),
@@ -748,7 +747,6 @@ pub fn parse_command(
                 command: CliCommand::Deploy {
                     program_location: matches.value_of("program_location").unwrap().to_string(),
                     address,
-                    use_deprecated_loader: matches.is_present("use_deprecated_loader"),
                     allow_excessive_balance: matches.is_present("allow_excessive_balance"),
                 },
                 signers,
@@ -1124,14 +1122,12 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
         CliCommand::Deploy {
             program_location,
             address,
-            use_deprecated_loader,
             allow_excessive_balance,
         } => process_deploy(
             rpc_client,
             config,
             program_location,
             *address,
-            *use_deprecated_loader,
             *allow_excessive_balance,
         ),
         CliCommand::Program(program_subcommand) => {

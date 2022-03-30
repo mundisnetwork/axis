@@ -6,213 +6,99 @@ use {
     mundis_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_MUN},
 };
 
-// 9 month schedule is 100% after 9 months
-const UNLOCKS_ALL_AT_9_MONTHS: UnlockInfo = UnlockInfo {
-    cliff_fraction: 1.0,
+// Team schedule: unlock after 9 months, then monthly for 24 months
+const UNLOCK_AFTER_9_MONTHS_VESTED_FOR_24: UnlockInfo = UnlockInfo {
+    cliff_fraction: 1.0 / 24.0,
     cliff_years: 0.75,
-    unlocks: 0,
-    unlock_years: 0.0,
-    custodian: "Mc5XB47H3DKJHym5RLa9mPzWv5snERsF3KNv5AauXK8",
+    unlocks: 23,
+    unlock_years: 1.0 / 12.0,
+    custodian: "MuneGztCcF9wXt5aNCuqe6Uq34nGDm86ccHWuEHhYPj",
 };
 
-// 9 month schedule is 50% after 9 months, then monthly for 2 years
-const UNLOCKS_HALF_AT_9_MONTHS: UnlockInfo = UnlockInfo {
-    cliff_fraction: 0.5,
+// Private sale schedule: unlock after 9 months, then monthly for 12 months
+const UNLOCK_AFTER_9_MONTHS_VESTED_FOR_12: UnlockInfo = UnlockInfo {
+    cliff_fraction: 1.0 / 12.0,
     cliff_years: 0.75,
-    unlocks: 24,
-    unlock_years: 2.0,
-    custodian: "Mc5XB47H3DKJHym5RLa9mPzWv5snERsF3KNv5AauXK8",
+    unlocks: 11,
+    unlock_years: 1.0 / 12.0,
+    custodian: "MuneGztCcF9wXt5aNCuqe6Uq34nGDm86ccHWuEHhYPj",
 };
 
-// no lockups
-const UNLOCKS_ALL_DAY_ZERO: UnlockInfo = UnlockInfo {
+// Foundation schedule: unlock from day 0, release monthly for 12 months
+const UNLOCK_FROM_DAY_ZERO_VESTED_FOR_12: UnlockInfo = UnlockInfo {
+    cliff_fraction: 1.0 / 12.0,
+    cliff_years: 0.0,
+    unlocks: 11,
+    unlock_years: 1.0 / 12.0,
+    custodian: "MuneGztCcF9wXt5aNCuqe6Uq34nGDm86ccHWuEHhYPj",
+};
+
+// Community fund schedule: unlock from day 0, release monthly for 24 months
+const UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24: UnlockInfo = UnlockInfo {
+    cliff_fraction: 1.0 / 24.0,
+    cliff_years: 0.0,
+    unlocks: 23,
+    unlock_years: 1.0 / 12.0,
+    custodian: "MuneGztCcF9wXt5aNCuqe6Uq34nGDm86ccHWuEHhYPj",
+};
+
+// Private sale schedule: unlock from day 0
+const UNLOCK_FROM_DAY_ZERO: UnlockInfo = UnlockInfo {
     cliff_fraction: 1.0,
     cliff_years: 0.0,
     unlocks: 0,
     unlock_years: 0.0,
-    custodian: "Mc5XB47H3DKJHym5RLa9mPzWv5snERsF3KNv5AauXK8",
+    custodian: "MuneGztCcF9wXt5aNCuqe6Uq34nGDm86ccHWuEHhYPj",
 };
+
+const TEAM_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MUN;
+const FOUNDATION_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MUN;
+const COMMUNITY_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MUN;
+const PRIVATE_SALE_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MUN;
+const PUBLIC_SALE_LAMPORTS: u64 = 20_000_000 * LAMPORTS_PER_MUN;
 
 pub const TEAM_STAKER_INFOS: &[StakerInfo] = &[
     StakerInfo {
-        name: "impossible pizza",
-        staker: "uE3TVEffRp69mrgknYr71M18GDqL7GxCNGYYRjb3oUt",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("59SLqk4ete5QttM1WmjfMA7uNJnJVFLQqXJSy9rvuj7c"),
-    },
-    StakerInfo {
-        name: "nutritious examination",
-        staker: "9noVEZreMmgQvE8iyKmxy7CGTJ2enELyuJ1qxFtXrfJB",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("ERnx3Csgu3LjrGGrCeCUZzuHguRu6XabT1kufSB1NDWi"),
-    },
-    StakerInfo {
-        name: "tidy impression",
-        staker: "BU7LA4kYvicfPCp22EM2Tth3eaeWAXYo6yCgWXQFJ42z",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("5eKcGy7ZCPJdQSQGVnfmT7kGz6MKPMKaNaMEYJbmwhuT"),
-    },
-    StakerInfo {
-        name: "dramatic treatment",
-        staker: "BrNFrFeuev8TosKhRe2kvVZTYrcUuYaqCfptWutxs17B",
-        lamports: 1_205_602 * LAMPORTS_PER_MUN,
-        withdrawer: Some("2pKqwFKfKj2nGrknPNDSP8vXGYrgAjd28fT6yLew8sT3"),
-    },
-    StakerInfo {
-        name: "angry noise",
-        staker: "34HCVh8Yx4jNkaeLUQEKibFKUZDPQMjWzkXy8qUfdhS4",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("Hw3sP6PreBtFCnwXbNvUypMhty62GXibjfiZ1zHBXFk6"),
-    },
-    StakerInfo {
-        name: "hard cousin",
-        staker: "AyZb3xrZE8wnS6gYBdsJg5v8CjyrX2ZGXU2zMakCFyYd",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("9j3WzBSZRHrD2DbzFTUVVi81QX6boVvUTpGWcSiMwD5W"),
-    },
-    StakerInfo {
-        name: "lopsided skill",
-        staker: "7SbpY8LmZUb5XRqDbyoreUrSVVV9c39wkpEz81kEAXu5",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("EJyZGbQ1PmpcWxfqGME6SUNHfurh1zggDqCT7rV9xLzL"),
-    },
-    StakerInfo {
-        name: "red snake",
-        staker: "C9CfFpmLDsQsz6wt7MrrZquNB5oS4QkpJkmDAiboVEZZ",
-        lamports: 3_655_292 * LAMPORTS_PER_MUN,
-        withdrawer: Some("JBGnGdLyo7V2z9hz51mnnbyDp9sBACtw5WYH9YRG8n7e"),
-    },
-    StakerInfo {
-        name: "jolly year",
-        staker: "5WbxKiW7bghkr8JN6ZAv2TQt4PfJFvtuqNaN8gyQ5UzU",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("43XAfG3AFiF1ockdh7xp91fpFyZkbWSZq9ZFBCGUVV41"),
-    },
-    StakerInfo {
-        name: "typical initiative",
-        staker: "Gc8XnHU6Nnriwt9RbEwi7PTosx4YanLyXak9GTbB8VaH",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("7s2GVwFo8VSrCwX9Tztt42ueiEaUtJ6zCEHU8XGvuf5E"),
-    },
-    StakerInfo {
-        name: "deserted window",
-        staker: "AMmYEynkd78uNTZDFFrMw6NKjWTgqW7M8EFjvajk23VR",
-        lamports: 3_655_292 * LAMPORTS_PER_MUN,
-        withdrawer: Some("23PJYLS1WFLqhXnXq2Hobc17DbvZaoinoTZYLyGRT8E2"),
-    },
-    StakerInfo {
-        name: "eight nation",
-        staker: "4qWoqt71p7h6siSDS6osu4oVWpw8R7E6uYYiY7Z6oJbH",
-        lamports: 103_519 * LAMPORTS_PER_MUN,
-        withdrawer: Some("6bFjx3egMjVsGKFb445564a4bwgibwbUB2tVFsJcdPv7"),
-    },
-    StakerInfo {
-        name: "earsplitting meaning",
-        staker: "GYitoBY53E9awc56NWHJ2kxMwj4do5GSmvTRowjGaRDw",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("jXMEkVQQpoqebVMGN7DfpvdRLwJDEkoVNrwPVphNm7i"),
-    },
-    StakerInfo {
-        name: "alike cheese",
-        staker: "Drg9uSvSEfjtn15jqmmrEQnA4pvU1ToYSGSa1Dv9C6Fk",
-        lamports: 3_880_295 * LAMPORTS_PER_MUN,
-        withdrawer: Some("BxmwgfnyAqZnqRCJGdsEea35pcc92GFTcyGeSj4RNfJJ"),
-    },
-    StakerInfo {
-        name: "noisy honey",
-        staker: "95HsPFFvwbWpk42MKzenauSoULNzk8Tg6fc6EiJhLsUZ",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("Aj3K933zdRQhYEJi2Yjz8hJWXN3Z3hrKJQtPtE8VmUnq"),
-    },
-];
-
-pub const SERVICE_STAKER_INFOS: &[StakerInfo] = &[
-    StakerInfo {
-        name: "wretched texture",
-        staker: "B1hegzthtfNQxyEPzkESySxRjMidNqaxrzbQ28GaEwn8",
-        lamports: 225_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("HWzeqw1Yk5uiLgT2uGUim5ocFJNCwYUFbeCtDVpx9yUb"),
-    },
-    StakerInfo {
-        name: "unbecoming silver",
-        staker: "4AcoZa1P8fF5XK21RJsiuMRZPEScbbWNc75oakRFHiBz",
-        lamports: 28_800 * LAMPORTS_PER_MUN,
-        withdrawer: None,
-    },
-    StakerInfo {
-        name: "inexpensive uncle",
-        staker: "AkJ7yssRqS3X4UWLUsPTxbP6LfVgdPYBWH4Jgk5EETgZ",
-        lamports: 300_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("6mudxxoe5VyXXNXsJ3NSGSTGESfG2t86PBCQGbouHpXX"),
-    },
-    StakerInfo {
-        name: "hellish money",
-        staker: "4DVkqvRP8y26JvzNwsnQEQuC7HASwpGs58GsAT9XJMVg",
-        lamports: 200_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("ASJpWZAxY96kbciLqzb7sg45gsH32yPzGcxjn7HPcARn"),
-    },
-    StakerInfo {
-        name: "full grape",
-        staker: "B2EWnwgmNd3KMpD71yZMijhML1jd4TYp96zJdhMiWZ7b",
-        lamports: 450_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("9oaCkokBBhgBsgyg4sL7fMJyQseaJb1TbADZeoPdpWdc"),
-    },
-    StakerInfo {
-        name: "nice ghost",
-        staker: "HtQS1CH3nsUHmnLpenj5W6KHzFWTf3mzCn1mTqK7LkB7",
-        lamports: 650_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("4YnNnycEZXCkuVs2hDthdNxMD4E8wc7ZPgyAK7Lm1uZc"),
+        name: "team members",
+        staker: "Mungt5u1FJvZSouWrmMScXPRhPiPkgaPe9VepeouWGx",
+        lamports: TEAM_LAMPORTS,
+        withdrawer: Some("47cDa9zStSNbUfGksjQ2NktFPMYzV4MXADZjW73Gtfkt"),
     },
 ];
 
 pub const FOUNDATION_STAKER_INFOS: &[StakerInfo] = &[
     StakerInfo {
-        name: "lyrical supermarket",
-        staker: "4xh7vtQCTim3vgpQ1dQQWjtKrBSkbtL3s15FimXVJAAP",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("C7WS9ic7KN9XNcLsNoMvzTvbzURM3rFGDEQN7qJMWNLn"),
-    },
-    StakerInfo {
-        name: "frequent description",
-        staker: "95Nf8XfoecteSXU9nbcvzkrFQdu6FqPaH3EvhwLaC83t",
-        lamports: 57_500_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("FdGYQdiRky8NZzN9wZtczTBcWLYYRXrJ3LMDhqDPn5rM"),
-    },
-];
-
-pub const GRANTS_STAKER_INFOS: &[StakerInfo] = &[
-    StakerInfo {
-        name: "rightful agreement",
-        staker: "8w5cgUQfXAZZWyVgenPHpQ1uABXUVLnymqXbuZPx7yqt",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("EDwSQShtUWQtmFfN9SpUUd6hgonL7tRdxngAsNKv9Pe6"),
-    },
-    StakerInfo {
-        name: "tasty location",
-        staker: "9eyXtP43dCp59oyvWG2R7WQCeJ2bA6TWoLzXg1KTDfQQ",
-        lamports: 15_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("9BgvWHerNACjnx6ZpK51k2LEsnwBP3gFwWDzhKkHKH1m"),
+        name: "mundis foundation",
+        staker: "MuniJ25yadvJLo6jBAsdkqktAFwNNsGwct1czmqokPQ",
+        lamports: FOUNDATION_LAMPORTS,
+        withdrawer: Some("9uNarXA3yf3KyHwPi7vdvUhVw3t3odWJyVT1Hkx8R9nn"),
     },
 ];
 
 pub const COMMUNITY_STAKER_INFOS: &[StakerInfo] = &[
     StakerInfo {
-        name: "shrill charity",
-        staker: "Eo1iDtrZZiAkQFA8u431hedChaSUnPbU8MWg849MFvEZ",
-        lamports: 5_000_000 * LAMPORTS_PER_MUN,
-        withdrawer: Some("8CUUMKYNGxdgYio5CLHRHyzMEhhVRMcqefgE6dLqnVRK"),
+        name: "community fund",
+        staker: "MunNDg3VKB2CheJaNfPqWZ8mkmYUhCNZpVD4Rrgs28t",
+        lamports: COMMUNITY_LAMPORTS,
+        withdrawer: Some("6WJdj215EX9y3dLJgEr91uSrHjRj84Ba2HcEZ2dKqi1c"),
     },
+];
+
+pub const PRIVATE_SALE_STAKER_INFOS: &[StakerInfo] = &[
     StakerInfo {
-        name: "legal gate",
-        staker: "7KCzZCbZz6V1U1YXUpBNaqQzQCg2DKo8JsNhKASKtYxe",
-        lamports: 30_301_032 * LAMPORTS_PER_MUN,
-        withdrawer: Some("92viKFftk1dJjqJwreFqT2qHXxjSUuEE9VyHvTdY1mpY"),
+        name: "private sale",
+        staker: "MunW6M8aJrWPevTEACPuwuSaRz8mRtCuKyognBDqzVL",
+        lamports: PRIVATE_SALE_LAMPORTS,
+        withdrawer: Some("J53uBDDJ2FhBDYcDWZwTM2nSYNohxGrMdBNceqzR145T"),
     },
+];
+
+pub const PUBLIC_SALE_STAKER_INFOS: &[StakerInfo] = &[
     StakerInfo {
-        name: "cluttered complaint",
-        staker: "2J8mJU6tWg78DdQVEqMfpN3rMeNbcRT9qGL3yLbmSXYL",
-        lamports: 153_333_633 * LAMPORTS_PER_MUN + 41 * LAMPORTS_PER_MUN / 100,
-        withdrawer: Some("7kgfDmgbEfypBujqn4tyApjf8H7ZWuaL3F6Ah9vQHzgR"),
+        name: "public sale",
+        staker: "MunitENa3moqh2xBmJ3a1BnL4H9Uukb3GDrgTYbqtPz",
+        lamports: PUBLIC_SALE_LAMPORTS,
+        withdrawer: Some("EdCwp8FbeB8dLCtUCMc9qieF8YwF8oowkgHd6cGT1TRn"),
     },
 ];
 
@@ -227,55 +113,49 @@ fn add_stakes(
         .sum::<u64>()
 }
 
-pub fn add_genesis_accounts(genesis_config: &mut GenesisConfig, mut issued_lamports: u64) {
+pub fn add_genesis_accounts(genesis_config: &mut GenesisConfig) {
     // add_stakes() and add_validators() award tokens for rent exemption and
     //  to cover an initial transfer-free period of the network
 
-    issued_lamports += add_stakes(
+    let total_lamports = add_stakes(
         genesis_config,
-        TEAM_STAKER_INFOS,
-        &UNLOCKS_HALF_AT_9_MONTHS,
+        COMMUNITY_STAKER_INFOS,
+        &UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24,
     ) + add_stakes(
         genesis_config,
-        SERVICE_STAKER_INFOS,
-        &UNLOCKS_ALL_AT_9_MONTHS,
+        PRIVATE_SALE_STAKER_INFOS,
+        &UNLOCK_AFTER_9_MONTHS_VESTED_FOR_12,
+    ) + add_stakes(
+        genesis_config,
+        PUBLIC_SALE_STAKER_INFOS,
+        &UNLOCK_FROM_DAY_ZERO,
+    ) + add_stakes(
+        genesis_config,
+        TEAM_STAKER_INFOS,
+        &UNLOCK_AFTER_9_MONTHS_VESTED_FOR_24,
     ) + add_stakes(
         genesis_config,
         FOUNDATION_STAKER_INFOS,
-        &UNLOCKS_ALL_DAY_ZERO,
-    ) + add_stakes(
-        genesis_config,
-        GRANTS_STAKER_INFOS,
-        &UNLOCKS_ALL_DAY_ZERO,
-    ) + add_stakes(
-        genesis_config,
-        COMMUNITY_STAKER_INFOS,
-        &UNLOCKS_ALL_DAY_ZERO,
+        &UNLOCK_FROM_DAY_ZERO_VESTED_FOR_12,
     );
 
-    // "one thanks" (community pool) gets 400_000_000SOL (total) - above distributions
-    create_and_add_stakes(
-        genesis_config,
-        &StakerInfo {
-            name: "one thanks",
-            staker: "7vEAL3nS9CWmy1q6njUUyHE7Cf5RmyQpND6CsoHjzPiR",
-            lamports: (400_000_000 * LAMPORTS_PER_MUN).saturating_sub(issued_lamports),
-            withdrawer: Some("3FFaheyqtyAXZSYxDzsr5CVKvJuvZD1WE1VEsBtDbRqB"),
-        },
-        &UNLOCKS_ALL_DAY_ZERO,
-        None,
-    );
+    assert_eq!(400_000_000 * LAMPORTS_PER_MUN, total_lamports);
 }
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+    use mundis_sdk::clock::Epoch;
+    use mundis_sdk::epoch_schedule::EpochSchedule;
+    use mundis_sdk::native_token::lamports_to_mun;
+    use crate::unlocks::Unlocks;
     use super::*;
 
     #[test]
     fn test_add_genesis_accounts() {
         let mut genesis_config = GenesisConfig::default();
 
-        add_genesis_accounts(&mut genesis_config, 0);
+        add_genesis_accounts(&mut genesis_config);
 
         let lamports = genesis_config
             .accounts
@@ -284,5 +164,111 @@ mod tests {
             .sum::<u64>();
 
         assert_eq!(400_000_000 * LAMPORTS_PER_MUN, lamports);
+    }
+
+    #[test]
+    fn test_distribution() {
+        let mut genesis_config = GenesisConfig::default();
+        add_genesis_accounts(&mut genesis_config);
+
+        // expected config
+        const EPOCHS_PER_MONTH: Epoch = 2;
+        // one tick/sec
+        let tick_duration = Duration::new(1, 0);
+        // one tick per slot
+        let ticks_per_slot = 1;
+        // two-week epochs at one second per slot
+        let epoch_schedule = EpochSchedule::custom(14 * 24 * 60 * 60, 0, false);
+
+        // Team
+        println!("------------- Team Schedule -------------");
+        assert_eq!(
+            TEAM_LAMPORTS,
+            Unlocks::new(
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24.cliff_fraction,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24.cliff_years,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24.unlocks,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24.unlock_years,
+                &epoch_schedule,
+                &tick_duration,
+                ticks_per_slot,
+            ).map(|unlock| {
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(TEAM_LAMPORTS)));
+                return unlock.amount(TEAM_LAMPORTS);
+            })
+                .sum::<u64>()
+        );
+
+        println!("------------- Foundation Schedule -------------");
+        assert_eq!(
+            FOUNDATION_LAMPORTS,
+            Unlocks::new(
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_12.cliff_fraction,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_12.cliff_years,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_12.unlocks,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_12.unlock_years,
+                &epoch_schedule,
+                &tick_duration,
+                ticks_per_slot,
+            ).map(|unlock| {
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(FOUNDATION_LAMPORTS)));
+                return unlock.amount(FOUNDATION_LAMPORTS);
+            })
+                .sum::<u64>()
+        );
+
+        println!("------------- Community Schedule -------------");
+        assert_eq!(
+            COMMUNITY_LAMPORTS,
+            Unlocks::new(
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24.cliff_fraction,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24.cliff_years,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24.unlocks,
+                UNLOCK_FROM_DAY_ZERO_VESTED_FOR_24.unlock_years,
+                &epoch_schedule,
+                &tick_duration,
+                ticks_per_slot,
+            ).map(|unlock| {
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(COMMUNITY_LAMPORTS)));
+                return unlock.amount(COMMUNITY_LAMPORTS);
+            })
+                .sum::<u64>()
+        );
+
+        println!("------------- Private Sale Schedule -------------");
+        assert_eq!(
+            PRIVATE_SALE_LAMPORTS,
+            Unlocks::new(
+                UNLOCK_AFTER_9_MONTHS_VESTED_FOR_12.cliff_fraction,
+                UNLOCK_AFTER_9_MONTHS_VESTED_FOR_12.cliff_years,
+                UNLOCK_AFTER_9_MONTHS_VESTED_FOR_12.unlocks,
+                UNLOCK_AFTER_9_MONTHS_VESTED_FOR_12.unlock_years,
+                &epoch_schedule,
+                &tick_duration,
+                ticks_per_slot,
+            ).map(|unlock| {
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(PRIVATE_SALE_LAMPORTS)));
+                return unlock.amount(PRIVATE_SALE_LAMPORTS);
+            })
+                .sum::<u64>()
+        );
+
+        println!("------------- Public Sale Schedule -------------");
+        assert_eq!(
+            PUBLIC_SALE_LAMPORTS,
+            Unlocks::new(
+                UNLOCK_FROM_DAY_ZERO.cliff_fraction,
+                UNLOCK_FROM_DAY_ZERO.cliff_years,
+                UNLOCK_FROM_DAY_ZERO.unlocks,
+                UNLOCK_FROM_DAY_ZERO.unlock_years,
+                &epoch_schedule,
+                &tick_duration,
+                ticks_per_slot,
+            ).map(|unlock| {
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(PUBLIC_SALE_LAMPORTS)));
+                return unlock.amount(PUBLIC_SALE_LAMPORTS);
+            })
+                .sum::<u64>()
+        );
     }
 }
