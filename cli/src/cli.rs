@@ -1947,7 +1947,6 @@ mod tests {
                 command: CliCommand::Deploy {
                     program_location: "/Users/test/program.o".to_string(),
                     address: None,
-                    use_deprecated_loader: false,
                     allow_excessive_balance: false,
                 },
                 signers: vec![read_keypair_file(&keypair_file).unwrap().into()],
@@ -1969,7 +1968,6 @@ mod tests {
                 command: CliCommand::Deploy {
                     program_location: "/Users/test/program.o".to_string(),
                     address: Some(1),
-                    use_deprecated_loader: false,
                     allow_excessive_balance: false,
                 },
                 signers: vec![
@@ -2362,7 +2360,6 @@ mod tests {
         config.command = CliCommand::Deploy {
             program_location: pathbuf.to_str().unwrap().to_string(),
             address: None,
-            use_deprecated_loader: false,
             allow_excessive_balance: false,
         };
         config.output_format = OutputFormat::JsonCompact;
@@ -2382,7 +2379,6 @@ mod tests {
         config.command = CliCommand::Deploy {
             program_location: "bad/file/location.so".to_string(),
             address: None,
-            use_deprecated_loader: false,
             allow_excessive_balance: false,
         };
         assert!(process_command(&config).is_err());

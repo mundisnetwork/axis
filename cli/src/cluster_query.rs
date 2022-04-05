@@ -2135,32 +2135,6 @@ mod tests {
             }
         );
 
-        let test_fees = test_commands.clone().get_matches_from(vec!["test", "fees"]);
-        assert_eq!(
-            parse_command(&test_fees, &default_signer, &mut None).unwrap(),
-            CliCommandInfo {
-                command: CliCommand::Fees { blockhash: None },
-                signers: vec![],
-            }
-        );
-
-        let blockhash = Hash::new_unique();
-        let test_fees = test_commands.clone().get_matches_from(vec![
-            "test",
-            "fees",
-            "--blockhash",
-            &blockhash.to_string(),
-        ]);
-        assert_eq!(
-            parse_command(&test_fees, &default_signer, &mut None).unwrap(),
-            CliCommandInfo {
-                command: CliCommand::Fees {
-                    blockhash: Some(blockhash)
-                },
-                signers: vec![],
-            }
-        );
-
         let slot = 100;
         let test_get_block_time =
             test_commands
