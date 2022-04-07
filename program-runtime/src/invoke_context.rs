@@ -13,8 +13,8 @@ use {
     mundis_sdk::{
         account::{AccountSharedData, ReadableAccount},
         feature_set::{
-            cap_accounts_data_len, do_support_realloc, neon_evm_compute_budget,
-            reject_empty_instruction_without_program, requestable_heap_size,
+            cap_accounts_data_len, do_support_realloc,
+            reject_empty_instruction_without_program,
             tx_wide_compute_cap, FeatureSet,
         },
         hash::Hash,
@@ -288,22 +288,7 @@ impl<'a> InvokeContext<'a> {
             return Err(InstructionError::UnsupportedProgramId);
         }
         if self.invoke_stack.is_empty() {
-            let mut compute_budget = self.compute_budget;
-            if !self.feature_set.is_active(&tx_wide_compute_cap::id())
-                && self.feature_set.is_active(&neon_evm_compute_budget::id())
-                && program_id == Some(&crate::neon_evm_program::id())
-            {
-                // Bump the compute budget for neon_evm
-                compute_budget.max_units = compute_budget.max_units.max(500_000);
-            }
-            if !self.feature_set.is_active(&requestable_heap_size::id())
-                && self.feature_set.is_active(&neon_evm_compute_budget::id())
-                && program_id == Some(&crate::neon_evm_program::id())
-            {
-                // Bump the compute budget for neon_evm
-                compute_budget.heap_size = Some(256_usize.saturating_mul(1024));
-            }
-            self.current_compute_budget = compute_budget;
+            self.current_compute_budget = self.compute_budget;
 
             if !self.feature_set.is_active(&tx_wide_compute_cap::id()) {
                 self.compute_meter = ComputeMeter::new_ref(self.current_compute_budget.max_units);

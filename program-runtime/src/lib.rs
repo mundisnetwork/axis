@@ -5,7 +5,6 @@ pub mod compute_budget;
 pub mod instruction_recorder;
 pub mod invoke_context;
 pub mod log_collector;
-pub mod neon_evm_program;
 pub mod pre_account;
 pub mod stable_log;
 pub mod sysvar_cache;
