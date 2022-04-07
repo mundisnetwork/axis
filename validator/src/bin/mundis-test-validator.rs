@@ -163,19 +163,6 @@ fn main() {
                 .help("Enable the unstable RPC PubSub `voteSubscribe` subscription"),
         )
         .arg(
-            Arg::with_name("bpf_program")
-                .long("bpf-program")
-                .value_name("ADDRESS_OR_PATH BPF_PROGRAM.SO")
-                .takes_value(true)
-                .number_of_values(2)
-                .multiple(true)
-                .help(
-                    "Add a BPF program to the genesis configuration. \
-                       If the ledger already exists then this parameter is silently ignored. \
-                       First argument can be a public key or path to file that can be parsed as a keypair",
-                ),
-        )
-        .arg(
             Arg::with_name("account")
                 .long("account")
                 .value_name("ADDRESS FILENAME.JSON")
@@ -187,12 +174,6 @@ fn main() {
                         an account to file). Files are searched for relatively to CWD and tests/fixtures. \
                         If the ledger already exists then this parameter is silently ignored",
                 ),
-        )
-        .arg(
-            Arg::with_name("no_bpf_jit")
-                .long("no-bpf-jit")
-                .takes_value(false)
-                .help("Disable the just-in-time compiler and instead use the interpreter for BPF. Windows always disables JIT."),
         )
         .arg(
             Arg::with_name("ticks_per_slot")
@@ -449,40 +430,6 @@ fn main() {
         faucet_port,
     ));
 
-    let mut programs_to_load = vec![];
-    if let Some(values) = matches.values_of("bpf_program") {
-        let values: Vec<&str> = values.collect::<Vec<_>>();
-        for address_program in values.chunks(2) {
-            match address_program {
-                [address, program] => {
-                    let address = address
-                        .parse::<Pubkey>()
-                        .or_else(|_| read_keypair_file(address).map(|keypair| keypair.pubkey()))
-                        .unwrap_or_else(|err| {
-                            println!("Error: invalid address {}: {}", address, err);
-                            exit(1);
-                        });
-
-                    let program_path = PathBuf::from(program);
-                    if !program_path.exists() {
-                        println!(
-                            "Error: program file does not exist: {}",
-                            program_path.display()
-                        );
-                        exit(1);
-                    }
-
-                    programs_to_load.push(ProgramInfo {
-                        program_id: address,
-                        loader: mundis_sdk::bpf_loader::id(),
-                        program_path,
-                    });
-                }
-                _ => unreachable!(),
-            }
-        }
-    }
-
     let mut accounts_to_load = vec![];
     if let Some(values) = matches.values_of("account") {
         let values: Vec<&str> = values.collect::<Vec<_>>();
@@ -563,7 +510,6 @@ fn main() {
 
     if TestValidatorGenesis::ledger_exists(&ledger_path) {
         for (name, long) in &[
-            ("bpf_program", "--bpf-program"),
             ("clone_account", "--clone"),
             ("account", "--account"),
             ("mint_address", "--mint"),
@@ -636,9 +582,7 @@ fn main() {
             enable_vote_subscription,
             ..PubSubConfig::default()
         })
-        .bpf_jit(!matches.is_present("no_bpf_jit"))
         .rpc_port(rpc_port)
-        .add_programs_with_path(&programs_to_load)
         .add_accounts_from_json_files(&accounts_to_load)
         .deactivate_features(&features_to_deactivate);
 

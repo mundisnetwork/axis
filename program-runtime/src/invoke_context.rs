@@ -5,7 +5,6 @@ use {
         ic_logger_msg, ic_msg,
         instruction_recorder::InstructionRecorder,
         log_collector::LogCollector,
-        native_loader::NativeLoader,
         pre_account::PreAccount,
         sysvar_cache::SysvarCache,
         timings::{ExecuteDetailsTimings, ExecuteTimings},
@@ -17,7 +16,7 @@ use {
         bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         feature_set::{
             cap_accounts_data_len, do_support_realloc, neon_evm_compute_budget,
-            reject_empty_instruction_without_program, remove_native_loader, requestable_heap_size,
+            reject_empty_instruction_without_program, requestable_heap_size,
             tx_wide_compute_cap, FeatureSet,
         },
         hash::Hash,
@@ -826,11 +825,6 @@ impl<'a> InvokeContext<'a> {
                     );
                 }
             }
-            if !self.feature_set.is_active(&remove_native_loader::id()) {
-                let native_loader = NativeLoader::default();
-                // Call the program via the native loader
-                return native_loader.process_instruction(0, instruction_data, self);
-            }
         } else {
             for entry in self.builtin_programs {
                 if entry.program_id == *owner_id {
@@ -865,23 +859,6 @@ impl<'a> InvokeContext<'a> {
             .checked_sub(1)
             .ok_or(InstructionError::CallDepth)?;
         frame.keyed_accounts[first_instruction_account].owner()
-    }
-
-    /// Removes the first keyed account
-    #[deprecated(
-        since = "1.9.0",
-        note = "To be removed together with remove_native_loader"
-    )]
-    pub fn remove_first_keyed_account(&mut self) -> Result<(), InstructionError> {
-        if !self.feature_set.is_active(&remove_native_loader::id()) {
-            let stack_frame = &mut self
-                .invoke_stack
-                .last_mut()
-                .ok_or(InstructionError::CallDepth)?;
-            stack_frame.keyed_accounts_range.start =
-                stack_frame.keyed_accounts_range.start.saturating_add(1);
-        }
-        Ok(())
     }
 
     /// Get the list of keyed accounts

@@ -211,10 +211,6 @@ pub mod optimize_epoch_boundary_updates {
     mundis_sdk::declare_id!("265hPS8k8xJ37ot82KEgjRunsUp5w4n4Q4VwwiN9i9ps");
 }
 
-pub mod remove_native_loader {
-    mundis_sdk::declare_id!("HTTgmruMYRZEntyL3EdCDdnS6e4D5wRq1FA7kQsb66qq");
-}
-
 pub mod send_to_tpu_vote_port {
     mundis_sdk::declare_id!("C5fh68nJ7uyKAuYZg2x9sEQ5YrVf3dkW6oojNBSc3Jvo");
 }
@@ -354,7 +350,6 @@ lazy_static! {
         (do_support_realloc::id(), "support account data reallocation"),
         (prevent_calling_precompiles_as_programs::id(), "prevent calling precompiles as programs"),
         (optimize_epoch_boundary_updates::id(), "optimize epoch boundary updates"),
-        (remove_native_loader::id(), "remove support for the native loader"),
         (send_to_tpu_vote_port::id(), "send votes to the tpu vote port"),
         (turbine_peers_shuffle::id(), "turbine peers shuffle patch"),
         (requestable_heap_size::id(), "Requestable heap frame size"),

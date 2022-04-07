@@ -1,6 +1,6 @@
 use {
     crate::{
-        clap_app::*, cluster_query::*, feature::*, inflation::*, nonce::*, program::*,
+        clap_app::*, cluster_query::*, feature::*, inflation::*, nonce::*,
         spend_utils::*, stake::*, validator_info::*, vote::*, wallet::*,
     },
     clap::{crate_description, crate_name, value_t_or_exit, ArgMatches, Shell},
@@ -152,13 +152,7 @@ pub enum CliCommand {
         destination_account_pubkey: Pubkey,
         lamports: u64,
     },
-    // Program Deployment
-    Deploy {
-        program_location: String,
-        address: Option<SignerIndex>,
-        allow_excessive_balance: bool,
-    },
-    Program(ProgramCliCommand),
+
     // Stake Commands
     CreateStakeAccount {
         stake_account: SignerIndex,
@@ -724,27 +718,6 @@ pub fn parse_command(
         ("withdraw-from-nonce-account", Some(matches)) => {
             parse_withdraw_from_nonce_account(matches, default_signer, wallet_manager)
         }
-        // Program Deployment
-        ("deploy", Some(matches)) => {
-            let (address_signer, _address) = signer_of(matches, "address_signer", wallet_manager)?;
-            let mut signers = vec![default_signer.signer_from_path(matches, wallet_manager)?];
-            let address = address_signer.map(|signer| {
-                signers.push(signer);
-                1
-            });
-
-            Ok(CliCommandInfo {
-                command: CliCommand::Deploy {
-                    program_location: matches.value_of("program_location").unwrap().to_string(),
-                    address,
-                    allow_excessive_balance: matches.is_present("allow_excessive_balance"),
-                },
-                signers,
-            })
-        }
-        ("program", Some(matches)) => {
-            parse_program_subcommand(matches, default_signer, wallet_manager)
-        }
         ("wait-for-max-stake", Some(matches)) => {
             let max_stake_percent = value_t_or_exit!(matches, "max_percent", f32);
             Ok(CliCommandInfo {
@@ -1104,24 +1077,6 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             destination_account_pubkey,
             *lamports,
         ),
-
-        // Program Deployment
-
-        // Deploy a custom program to the chain
-        CliCommand::Deploy {
-            program_location,
-            address,
-            allow_excessive_balance,
-        } => process_deploy(
-            rpc_client,
-            config,
-            program_location,
-            *address,
-            *allow_excessive_balance,
-        ),
-        CliCommand::Program(program_subcommand) => {
-            process_program_subcommand(rpc_client, config, program_subcommand)
-        }
 
         // Stake Commands
 
@@ -1933,47 +1888,6 @@ mod tests {
                     program_id: stake::program::id(),
                 },
                 signers: vec![read_keypair_file(&keypair_file).unwrap().into()],
-            }
-        );
-
-        // Test Deploy Subcommand
-        let test_command =
-            test_commands
-                .clone()
-                .get_matches_from(vec!["test", "deploy", "/Users/test/program.o"]);
-        assert_eq!(
-            parse_command(&test_command, &default_signer, &mut None).unwrap(),
-            CliCommandInfo {
-                command: CliCommand::Deploy {
-                    program_location: "/Users/test/program.o".to_string(),
-                    address: None,
-                    allow_excessive_balance: false,
-                },
-                signers: vec![read_keypair_file(&keypair_file).unwrap().into()],
-            }
-        );
-
-        let custom_address = Keypair::new();
-        let custom_address_file = make_tmp_path("custom_address_file");
-        write_keypair_file(&custom_address, &custom_address_file).unwrap();
-        let test_command = test_commands.clone().get_matches_from(vec![
-            "test",
-            "deploy",
-            "/Users/test/program.o",
-            &custom_address_file,
-        ]);
-        assert_eq!(
-            parse_command(&test_command, &default_signer, &mut None).unwrap(),
-            CliCommandInfo {
-                command: CliCommand::Deploy {
-                    program_location: "/Users/test/program.o".to_string(),
-                    address: Some(1),
-                    allow_excessive_balance: false,
-                },
-                signers: vec![
-                    read_keypair_file(&keypair_file).unwrap().into(),
-                    read_keypair_file(&custom_address_file).unwrap().into(),
-                ],
             }
         );
 

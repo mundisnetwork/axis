@@ -1,6 +1,6 @@
 use {
     crate::{
-        cli::*, cluster_query::*, feature::*, inflation::*, nonce::*, program::*, stake::*,
+        cli::*, cluster_query::*, feature::*, inflation::*, nonce::*, stake::*,
         validator_info::*, vote::*, wallet::*,
     },
     clap::{App, AppSettings, Arg, ArgGroup, SubCommand},
@@ -124,7 +124,6 @@ pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> A
         .feature_subcommands()
         .inflation_subcommands()
         .nonce_subcommands()
-        .program_subcommands()
         .stake_subcommands()
         .validator_info_subcommands()
         .vote_subcommands()

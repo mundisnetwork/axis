@@ -93,9 +93,7 @@ pub struct TestValidatorGenesis {
     pubsub_config: PubSubConfig,
     rpc_ports: Option<(u16, u16)>, // (JsonRpc, JsonRpcPubSub), None == random ports
     warp_slot: Option<Slot>,
-    no_bpf_jit: bool,
     accounts: HashMap<Pubkey, AccountSharedData>,
-    programs: Vec<ProgramInfo>,
     ticks_per_slot: Option<u64>,
     epoch_schedule: Option<EpochSchedule>,
     node_config: TestValidatorNodeConfig,
@@ -120,9 +118,7 @@ impl Default for TestValidatorGenesis {
             pubsub_config: PubSubConfig::default(),
             rpc_ports: Option::<(u16, u16)>::default(),
             warp_slot: Option::<Slot>::default(),
-            no_bpf_jit: bool::default(),
             accounts: HashMap::<Pubkey, AccountSharedData>::default(),
-            programs: Vec::<ProgramInfo>::default(),
             ticks_per_slot: Option::<u64>::default(),
             epoch_schedule: Option::<EpochSchedule>::default(),
             node_config: TestValidatorNodeConfig::default(),
@@ -203,11 +199,6 @@ impl TestValidatorGenesis {
 
     pub fn warp_slot(&mut self, warp_slot: Slot) -> &mut Self {
         self.warp_slot = Some(warp_slot);
-        self
-    }
-
-    pub fn bpf_jit(&mut self, bpf_jit: bool) -> &mut Self {
-        self.no_bpf_jit = !bpf_jit;
         self
     }
 
@@ -343,31 +334,6 @@ impl TestValidatorGenesis {
         )
     }
 
-    /// Add a BPF program to the test environment.
-    ///
-    /// `program_name` will also used to locate the BPF shared object in the current or fixtures
-    /// directory.
-    pub fn add_program(&mut self, program_name: &str, program_id: Pubkey) -> &mut Self {
-        let program_path = mundis_program_test::find_file(&format!("{}.so", program_name))
-            .unwrap_or_else(|| panic!("Unable to locate program {}", program_name));
-
-        self.programs.push(ProgramInfo {
-            program_id,
-            loader: mundis_sdk::bpf_loader::id(),
-            program_path,
-        });
-        self
-    }
-
-    /// Add a list of programs to the test environment.
-    ///pub fn add_programs_with_path<'a>(&'a mut self, programs: &[ProgramInfo]) -> &'a mut Self {
-    pub fn add_programs_with_path(&mut self, programs: &[ProgramInfo]) -> &mut Self {
-        for program in programs {
-            self.programs.push(program.clone());
-        }
-        self
-    }
-
     /// Start a test validator with the address of the mint account that will receive tokens
     /// created at genesis.
     ///
@@ -481,19 +447,6 @@ impl TestValidator {
         let mut accounts = config.accounts.clone();
         for (address, account) in mundis_program_test::programs::anima_programs(&config.rent) {
             accounts.entry(address).or_insert(account);
-        }
-        for program in &config.programs {
-            let data = mundis_program_test::read_file(&program.program_path);
-            accounts.insert(
-                program.program_id,
-                AccountSharedData::from(Account {
-                    lamports: Rent::default().minimum_balance(data.len()).min(1),
-                    data,
-                    owner: program.loader,
-                    executable: true,
-                    rent_epoch: 0,
-                }),
-            );
         }
 
         let mut genesis_config = create_genesis_config_with_leader_ex(
@@ -649,7 +602,6 @@ impl TestValidator {
             }),
             enforce_ulimit_nofile: false,
             warp_slot: config.warp_slot,
-            bpf_jit: !config.no_bpf_jit,
             validator_exit: config.validator_exit.clone(),
             rocksdb_compaction_interval: Some(100), // Compact every 100 slots
             max_ledger_shreds: config.max_ledger_shreds,
