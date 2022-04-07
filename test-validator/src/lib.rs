@@ -54,13 +54,6 @@ pub struct AccountInfo<'a> {
     pub filename: &'a str,
 }
 
-#[derive(Clone)]
-pub struct ProgramInfo {
-    pub program_id: Pubkey,
-    pub loader: Pubkey,
-    pub program_path: PathBuf,
-}
-
 #[derive(Debug)]
 pub struct TestValidatorNodeConfig {
     gossip_addr: SocketAddr,
@@ -253,10 +246,37 @@ impl TestValidatorGenesis {
         self
     }
 
+    fn find_file(filename: &str) -> Option<PathBuf> {
+        let mut search_path = vec![];
+        search_path.push(PathBuf::from("tests/fixtures"));
+        if let Ok(dir) = std::env::current_dir() {
+            search_path.push(dir);
+        }
+
+        for dir in search_path {
+            let candidate = dir.join(&filename);
+            if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+        None
+    }
+
+    fn read_file<P: AsRef<Path>>(path: P) -> Vec<u8> {
+        let path = path.as_ref();
+        let mut file = File::open(path)
+            .unwrap_or_else(|err| panic!("Failed to open \"{}\": {}", path.display(), err));
+
+        let mut file_data = Vec::new();
+        file.read_to_end(&mut file_data)
+            .unwrap_or_else(|err| panic!("Failed to read \"{}\": {}", path.display(), err));
+        file_data
+    }
+
     pub fn add_accounts_from_json_files(&mut self, accounts: &[AccountInfo]) -> &mut Self {
         for account in accounts {
             let account_path =
-                mundis_program_test::find_file(account.filename).unwrap_or_else(|| {
+                TestValidatorGenesis::find_file(account.filename).unwrap_or_else(|| {
                     error!("Unable to locate {}", account.filename);
                     mundis_core::validator::abort();
                 });
@@ -300,8 +320,8 @@ impl TestValidatorGenesis {
             address,
             AccountSharedData::from(Account {
                 lamports,
-                data: mundis_program_test::read_file(
-                    mundis_program_test::find_file(filename).unwrap_or_else(|| {
+                data: TestValidatorGenesis::read_file(
+                    TestValidatorGenesis::find_file(filename).unwrap_or_else(|| {
                         panic!("Unable to locate {}", filename);
                     }),
                 ),
@@ -444,10 +464,7 @@ impl TestValidator {
         let validator_stake_lamports = mun_to_lamports(1_000_000.);
         let mint_lamports = mun_to_lamports(500_000_000.);
 
-        let mut accounts = config.accounts.clone();
-        for (address, account) in mundis_program_test::programs::anima_programs(&config.rent) {
-            accounts.entry(address).or_insert(account);
-        }
+        let accounts = config.accounts.clone();
 
         let mut genesis_config = create_genesis_config_with_leader_ex(
             mint_lamports,

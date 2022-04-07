@@ -547,7 +547,6 @@ pub type ProcessCallback = Arc<dyn Fn(&Bank) + Sync + Send>;
 
 #[derive(Default, Clone)]
 pub struct ProcessOptions {
-    pub bpf_jit: bool,
     pub poh_verify: bool,
     pub full_leader_cache: bool,
     pub dev_halt_at_slot: Option<Slot>,
@@ -590,7 +589,7 @@ pub fn process_blockstore(
         genesis_config,
         account_paths,
         opts.debug_keys.clone(),
-        Some(&crate::builtins::get(opts.bpf_jit)),
+        Some(&crate::builtins::get()),
         opts.account_indexes.clone(),
         opts.accounts_db_caching_enabled,
         opts.shrink_ratio,

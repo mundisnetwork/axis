@@ -326,7 +326,7 @@ impl Accounts {
                             .unwrap_or_default();
 
                         if bpf_loader_upgradeable::check_id(account.owner()) {
-                            if message.is_writable(i) && !message.is_upgradeable_loader_present() {
+                            if message.is_writable(i) {
                                 error_counters.invalid_writable_account += 1;
                                 return Err(TransactionError::InvalidWritableAccount);
                             }

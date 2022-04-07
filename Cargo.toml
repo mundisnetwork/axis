@@ -27,7 +27,6 @@ members = [
     "measure",
     "metrics",
     "poh",
-    "program-test",
     "programs/address-lookup-table",
     "programs/bpf_loader",
     "programs/bpf_loader/gen-syscall-list",
@@ -49,10 +48,6 @@ members = [
     "rayon-threadlimit",
     "replica-lib",
     "test-validator",
-
-    "anima-services/memo",
-    "anima-services/token",
-    "anima-services/token-account",
 ]
 
 exclude = [

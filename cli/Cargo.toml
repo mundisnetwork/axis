@@ -25,7 +25,6 @@ serde = "1.0.130"
 serde_derive = "1.0.103"
 serde_json = "1.0.72"
 mundis-account-decoder = { path = "../account-decoder", version = "=1.9.14" }
-mundis-bpf-loader-program = { path = "../programs/bpf_loader", version = "=1.9.14" }
 mundis-clap-utils = { path = "../clap-utils", version = "=1.9.14" }
 mundis-cli-config = { path = "../cli-config", version = "=1.9.14" }
 mundis-cli-output = { path = "../cli-output", version = "=1.9.14" }

@@ -71,9 +71,6 @@ pub mod banks_server;
 pub mod rpc_banks_service;
 mod error;
 
-#[macro_use]
-extern crate mundis_bpf_loader_program;
-
 /// Errors from the program test environment
 #[derive(Error, Debug, PartialEq)]
 pub enum ProgramTestError {

@@ -253,14 +253,6 @@ impl SanitizedMessage {
             .collect()
     }
 
-    /// Inspect all message keys for the bpf upgradeable loader
-    pub fn is_upgradeable_loader_present(&self) -> bool {
-        match self {
-            Self::Legacy(message) => message.is_upgradeable_loader_present(),
-            Self::V0(message) => message.is_upgradeable_loader_present(),
-        }
-    }
-
     /// If the message uses a durable nonce, return the pubkey of the nonce account
     pub fn get_durable_nonce(&self, nonce_must_be_writable: bool) -> Option<&Pubkey> {
         self.instructions()

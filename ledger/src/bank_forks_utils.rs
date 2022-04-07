@@ -172,7 +172,7 @@ fn load_from_snapshot(
             &account_paths,
             genesis_config,
             process_options.debug_keys.clone(),
-            Some(&crate::builtins::get(process_options.bpf_jit)),
+            Some(&crate::builtins::get()),
             process_options.account_indexes.clone(),
             process_options.accounts_db_caching_enabled,
             process_options.limit_load_slot_count_from_snapshot,
