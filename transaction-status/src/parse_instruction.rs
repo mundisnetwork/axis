@@ -20,8 +20,6 @@ use {
 
 lazy_static! {
     static ref ASSOCIATED_TOKEN_PROGRAM_ID: Pubkey = anima_associated_token_id();
-    static ref BPF_LOADER_PROGRAM_ID: Pubkey = mundis_sdk::bpf_loader::id();
-    static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = mundis_sdk::bpf_loader_upgradeable::id();
     static ref MEMO_PROGRAM_ID: Pubkey = anima_memo_id();
     static ref STAKE_PROGRAM_ID: Pubkey = stake::program::id();
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();

@@ -64,7 +64,6 @@ name = "anima-memo"
 version = "3.0.1"
 dependencies = [
  "mundis-program",
- "mundis-program-test",
  "mundis-sdk",
 ]
 
@@ -87,7 +86,6 @@ version = "1.0.3"
 dependencies = [
  "anima-token",
  "mundis-program",
- "mundis-program-test",
  "mundis-sdk",
 ]
 
@@ -1131,18 +1129,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "educe"
-version = "0.4.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f86b50932a01e7ec5c06160492ab660fb19b6bb2a7878030dd6cd68d21df9d4d"
-dependencies = [
- "enum-ordinalize",
- "proc-macro2 1.0.32",
- "quote 1.0.10",
- "syn 1.0.81",
-]
-
-[[package]]
 name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1178,19 +1164,6 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c134c37760b27a871ba422106eedbb8247da973a09e82558bf26d619c882b159"
 dependencies = [
- "proc-macro2 1.0.32",
- "quote 1.0.10",
- "syn 1.0.81",
-]
-
-[[package]]
-name = "enum-ordinalize"
-version = "3.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b166c9e378360dd5a6666a9604bb4f54ae0cac39023ffbac425e917a2a04fef"
-dependencies = [
- "num-bigint",
- "num-traits",
  "proc-macro2 1.0.32",
  "quote 1.0.10",
  "syn 1.0.81",
@@ -1498,13 +1471,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
 dependencies = [
  "byteorder",
-]
-
-[[package]]
-name = "gen-syscall-list"
-version = "1.9.14"
-dependencies = [
- "regex",
 ]
 
 [[package]]
@@ -2479,24 +2445,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mundis-bpf-loader-program"
-version = "1.9.14"
-dependencies = [
- "bincode",
- "byteorder",
- "libsecp256k1",
- "log 0.4.14",
- "mundis-measure",
- "mundis-metrics",
- "mundis-program-runtime",
- "mundis-runtime",
- "mundis-sdk",
- "rand 0.7.3",
- "solana_rbpf",
- "thiserror",
-]
-
-[[package]]
 name = "mundis-cargo-build-bpf"
 version = "1.9.14"
 dependencies = [
@@ -3163,33 +3111,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mundis-program-test"
-version = "1.9.14"
-dependencies = [
- "assert_matches",
- "async-trait",
- "base64 0.12.3",
- "bincode",
- "borsh",
- "chrono-humanize",
- "futures 0.3.18",
- "log 0.4.14",
- "mundis-logger",
- "mundis-program",
- "mundis-program-runtime",
- "mundis-runtime",
- "mundis-sdk",
- "mundis-send-transaction-service",
- "mundis-vote-program",
- "serde",
- "tarpc",
- "thiserror",
- "tokio",
- "tokio-serde",
- "tokio-stream",
-]
-
-[[package]]
 name = "mundis-rayon-threadlimit"
 version = "1.9.14"
 dependencies = [
@@ -3715,17 +3636,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-bigint"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74e768dff5fb39a41b3bcd30bb25cf989706c90d028d1ad71971987aa309d535"
-dependencies = [
- "autocfg 1.0.1",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
 name = "num-derive"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3871,23 +3781,6 @@ dependencies = [
  "openssl-src",
  "pkg-config",
  "vcpkg",
-]
-
-[[package]]
-name = "opentelemetry"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1cf9b1c4e9a6c4de793c632496fa490bdc0e1eea73f0c91394f7b6990935d22"
-dependencies = [
- "async-trait",
- "crossbeam-channel",
- "futures 0.3.18",
- "js-sys",
- "lazy_static",
- "percent-encoding 2.1.0",
- "pin-project",
- "rand 0.8.4",
- "thiserror",
 ]
 
 [[package]]
@@ -5171,15 +5064,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sharded-slab"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "900fba806f70c630b0a382d0d825e17a0f19fcd059a2ade1ff237bcddf446b31"
-dependencies = [
- "lazy_static",
-]
-
-[[package]]
 name = "shlex"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5507,41 +5391,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tarpc"
-version = "0.27.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b85d0a9369a919ba0db919b142a2b704cd207dfc676f7a43c2d105d0bc225487"
-dependencies = [
- "anyhow",
- "fnv",
- "futures 0.3.18",
- "humantime",
- "opentelemetry",
- "pin-project",
- "rand 0.8.4",
- "serde",
- "static_assertions",
- "tarpc-plugins",
- "thiserror",
- "tokio",
- "tokio-serde",
- "tokio-util",
- "tracing",
- "tracing-opentelemetry",
-]
-
-[[package]]
-name = "tarpc-plugins"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ee42b4e559f17bce0385ebf511a7beb67d5cc33c12c96b7f4e9789919d9c10f"
-dependencies = [
- "proc-macro2 1.0.32",
- "quote 1.0.10",
- "syn 1.0.81",
-]
-
-[[package]]
 name = "tempfile"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5608,15 +5457,6 @@ name = "thread-scoped"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bcbb6aa301e5d3b0b5ef639c9a9c7e2f1c944f177b460c04dc24c69b1fa2bd99"
-
-[[package]]
-name = "thread_local"
-version = "1.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5516c27b78311c50bf42c071425c560ac799b11c30b31f87e3081965fe5e0180"
-dependencies = [
- "once_cell",
-]
 
 [[package]]
 name = "tikv-jemalloc-sys"
@@ -5835,22 +5675,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-serde"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "911a61637386b789af998ee23f50aa30d5fd7edcec8d6d3dedae5e5815205466"
-dependencies = [
- "bincode",
- "bytes 1.1.0",
- "educe",
- "futures-core",
- "futures-sink",
- "pin-project",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "tokio-stream"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5908,7 +5732,6 @@ dependencies = [
  "futures-sink",
  "log 0.4.14",
  "pin-project-lite",
- "slab",
  "tokio",
 ]
 
@@ -6039,29 +5862,6 @@ checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
 dependencies = [
  "pin-project",
  "tracing",
-]
-
-[[package]]
-name = "tracing-opentelemetry"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "599f388ecb26b28d9c1b2e4437ae019a7b336018b45ed911458cd9ebf91129f6"
-dependencies = [
- "opentelemetry",
- "tracing",
- "tracing-core",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "tracing-subscriber"
-version = "0.2.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e0d2eaa99c3c2e41547cfa109e910a68ea03823cccad4a0525dcbc9b01e8c71"
-dependencies = [
- "sharded-slab",
- "thread_local",
- "tracing-core",
 ]
 
 [[package]]
