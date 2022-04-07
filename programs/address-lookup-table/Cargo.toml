@@ -1,5 +1,6 @@
 [package]
 name = "mundis-address-lookup-table-program"
+description = "Create collections of related addresses on-chain for concise use in a transaction's account inputs"
 version = "1.9.14"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
