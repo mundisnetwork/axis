@@ -2,7 +2,6 @@ use {
     crate::{
         extract_memos::anima_memo_id,
         parse_associated_token::{parse_associated_token, anima_associated_token_id},
-        parse_bpf_loader::{parse_bpf_loader, parse_bpf_upgradeable_loader},
         parse_stake::parse_stake,
         parse_system::parse_system,
         parse_token::parse_token,
@@ -37,11 +36,6 @@ lazy_static! {
         for anima_token_id in anima_token_ids() {
             m.insert(anima_token_id, ParsableProgram::AnimaToken);
         }
-        m.insert(*BPF_LOADER_PROGRAM_ID, ParsableProgram::BpfLoader);
-        m.insert(
-            *BPF_UPGRADEABLE_LOADER_PROGRAM_ID,
-            ParsableProgram::BpfUpgradeableLoader,
-        );
         m.insert(*STAKE_PROGRAM_ID, ParsableProgram::Stake);
         m.insert(*SYSTEM_PROGRAM_ID, ParsableProgram::System);
         m.insert(*VOTE_PROGRAM_ID, ParsableProgram::Vote);
@@ -87,8 +81,6 @@ pub enum ParsableProgram {
     AnimaTokenAccount,
     AnimaMemo,
     AnimaToken,
-    BpfLoader,
-    BpfUpgradeableLoader,
     Stake,
     System,
     Vote,
@@ -108,12 +100,6 @@ pub fn parse(
         }
         ParsableProgram::AnimaMemo => parse_memo(instruction)?,
         ParsableProgram::AnimaToken => serde_json::to_value(parse_token(instruction, account_keys)?)?,
-        ParsableProgram::BpfLoader => {
-            serde_json::to_value(parse_bpf_loader(instruction, account_keys)?)?
-        }
-        ParsableProgram::BpfUpgradeableLoader => {
-            serde_json::to_value(parse_bpf_upgradeable_loader(instruction, account_keys)?)?
-        }
         ParsableProgram::Stake => serde_json::to_value(parse_stake(instruction, account_keys)?)?,
         ParsableProgram::System => serde_json::to_value(parse_system(instruction, account_keys)?)?,
         ParsableProgram::Vote => serde_json::to_value(parse_vote(instruction, account_keys)?)?,
