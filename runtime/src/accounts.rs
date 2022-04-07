@@ -27,7 +27,6 @@ use {
     mundis_sdk::{
         account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
         account_utils::StateMut,
-        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         clock::{BankId, Slot, INITIAL_RENT_EPOCH},
         feature_set::{self, tx_wide_compute_cap, FeatureSet},
         fee::FeeStructure,
@@ -325,34 +324,7 @@ impl Accounts {
                             })
                             .unwrap_or_default();
 
-                        if bpf_loader_upgradeable::check_id(account.owner()) {
-                            if message.is_writable(i) {
-                                error_counters.invalid_writable_account += 1;
-                                return Err(TransactionError::InvalidWritableAccount);
-                            }
-
-                            if account.executable() {
-                                // The upgradeable loader requires the derived ProgramData account
-                                if let Ok(UpgradeableLoaderState::Program {
-                                    programdata_address,
-                                }) = account.state()
-                                {
-                                    if let Some((programdata_account, _)) = self
-                                        .accounts_db
-                                        .load_with_fixed_root(ancestors, &programdata_address)
-                                    {
-                                        account_deps
-                                            .push((programdata_address, programdata_account));
-                                    } else {
-                                        error_counters.account_not_found += 1;
-                                        return Err(TransactionError::ProgramAccountNotFound);
-                                    }
-                                } else {
-                                    error_counters.invalid_program_for_execution += 1;
-                                    return Err(TransactionError::InvalidProgramForExecution);
-                                }
-                            }
-                        } else if account.executable() && message.is_writable(i) {
+                        if account.executable() && message.is_writable(i) {
                             error_counters.invalid_writable_account += 1;
                             return Err(TransactionError::InvalidWritableAccount);
                         }
@@ -485,33 +457,6 @@ impl Accounts {
             // Add loader to chain
             let program_owner = *program.owner();
             account_indices.insert(0, program_account_index);
-            if bpf_loader_upgradeable::check_id(&program_owner) {
-                // The upgradeable loader requires the derived ProgramData account
-                if let Ok(UpgradeableLoaderState::Program {
-                    programdata_address,
-                }) = program.state()
-                {
-                    let programdata_account_index = match self
-                        .accounts_db
-                        .load_with_fixed_root(ancestors, &programdata_address)
-                    {
-                        Some((programdata_account, _)) => {
-                            let account_index = accounts.len();
-                            accounts.push((programdata_address, programdata_account));
-                            account_index
-                        }
-                        None => {
-                            error_counters.account_not_found += 1;
-                            return Err(TransactionError::ProgramAccountNotFound);
-                        }
-                    };
-                    account_indices.insert(0, programdata_account_index);
-                } else {
-                    error_counters.invalid_program_for_execution += 1;
-                    return Err(TransactionError::InvalidProgramForExecution);
-                }
-            }
-
             program_id = program_owner;
         }
         Ok(account_indices)
@@ -2139,186 +2084,6 @@ mod tests {
         // Mark executables as readonly
         message.account_keys = vec![key0, key1, key2]; // revert key change
         message.header.num_readonly_unsigned_accounts = 2; // mark both executables as readonly
-        let tx = Transaction::new(&[&keypair], message, Hash::default());
-        let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
-
-        assert_eq!(error_counters.invalid_writable_account, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        let result = loaded_accounts[0].0.as_ref().unwrap();
-        assert_eq!(result.accounts[..2], accounts[..2]);
-        assert_eq!(result.accounts[result.program_indices[0][0]], accounts[2]);
-    }
-
-    #[test]
-    fn test_load_accounts_upgradeable_with_write_lock() {
-        let mut accounts: Vec<(Pubkey, AccountSharedData)> = Vec::new();
-        let mut error_counters = ErrorCounters::default();
-
-        let keypair = Keypair::new();
-        let key0 = keypair.pubkey();
-        let key1 = Pubkey::new(&[5u8; 32]);
-        let key2 = Pubkey::new(&[6u8; 32]);
-        let programdata_key1 = Pubkey::new(&[7u8; 32]);
-        let programdata_key2 = Pubkey::new(&[8u8; 32]);
-
-        let mut account = AccountSharedData::new(1, 0, &Pubkey::default());
-        account.set_rent_epoch(1);
-        accounts.push((key0, account));
-
-        let program_data = UpgradeableLoaderState::ProgramData {
-            slot: 42,
-            upgrade_authority_address: None,
-        };
-
-        let program = UpgradeableLoaderState::Program {
-            programdata_address: programdata_key1,
-        };
-        let mut account =
-            AccountSharedData::new_data(40, &program, &bpf_loader_upgradeable::id()).unwrap();
-        account.set_executable(true);
-        account.set_rent_epoch(1);
-        accounts.push((key1, account));
-        let mut account =
-            AccountSharedData::new_data(40, &program_data, &bpf_loader_upgradeable::id()).unwrap();
-        account.set_rent_epoch(1);
-        accounts.push((programdata_key1, account));
-
-        let program = UpgradeableLoaderState::Program {
-            programdata_address: programdata_key2,
-        };
-        let mut account =
-            AccountSharedData::new_data(40, &program, &bpf_loader_upgradeable::id()).unwrap();
-        account.set_executable(true);
-        account.set_rent_epoch(1);
-        accounts.push((key2, account));
-        let mut account =
-            AccountSharedData::new_data(40, &program_data, &bpf_loader_upgradeable::id()).unwrap();
-        account.set_rent_epoch(1);
-        accounts.push((programdata_key2, account));
-
-        let mut account = AccountSharedData::new(40, 1, &native_loader::id()); // create mock bpf_loader_upgradeable
-        account.set_executable(true);
-        account.set_rent_epoch(1);
-        accounts.push((bpf_loader_upgradeable::id(), account));
-
-        let instructions = vec![CompiledInstruction::new(2, &(), vec![0, 1])];
-        let mut message = Message::new_with_compiled_instructions(
-            1,
-            0,
-            1, // only one executable marked as readonly
-            vec![key0, key1, key2],
-            Hash::default(),
-            instructions,
-        );
-        let tx = Transaction::new(&[&keypair], message.clone(), Hash::default());
-        let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
-
-        assert_eq!(error_counters.invalid_writable_account, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        assert_eq!(
-            loaded_accounts[0],
-            (Err(TransactionError::InvalidWritableAccount), None)
-        );
-
-        // Solution 1: include bpf_loader_upgradeable account
-        message.account_keys = vec![key0, key1, bpf_loader_upgradeable::id()];
-        let tx = Transaction::new(&[&keypair], message.clone(), Hash::default());
-        let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
-
-        assert_eq!(error_counters.invalid_writable_account, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        let result = loaded_accounts[0].0.as_ref().unwrap();
-        assert_eq!(result.accounts[..2], accounts[..2]);
-        assert_eq!(result.accounts[result.program_indices[0][0]], accounts[5]);
-
-        // Solution 2: mark programdata as readonly
-        message.account_keys = vec![key0, key1, key2]; // revert key change
-        message.header.num_readonly_unsigned_accounts = 2; // mark both executables as readonly
-        let tx = Transaction::new(&[&keypair], message, Hash::default());
-        let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
-
-        assert_eq!(error_counters.invalid_writable_account, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        let result = loaded_accounts[0].0.as_ref().unwrap();
-        assert_eq!(result.accounts[..2], accounts[..2]);
-        assert_eq!(result.accounts[result.program_indices[0][0]], accounts[5]);
-        assert_eq!(result.accounts[result.program_indices[0][1]], accounts[4]);
-        assert_eq!(result.accounts[result.program_indices[0][2]], accounts[3]);
-    }
-
-    #[test]
-    fn test_load_accounts_programdata_with_write_lock() {
-        let mut accounts: Vec<(Pubkey, AccountSharedData)> = Vec::new();
-        let mut error_counters = ErrorCounters::default();
-
-        let keypair = Keypair::new();
-        let key0 = keypair.pubkey();
-        let key1 = Pubkey::new(&[5u8; 32]);
-        let key2 = Pubkey::new(&[6u8; 32]);
-
-        let mut account = AccountSharedData::new(1, 0, &Pubkey::default());
-        account.set_rent_epoch(1);
-        accounts.push((key0, account));
-
-        let program_data = UpgradeableLoaderState::ProgramData {
-            slot: 42,
-            upgrade_authority_address: None,
-        };
-        let mut account =
-            AccountSharedData::new_data(40, &program_data, &bpf_loader_upgradeable::id()).unwrap();
-        account.set_rent_epoch(1);
-        accounts.push((key1, account));
-
-        let mut account = AccountSharedData::new(40, 1, &native_loader::id());
-        account.set_executable(true);
-        account.set_rent_epoch(1);
-        accounts.push((key2, account));
-
-        let instructions = vec![CompiledInstruction::new(2, &(), vec![0, 1])];
-        let mut message = Message::new_with_compiled_instructions(
-            1,
-            0,
-            1, // only the program marked as readonly
-            vec![key0, key1, key2],
-            Hash::default(),
-            instructions,
-        );
-        let tx = Transaction::new(&[&keypair], message.clone(), Hash::default());
-        let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
-
-        assert_eq!(error_counters.invalid_writable_account, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        assert_eq!(
-            loaded_accounts[0],
-            (Err(TransactionError::InvalidWritableAccount), None)
-        );
-
-        // Solution 1: include bpf_loader_upgradeable account
-        let mut account = AccountSharedData::new(40, 1, &native_loader::id()); // create mock bpf_loader_upgradeable
-        account.set_executable(true);
-        account.set_rent_epoch(1);
-        let accounts_with_upgradeable_loader = vec![
-            accounts[0].clone(),
-            accounts[1].clone(),
-            (bpf_loader_upgradeable::id(), account),
-        ];
-        message.account_keys = vec![key0, key1, bpf_loader_upgradeable::id()];
-        let tx = Transaction::new(&[&keypair], message.clone(), Hash::default());
-        let loaded_accounts =
-            load_accounts(tx, &accounts_with_upgradeable_loader, &mut error_counters);
-
-        assert_eq!(error_counters.invalid_writable_account, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        let result = loaded_accounts[0].0.as_ref().unwrap();
-        assert_eq!(result.accounts[..2], accounts_with_upgradeable_loader[..2]);
-        assert_eq!(
-            result.accounts[result.program_indices[0][0]],
-            accounts_with_upgradeable_loader[2]
-        );
-
-        // Solution 2: mark programdata as readonly
-        message.account_keys = vec![key0, key1, key2]; // revert key change
-        message.header.num_readonly_unsigned_accounts = 2; // extend readonly set to include programdata
         let tx = Transaction::new(&[&keypair], message, Hash::default());
         let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
 

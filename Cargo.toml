@@ -36,8 +36,6 @@ members = [
     "rpc",
     "runtime",
     "sdk",
-    "sdk/cargo-build-bpf",
-    "sdk/cargo-test-bpf",
     "send-transaction-service",
     "transaction-status",
     "net-utils",

@@ -12,8 +12,6 @@ use {
     mundis_measure::measure::Measure,
     mundis_sdk::{
         account::{AccountSharedData, ReadableAccount},
-        account_utils::StateMut,
-        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         feature_set::{
             cap_accounts_data_len, do_support_realloc, neon_evm_compute_budget,
             reject_empty_instruction_without_program, requestable_heap_size,
@@ -685,32 +683,6 @@ impl<'a> InvokeContext<'a> {
             return Err(InstructionError::AccountNotExecutable);
         }
         let mut program_indices = vec![];
-        if program_account.borrow().owner() == &bpf_loader_upgradeable::id() {
-            if let UpgradeableLoaderState::Program {
-                programdata_address,
-            } = program_account.borrow().state()?
-            {
-                if let Some((programdata_account_index, _programdata_account)) =
-                    self.get_account(&programdata_address)
-                {
-                    program_indices.push(programdata_account_index);
-                } else {
-                    ic_msg!(
-                        self,
-                        "Unknown upgradeable programdata account {}",
-                        programdata_address,
-                    );
-                    return Err(InstructionError::MissingAccount);
-                }
-            } else {
-                ic_msg!(
-                    self,
-                    "Invalid upgradeable program account {}",
-                    callee_program_id,
-                );
-                return Err(InstructionError::MissingAccount);
-            }
-        }
         program_indices.push(program_account_index);
 
         Ok((message, caller_write_privileges, program_indices))
