@@ -774,7 +774,6 @@ impl<'a> InvokeContext<'a> {
         if mundis_sdk::native_loader::check_id(owner_id) {
             for entry in self.builtin_programs {
                 if entry.program_id == *root_id {
-                    println!("#### Calling program: {}", entry.program_id.to_string());
                     // Call the builtin program
                     return (entry.process_instruction)(
                         1, // root_id to be skipped
