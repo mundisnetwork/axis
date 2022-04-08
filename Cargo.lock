@@ -3410,6 +3410,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mundis-token-program"
+version = "1.9.14"
+dependencies = [
+ "arrayref",
+ "mundis-program",
+ "mundis-sdk",
+ "num-derive",
+ "num-traits",
+ "num_enum",
+ "thiserror",
+]
+
+[[package]]
 name = "mundis-transaction-status"
 version = "1.9.14"
 dependencies = [

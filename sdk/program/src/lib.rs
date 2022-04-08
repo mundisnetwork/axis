@@ -74,6 +74,12 @@ pub mod memo {
     }
 }
 
+pub mod token {
+    pub mod program {
+        crate::declare_id!("Token11111111111111111111111111111111111111");
+    }
+}
+
 /// Same as `declare_id` except report that this id has been deprecated
 pub use mundis_sdk_macro::program_declare_deprecated_id as declare_deprecated_id;
 /// Convenience macro to declare a static public key and functions to interact with it
