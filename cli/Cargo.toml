@@ -39,7 +39,7 @@ mundis-sdk = { path = "../sdk", version = "=1.9.14" }
 mundis-transaction-status = { path = "../transaction-status", version = "=1.9.14" }
 mundis-version = { path = "../version", version = "=1.9.14" }
 mundis-vote-program = { path = "../programs/vote", version = "=1.9.14" }
-anima-memo = { path = "../anima-services/memo", version = "=3.0.1", features = ["no-entrypoint"] }
+mundis-memo-program = { path = "../programs/memo", version = "=1.9.14" }
 thiserror = "1.0.30"
 tiny-bip39 = "0.8.2"
 

@@ -14,7 +14,7 @@ pub fn anima_memo_id() -> Pubkey {
 }
 
 lazy_static! {
-    static ref MEMO_PROGRAM_ID: Pubkey = Pubkey::new_from_array(anima_memo::id().to_bytes());
+    static ref MEMO_PROGRAM_ID: Pubkey = Pubkey::new_from_array(mundis_sdk::memo::program::id().to_bytes());
 }
 
 pub fn extract_and_fmt_memos<T: ExtractMemos>(message: &T) -> Option<String> {

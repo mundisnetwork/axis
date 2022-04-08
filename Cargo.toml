@@ -32,6 +32,7 @@ members = [
     "programs/config",
     "programs/stake",
     "programs/vote",
+    "programs/memo",
     "remote-wallet",
     "rpc",
     "runtime",
@@ -45,13 +46,8 @@ members = [
     "replica-lib",
     "test-validator",
 
-    "anima-services/memo",
     "anima-services/token",
     "anima-services/token-account",
-]
-
-exclude = [
-    "programs/bpf",
 ]
 
 # TODO: Remove once the "simd-accel" feature from the reed-solomon-erasure

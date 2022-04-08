@@ -203,6 +203,11 @@ fn genesis_builtins() -> Vec<Builtin> {
             "config_program",
             mundis_config_program::id(),
             with_program_logging!(mundis_config_program::config_processor::process_instruction),
+        ),
+        Builtin::new(
+            "memo_program",
+            mundis_memo_program::id(),
+            with_program_logging!(mundis_memo_program::memo_processor::process_instruction),
         )
     ]
 }

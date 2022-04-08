@@ -202,7 +202,7 @@ impl Faucet {
                             )
                         );
                         let memo_instruction = Instruction {
-                            program_id: Pubkey::new(&anima_memo::id().to_bytes()),
+                            program_id: Pubkey::new(&mundis_sdk::memo::program::id().to_bytes()),
                             accounts: vec![],
                             data: memo.as_bytes().to_vec(),
                         };

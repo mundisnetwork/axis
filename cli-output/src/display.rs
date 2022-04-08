@@ -8,7 +8,6 @@ use {
         program_utils::limited_deserialize, pubkey::Pubkey, stake, transaction::Transaction,
     },
     mundis_transaction_status::UiTransactionStatusMeta,
-    anima_memo::{id as anima_memo_id},
     std::{collections::HashMap, fmt, io},
 };
 
@@ -31,7 +30,7 @@ impl Default for BuildBalanceMessageConfig {
 
 fn is_memo_program(k: &Pubkey) -> bool {
     let k_str = k.to_string();
-    k_str == anima_memo_id().to_string()
+    k_str == mundis_sdk::memo::program::id().to_string()
 }
 
 pub fn build_balance_message_with_config(

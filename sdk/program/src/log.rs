@@ -40,12 +40,6 @@ macro_rules! msg {
 /// @param message - Message to print
 #[inline]
 pub fn sol_log(message: &str) {
-    #[cfg(target_arch = "bpf")]
-    unsafe {
-        sol_log_(message.as_ptr(), message.len() as u64);
-    }
-
-    #[cfg(not(target_arch = "bpf"))]
     crate::program_stubs::sol_log(message);
 }
 

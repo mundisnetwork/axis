@@ -26,7 +26,6 @@ use {
     },
 };
 
-mod vote_state_0_23_5;
 pub mod vote_state_versions;
 pub use vote_state_versions::*;
 

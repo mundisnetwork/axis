@@ -20,7 +20,7 @@ mundis-logger = { path = "../logger", version = "=1.9.14" }
 mundis-metrics = { path = "../metrics", version = "=1.9.14" }
 mundis-sdk = { path = "../sdk", version = "=1.9.14" }
 mundis-version = { path = "../version", version = "=1.9.14" }
-anima-memo = { path = "../anima-services/memo", version = "=3.0.1", features = ["no-entrypoint"] }
+mundis-memo-program = { path = "../programs/memo", version = "=1.9.14" }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 

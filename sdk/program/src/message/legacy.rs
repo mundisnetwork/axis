@@ -26,7 +26,7 @@ use {
 
 lazy_static! {
     // Copied keys over since direct references create cyclical dependency.
-    pub static ref BUILTIN_PROGRAMS_KEYS: [Pubkey; 7] = {
+    pub static ref BUILTIN_PROGRAMS_KEYS: [Pubkey; 8] = {
         let parse = |s| Pubkey::from_str(s).unwrap();
         [
             parse("Config1111111111111111111111111111111111111"),
@@ -35,6 +35,7 @@ lazy_static! {
             parse("Stake11111111111111111111111111111111111111"),
             parse("StakeConfig11111111111111111111111111111111"),
             parse("Vote111111111111111111111111111111111111111"),
+            parse("Memo111111111111111111111111111111111111111"),
             system_program::id(),
         ]
     };

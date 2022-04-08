@@ -60,14 +60,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
 
 [[package]]
-name = "anima-memo"
-version = "3.0.1"
-dependencies = [
- "mundis-program",
- "mundis-sdk",
-]
-
-[[package]]
 name = "anima-token"
 version = "3.2.0"
 dependencies = [
@@ -2434,7 +2426,6 @@ dependencies = [
 name = "mundis-cli"
 version = "1.9.14"
 dependencies = [
- "anima-memo",
  "bincode",
  "bs58",
  "clap",
@@ -2452,6 +2443,7 @@ dependencies = [
  "mundis-config-program",
  "mundis-faucet",
  "mundis-logger",
+ "mundis-memo-program",
  "mundis-program-runtime",
  "mundis-remote-wallet",
  "mundis-sdk",
@@ -2491,7 +2483,6 @@ name = "mundis-cli-output"
 version = "1.9.14"
 dependencies = [
  "Inflector",
- "anima-memo",
  "base64 0.13.0",
  "chrono",
  "clap",
@@ -2501,6 +2492,7 @@ dependencies = [
  "mundis-account-decoder",
  "mundis-clap-utils",
  "mundis-client",
+ "mundis-memo-program",
  "mundis-sdk",
  "mundis-transaction-status",
  "mundis-vote-program",
@@ -2669,7 +2661,6 @@ dependencies = [
 name = "mundis-faucet"
 version = "1.9.14"
 dependencies = [
- "anima-memo",
  "bincode",
  "byteorder",
  "clap",
@@ -2677,6 +2668,7 @@ dependencies = [
  "mundis-clap-utils",
  "mundis-cli-config",
  "mundis-logger",
+ "mundis-memo-program",
  "mundis-metrics",
  "mundis-sdk",
  "mundis-version",
@@ -2896,6 +2888,26 @@ version = "1.9.14"
 dependencies = [
  "log 0.4.14",
  "mundis-sdk",
+]
+
+[[package]]
+name = "mundis-memo-program"
+version = "1.9.14"
+dependencies = [
+ "bincode",
+ "log 0.4.14",
+ "mundis-frozen-abi",
+ "mundis-frozen-abi-macro",
+ "mundis-logger",
+ "mundis-metrics",
+ "mundis-program-runtime",
+ "mundis-sdk",
+ "num-derive",
+ "num-traits",
+ "rustc_version 0.4.0",
+ "serde",
+ "serde_derive",
+ "thiserror",
 ]
 
 [[package]]
@@ -3187,6 +3199,7 @@ dependencies = [
  "mundis-frozen-abi-macro",
  "mundis-logger",
  "mundis-measure",
+ "mundis-memo-program",
  "mundis-metrics",
  "mundis-program-runtime",
  "mundis-rayon-threadlimit",
@@ -3401,7 +3414,6 @@ name = "mundis-transaction-status"
 version = "1.9.14"
 dependencies = [
  "Inflector",
- "anima-memo",
  "anima-token",
  "anima-token-account",
  "base64 0.12.3",
@@ -3411,6 +3423,7 @@ dependencies = [
  "log 0.4.14",
  "mundis-account-decoder",
  "mundis-measure",
+ "mundis-memo-program",
  "mundis-metrics",
  "mundis-runtime",
  "mundis-sdk",
