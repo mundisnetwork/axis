@@ -8,7 +8,6 @@ use {
         cell::{Ref, RefCell, RefMut},
         iter::FromIterator,
         ops::Deref,
-        rc::Rc,
     },
 };
 
@@ -167,24 +166,6 @@ pub fn create_keyed_is_signer_accounts<'a>(
         .collect()
 }
 
-#[deprecated(
-    since = "1.7.0",
-    note = "Please use create_keyed_accounts_unified instead"
-)]
-pub fn create_keyed_readonly_accounts(
-    accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
-) -> Vec<KeyedAccount> {
-    accounts
-        .iter()
-        .map(|(key, account)| KeyedAccount {
-            is_signer: false,
-            is_writable: false,
-            key,
-            account,
-        })
-        .collect()
-}
-
 pub fn create_keyed_accounts_unified<'a>(
     accounts: &[(bool, bool, &'a Pubkey, &'a RefCell<AccountSharedData>)],
 ) -> Vec<KeyedAccount<'a>> {
@@ -211,7 +192,6 @@ where
         .collect::<A>()
 }
 
-#[deprecated(since = "1.7.0", note = "Please use keyed_account_at_index instead")]
 /// Return the next KeyedAccount or a NotEnoughAccountKeys error
 pub fn next_keyed_account<'a, 'b, I: Iterator<Item = &'a KeyedAccount<'b>>>(
     iter: &mut I,

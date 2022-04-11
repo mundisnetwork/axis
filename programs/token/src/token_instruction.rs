@@ -2,15 +2,12 @@
 
 use crate::{check_program_account, error::TokenError};
 use mundis_program::{
-    instruction::{AccountMeta, Instruction},
-    program_error::ProgramError,
-    program_option::COption,
+    instruction::Instruction,
     pubkey::Pubkey,
     sysvar,
 };
-use std::convert::TryInto;
-use std::mem::size_of;
-use mundis_program::instruction::InstructionError;
+use mundis_program::instruction::{AccountMeta, InstructionError};
+use serde_derive::{Deserialize, Serialize};
 
 /// Minimum number of multisignature signers (min N)
 pub const MIN_SIGNERS: usize = 1;
@@ -19,8 +16,7 @@ pub const MAX_SIGNERS: usize = 11;
 
 
 /// Instructions supported by the token program.
-#[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum TokenInstruction {
     /// Initializes a new mint and optionally deposits all the newly minted
     /// tokens in an account.
@@ -34,7 +30,6 @@ pub enum TokenInstruction {
     /// Accounts expected by this instruction:
     ///
     ///   0. `[writable]` The mint to initialize.
-    ///   1. `[]` Rent sysvar
     ///
     InitializeMint {
         /// Number of base 10 digits to the right of the decimal place.
@@ -42,7 +37,7 @@ pub enum TokenInstruction {
         /// The authority/multisignature to mint tokens.
         mint_authority: Pubkey,
         /// The freeze authority/multisignature of the mint.
-        freeze_authority: COption<Pubkey>,
+        freeze_authority: Option<Pubkey>,
     },
     /// Initializes a new account to hold tokens.  If this account is associated
     /// with the native mint then the token balance of the initialized account
@@ -61,7 +56,6 @@ pub enum TokenInstruction {
     ///   0. `[writable]`  The account to initialize.
     ///   1. `[]` The mint this account will be associated with.
     ///   2. `[]` The new account's owner/multisignature.
-    ///   3. `[]` Rent sysvar
     InitializeAccount,
     /// Initializes a multisignature account with N provided signers.
     ///
@@ -79,7 +73,6 @@ pub enum TokenInstruction {
     /// Accounts expected by this instruction:
     ///
     ///   0. `[writable]` The multisignature account to initialize.
-    ///   1. `[]` Rent sysvar
     ///   2. ..2+N. `[]` The signer accounts, must equal to N where 1 <= N <=
     ///      11.
     InitializeMultisig {
@@ -156,7 +149,7 @@ pub enum TokenInstruction {
         /// The type of authority to update.
         authority_type: AuthorityType,
         /// The new authority
-        new_authority: COption<Pubkey>,
+        new_authority: Option<Pubkey>,
     },
     /// Mints new tokens to an account.  The native mint does not support
     /// minting.
@@ -360,7 +353,6 @@ pub enum TokenInstruction {
     ///
     ///   0. `[writable]`  The account to initialize.
     ///   1. `[]` The mint this account will be associated with.
-    ///   3. `[]` Rent sysvar
     InitializeAccount2 {
         /// The new account's owner/multisignature.
         owner: Pubkey,
@@ -377,116 +369,8 @@ pub enum TokenInstruction {
     SyncNative,
 }
 
-impl TokenInstruction {
-    /// Unpacks a byte buffer into a [TokenInstruction](enum.TokenInstruction.html).
-    pub fn unpack(input: &[u8]) -> Result<Self, InstructionError> {
-        use TokenError::InvalidInstruction;
-
-        let (&tag, rest) = input.split_first().ok_or(InvalidInstruction)?;
-        Ok(match tag {
-            0 => {
-                let (&decimals, rest) = rest.split_first().ok_or(InvalidInstruction)?;
-                let (mint_authority, rest) = Self::unpack_pubkey(rest)?;
-                let (freeze_authority, _rest) = Self::unpack_pubkey_option(rest)?;
-                Self::InitializeMint {
-                    mint_authority,
-                    freeze_authority,
-                    decimals,
-                }
-            }
-            1 => Self::InitializeAccount,
-            2 => {
-                let &m = rest.get(0).ok_or(InvalidInstruction)?;
-                Self::InitializeMultisig { m }
-            }
-            3 | 4 | 7 | 8 => {
-                let amount = rest
-                    .get(..8)
-                    .and_then(|slice| slice.try_into().ok())
-                    .map(u64::from_le_bytes)
-                    .ok_or(InvalidInstruction)?;
-                match tag {
-                    3 => Self::Transfer { amount },
-                    4 => Self::Approve { amount },
-                    7 => Self::MintTo { amount },
-                    8 => Self::Burn { amount },
-                    _ => unreachable!(),
-                }
-            }
-            5 => Self::Revoke,
-            6 => {
-                let (authority_type, rest) = rest
-                    .split_first()
-                    .ok_or_else(|| ProgramError::from(InvalidInstruction))
-                    .and_then(|(&t, rest)| Ok((AuthorityType::from(t)?, rest)))?;
-                let (new_authority, _rest) = Self::unpack_pubkey_option(rest)?;
-
-                Self::SetAuthority {
-                    authority_type,
-                    new_authority,
-                }
-            }
-            9 => Self::CloseAccount,
-            10 => Self::FreezeAccount,
-            11 => Self::ThawAccount,
-            12 => {
-                let (amount, rest) = rest.split_at(8);
-                let amount = amount
-                    .try_into()
-                    .ok()
-                    .map(u64::from_le_bytes)
-                    .ok_or(InvalidInstruction)?;
-                let (&decimals, _rest) = rest.split_first().ok_or(InvalidInstruction)?;
-
-                Self::TransferChecked { amount, decimals }
-            }
-            13 => {
-                let (amount, rest) = rest.split_at(8);
-                let amount = amount
-                    .try_into()
-                    .ok()
-                    .map(u64::from_le_bytes)
-                    .ok_or(InvalidInstruction)?;
-                let (&decimals, _rest) = rest.split_first().ok_or(InvalidInstruction)?;
-
-                Self::ApproveChecked { amount, decimals }
-            }
-            14 => {
-                let (amount, rest) = rest.split_at(8);
-                let amount = amount
-                    .try_into()
-                    .ok()
-                    .map(u64::from_le_bytes)
-                    .ok_or(InvalidInstruction)?;
-                let (&decimals, _rest) = rest.split_first().ok_or(InvalidInstruction)?;
-
-                Self::MintToChecked { amount, decimals }
-            }
-            15 => {
-                let (amount, rest) = rest.split_at(8);
-                let amount = amount
-                    .try_into()
-                    .ok()
-                    .map(u64::from_le_bytes)
-                    .ok_or(InvalidInstruction)?;
-                let (&decimals, _rest) = rest.split_first().ok_or(InvalidInstruction)?;
-
-                Self::BurnChecked { amount, decimals }
-            }
-            16 => {
-                let (owner, _rest) = Self::unpack_pubkey(rest)?;
-                Self::InitializeAccount2 { owner }
-            }
-            17 => Self::SyncNative,
-
-            _ => return Err(TokenError::InvalidInstruction.into()),
-        })
-    }
-}
-
 /// Specifies the authority type for SetAuthority instructions
-#[repr(u8)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum AuthorityType {
     /// Authority to mint new tokens
     MintTokens,
@@ -508,7 +392,7 @@ impl AuthorityType {
         }
     }
 
-    fn from(index: u8) -> Result<Self, ProgramError> {
+    fn from(index: u8) -> Result<Self, InstructionError> {
         match index {
             0 => Ok(AuthorityType::MintTokens),
             1 => Ok(AuthorityType::FreezeAccount),
@@ -519,3 +403,541 @@ impl AuthorityType {
     }
 }
 
+/// Creates a `InitializeMint` instruction.
+pub fn initialize_mint(
+    token_program_id: &Pubkey,
+    mint_pubkey: &Pubkey,
+    mint_authority_pubkey: &Pubkey,
+    freeze_authority_pubkey: Option<&Pubkey>,
+    decimals: u8,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+    let freeze_authority = freeze_authority_pubkey.cloned().into();
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::InitializeMint {
+            mint_authority: *mint_authority_pubkey,
+            freeze_authority,
+            decimals,
+        },
+        vec![
+            AccountMeta::new(*mint_pubkey, false),
+            AccountMeta::new_readonly(sysvar::rent::id(), false),
+        ]
+    ))
+}
+
+/// Creates a `InitializeAccount` instruction.
+pub fn initialize_account(
+    token_program_id: &Pubkey,
+    account_pubkey: &Pubkey,
+    mint_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::InitializeAccount {},
+        vec![
+            AccountMeta::new(*account_pubkey, false),
+            AccountMeta::new_readonly(*mint_pubkey, false),
+            AccountMeta::new_readonly(*owner_pubkey, false),
+            AccountMeta::new_readonly(sysvar::rent::id(), false),
+        ],
+    ))
+}
+
+/// Creates a `InitializeAccount2` instruction.
+pub fn initialize_account2(
+    token_program_id: &Pubkey,
+    account_pubkey: &Pubkey,
+    mint_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::InitializeAccount2 {
+            owner: *owner_pubkey,
+        },
+        vec![
+            AccountMeta::new(*account_pubkey, false),
+            AccountMeta::new_readonly(*mint_pubkey, false),
+            AccountMeta::new_readonly(sysvar::rent::id(), false),
+        ]
+    ))
+}
+
+/// Creates a `InitializeMultisig` instruction.
+pub fn initialize_multisig(
+    token_program_id: &Pubkey,
+    multisig_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    m: u8,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    if !is_valid_signer_index(m as usize)
+        || !is_valid_signer_index(signer_pubkeys.len())
+        || m as usize > signer_pubkeys.len()
+    {
+        return Err(InstructionError::MissingRequiredSignature);
+    }
+
+    let mut accounts = Vec::with_capacity(1 + 1 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*multisig_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(sysvar::rent::id(), false));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, false));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::InitializeMultisig {
+            m,
+        },
+        accounts
+    ))
+}
+
+/// Creates a `Transfer` instruction.
+pub fn transfer(
+    token_program_id: &Pubkey,
+    source_pubkey: &Pubkey,
+    destination_pubkey: &Pubkey,
+    authority_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    amount: u64,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*source_pubkey, false));
+    accounts.push(AccountMeta::new(*destination_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *authority_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::Transfer {
+            amount
+        },
+        accounts
+    ))
+}
+
+/// Creates an `Approve` instruction.
+pub fn approve(
+    token_program_id: &Pubkey,
+    source_pubkey: &Pubkey,
+    delegate_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    amount: u64,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*source_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(*delegate_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::Approve {
+            amount
+        },
+        accounts
+    ))
+}
+
+/// Creates a `Revoke` instruction.
+pub fn revoke(
+    token_program_id: &Pubkey,
+    source_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(2 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*source_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::Revoke,
+        accounts
+    ))
+}
+
+/// Creates a `SetAuthority` instruction.
+pub fn set_authority(
+    token_program_id: &Pubkey,
+    owned_pubkey: &Pubkey,
+    new_authority_pubkey: Option<&Pubkey>,
+    authority_type: AuthorityType,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let new_authority = new_authority_pubkey.cloned().into();
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*owned_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::SetAuthority {
+            authority_type,
+            new_authority,
+        },
+        accounts
+    ))
+}
+
+/// Creates a `MintTo` instruction.
+pub fn mint_to(
+    token_program_id: &Pubkey,
+    mint_pubkey: &Pubkey,
+    account_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    amount: u64,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*mint_pubkey, false));
+    accounts.push(AccountMeta::new(*account_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::MintTo {
+            amount,
+        },
+        accounts
+    ))
+}
+
+/// Creates a `Burn` instruction.
+pub fn burn(
+    token_program_id: &Pubkey,
+    account_pubkey: &Pubkey,
+    mint_pubkey: &Pubkey,
+    authority_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    amount: u64,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*account_pubkey, false));
+    accounts.push(AccountMeta::new(*mint_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *authority_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::Burn {
+            amount,
+        },
+        accounts
+    ))
+}
+
+/// Creates a `CloseAccount` instruction.
+pub fn close_account(
+    token_program_id: &Pubkey,
+    account_pubkey: &Pubkey,
+    destination_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*account_pubkey, false));
+    accounts.push(AccountMeta::new(*destination_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::CloseAccount,
+        accounts
+    ))
+}
+
+/// Creates a `FreezeAccount` instruction.
+pub fn freeze_account(
+    token_program_id: &Pubkey,
+    account_pubkey: &Pubkey,
+    mint_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*account_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(*mint_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::FreezeAccount,
+        accounts
+    ))
+}
+
+/// Creates a `ThawAccount` instruction.
+pub fn thaw_account(
+    token_program_id: &Pubkey,
+    account_pubkey: &Pubkey,
+    mint_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*account_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(*mint_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::ThawAccount,
+        accounts
+    ))
+}
+
+/// Creates a `TransferChecked` instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn transfer_checked(
+    token_program_id: &Pubkey,
+    source_pubkey: &Pubkey,
+    mint_pubkey: &Pubkey,
+    destination_pubkey: &Pubkey,
+    authority_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    amount: u64,
+    decimals: u8,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(4 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*source_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(*mint_pubkey, false));
+    accounts.push(AccountMeta::new(*destination_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *authority_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::TransferChecked {
+            amount,
+            decimals
+        },
+        accounts
+    ))
+}
+
+/// Creates an `ApproveChecked` instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn approve_checked(
+    token_program_id: &Pubkey,
+    source_pubkey: &Pubkey,
+    mint_pubkey: &Pubkey,
+    delegate_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    amount: u64,
+    decimals: u8,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(4 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*source_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(*mint_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(*delegate_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::ApproveChecked {
+            amount,
+            decimals
+        },
+        accounts
+    ))
+}
+
+/// Creates a `MintToChecked` instruction.
+pub fn mint_to_checked(
+    token_program_id: &Pubkey,
+    mint_pubkey: &Pubkey,
+    account_pubkey: &Pubkey,
+    owner_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    amount: u64,
+    decimals: u8,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*mint_pubkey, false));
+    accounts.push(AccountMeta::new(*account_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *owner_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::MintToChecked {
+            amount,
+            decimals
+        },
+        accounts
+    ))
+}
+
+/// Creates a `BurnChecked` instruction.
+pub fn burn_checked(
+    token_program_id: &Pubkey,
+    account_pubkey: &Pubkey,
+    mint_pubkey: &Pubkey,
+    authority_pubkey: &Pubkey,
+    signer_pubkeys: &[&Pubkey],
+    amount: u64,
+    decimals: u8,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
+    accounts.push(AccountMeta::new(*account_pubkey, false));
+    accounts.push(AccountMeta::new(*mint_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(
+        *authority_pubkey,
+        signer_pubkeys.is_empty(),
+    ));
+    for signer_pubkey in signer_pubkeys.iter() {
+        accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
+    }
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::BurnChecked {
+            amount,
+            decimals
+        },
+        accounts
+    ))
+}
+
+/// Creates a `SyncNative` instruction
+pub fn sync_native(
+    token_program_id: &Pubkey,
+    account_pubkey: &Pubkey,
+) -> Result<Instruction, InstructionError> {
+    check_program_account(token_program_id)?;
+
+    let accounts = vec![AccountMeta::new(*account_pubkey, false)];
+
+    Ok(Instruction::new_with_bincode(
+        *token_program_id,
+        &TokenInstruction::SyncNative,
+        accounts,
+    ))
+}
+
+/// Utility function that checks index is between MIN_SIGNERS and MAX_SIGNERS
+pub fn is_valid_signer_index(index: usize) -> bool {
+    (MIN_SIGNERS..=MAX_SIGNERS).contains(&index)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_instruction_packing() {
+        let check = TokenInstruction::InitializeMint {
+            decimals: 2,
+            mint_authority: Pubkey::new_unique(),
+            freeze_authority: None,
+        };
+
+    }
+}

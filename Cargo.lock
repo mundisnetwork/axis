@@ -3414,11 +3414,15 @@ name = "mundis-token-program"
 version = "1.9.14"
 dependencies = [
  "arrayref",
+ "bincode",
  "mundis-program",
+ "mundis-program-runtime",
  "mundis-sdk",
  "num-derive",
  "num-traits",
  "num_enum",
+ "serde",
+ "serde_derive",
  "thiserror",
 ]
 

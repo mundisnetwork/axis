@@ -1,6 +1,7 @@
 //! Error types
 
 use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use thiserror::Error;
 use mundis_program::decode_error::DecodeError;
 use mundis_program::instruction::InstructionError;
@@ -9,9 +10,6 @@ use mundis_program::instruction::InstructionError;
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum TokenError {
     // 0
-    /// Lamport balance below rent-exempt threshold.
-    #[error("Lamport balance below rent-exempt threshold")]
-    NotRentExempt,
     /// Insufficient funds for the operation requested.
     #[error("Insufficient funds")]
     InsufficientFunds,
@@ -84,5 +82,48 @@ impl From<TokenError> for InstructionError {
 impl<T> DecodeError<T> for TokenError {
     fn type_of() -> &'static str {
         "TokenError"
+    }
+}
+
+pub trait PrintInstructionError {
+    fn print<E>(&self)
+        where
+            E: 'static + std::error::Error + DecodeError<E> + PrintInstructionError + FromPrimitive;
+}
+
+impl PrintInstructionError for InstructionError {
+    fn print<E>(&self)
+        where
+            E: 'static + std::error::Error + DecodeError<E> + PrintInstructionError + FromPrimitive,
+    {
+        match self {
+            Self::Custom(error) => {
+                if let Some(custom_error) = E::decode_custom_error_to_enum(*error) {
+                    custom_error.print::<E>();
+                } else {
+                    eprintln!("Error: Unknown");
+                }
+            }
+            Self::InvalidArgument => eprintln!("Error: InvalidArgument"),
+            Self::InvalidInstructionData => eprintln!("Error: InvalidInstructionData"),
+            Self::InvalidAccountData => eprintln!("Error: InvalidAccountData"),
+            Self::AccountDataTooSmall => eprintln!("Error: AccountDataTooSmall"),
+            Self::InsufficientFunds => eprintln!("Error: InsufficientFunds"),
+            Self::IncorrectProgramId => eprintln!("Error: IncorrectProgramId"),
+            Self::MissingRequiredSignature => eprintln!("Error: MissingRequiredSignature"),
+            Self::AccountAlreadyInitialized => eprintln!("Error: AccountAlreadyInitialized"),
+            Self::UninitializedAccount => eprintln!("Error: UninitializedAccount"),
+            Self::NotEnoughAccountKeys => eprintln!("Error: NotEnoughAccountKeys"),
+            Self::AccountBorrowFailed => eprintln!("Error: AccountBorrowFailed"),
+            Self::MaxSeedLengthExceeded => eprintln!("Error: MaxSeedLengthExceeded"),
+            Self::InvalidSeeds => eprintln!("Error: InvalidSeeds"),
+            Self::BorshIoError(_) => eprintln!("Error: BorshIoError"),
+            Self::AccountNotRentExempt => eprintln!("Error: AccountNotRentExempt"),
+            Self::UnsupportedSysvar => eprintln!("Error: UnsupportedSysvar"),
+            Self::IllegalOwner => eprintln!("Error: IllegalOwner"),
+            Self::MaxAccountsDataSizeExceeded => eprintln!("Error: MaxAccountsDataSizeExceeded"),
+            Self::ActiveVoteAccountClose => eprintln!("Error: ActiveVoteAccountClose"),
+            _ => {}
+        }
     }
 }
