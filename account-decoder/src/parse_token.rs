@@ -4,18 +4,13 @@ use {
         StringAmount, StringDecimals,
     },
     mundis_sdk::pubkey::Pubkey,
-    anima_token::{
-        mundis_program::{
-            program_option::COption, program_pack::Pack, pubkey::Pubkey as AnimaTokenPubkey,
-        },
-        state::{Account, AccountState, Mint, Multisig},
-    },
     std::str::FromStr,
 };
+use mundis_token_program::state::{Account, AccountState, Mint, Multisig};
 
 // A helper function to convert anima_token::id() to mundis_sdk::pubkey::Pubkey
 fn anima_token_id() -> Pubkey {
-    Pubkey::new_from_array(anima_token::id().to_bytes())
+    Pubkey::new_from_array(mundis_sdk::token::program::id().to_bytes())
 }
 
 // Returns all known SPL Token program ids
@@ -30,7 +25,7 @@ pub fn is_known_anima_token_id(program_id: &Pubkey) -> bool {
 
 // A helper function to convert anima_token::native_mint::id() to mundis_sdk::pubkey::Pubkey
 pub fn anima_token_native_mint() -> Pubkey {
-    Pubkey::new_from_array(anima_token::native_mint::id().to_bytes())
+    Pubkey::new_from_array(mundis_token_program::native_mint::id().to_bytes())
 }
 
 // The program id of the `anima_token_native_mint` account
@@ -38,21 +33,11 @@ pub fn anima_token_native_mint_program_id() -> Pubkey {
     anima_token_id()
 }
 
-// A helper function to convert a mundis_sdk::pubkey::Pubkey to anima_sdk::pubkey::Pubkey
-pub fn anima_token_pubkey(pubkey: &Pubkey) -> AnimaTokenPubkey {
-    AnimaTokenPubkey::new_from_array(pubkey.to_bytes())
-}
-
-// A helper function to convert a anima_sdk::pubkey::Pubkey to mundis_sdk::pubkey::Pubkey
-pub fn pubkey_from_anima_token(pubkey: &AnimaTokenPubkey) -> Pubkey {
-    Pubkey::new_from_array(pubkey.to_bytes())
-}
-
 pub fn parse_token(
     data: &[u8],
     mint_decimals: Option<u8>,
 ) -> Result<TokenAccountType, ParseAccountError> {
-    if data.len() == Account::get_packed_len() {
+    if data.len() == Account::packed_len() {
         let account = Account::unpack(data)
             .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::AnimaToken))?;
         let decimals = mint_decimals.ok_or_else(|| {
@@ -65,15 +50,11 @@ pub fn parse_token(
             owner: account.owner.to_string(),
             token_amount: token_amount_to_ui_amount(account.amount, decimals),
             delegate: match account.delegate {
-                COption::Some(pubkey) => Some(pubkey.to_string()),
-                COption::None => None,
+                Some(pubkey) => Some(pubkey.to_string()),
+                None => None,
             },
             state: account.state.into(),
             is_native: account.is_native(),
-            rent_exempt_reserve: match account.is_native {
-                COption::Some(reserve) => Some(token_amount_to_ui_amount(reserve, decimals)),
-                COption::None => None,
-            },
             delegated_amount: if account.delegate.is_none() {
                 None
             } else {
@@ -83,27 +64,27 @@ pub fn parse_token(
                 ))
             },
             close_authority: match account.close_authority {
-                COption::Some(pubkey) => Some(pubkey.to_string()),
-                COption::None => None,
+                Some(pubkey) => Some(pubkey.to_string()),
+                None => None,
             },
         }))
-    } else if data.len() == Mint::get_packed_len() {
+    } else if data.len() == Mint::packed_len() {
         let mint = Mint::unpack(data)
             .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::AnimaToken))?;
         Ok(TokenAccountType::Mint(UiMint {
             mint_authority: match mint.mint_authority {
-                COption::Some(pubkey) => Some(pubkey.to_string()),
-                COption::None => None,
+                Some(pubkey) => Some(pubkey.to_string()),
+                None => None,
             },
             supply: mint.supply.to_string(),
             decimals: mint.decimals,
             is_initialized: mint.is_initialized,
             freeze_authority: match mint.freeze_authority {
-                COption::Some(pubkey) => Some(pubkey.to_string()),
-                COption::None => None,
+                Some(pubkey) => Some(pubkey.to_string()),
+                None => None,
             },
         }))
-    } else if data.len() == Multisig::get_packed_len() {
+    } else if data.len() == Multisig::packed_len() {
         let multisig = Multisig::unpack(data)
             .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::AnimaToken))?;
         Ok(TokenAccountType::Multisig(UiMultisig {
@@ -114,7 +95,7 @@ pub fn parse_token(
                 .signers
                 .iter()
                 .filter_map(|pubkey| {
-                    if pubkey != &AnimaTokenPubkey::default() {
+                    if pubkey != &Pubkey::default() {
                         Some(pubkey.to_string())
                     } else {
                         None
@@ -148,8 +129,6 @@ pub struct UiTokenAccount {
     pub delegate: Option<String>,
     pub state: UiAccountState,
     pub is_native: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rent_exempt_reserve: Option<UiTokenAmount>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delegated_amount: Option<UiTokenAmount>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -257,7 +236,7 @@ pub struct UiMultisig {
 }
 
 pub fn get_token_account_mint(data: &[u8]) -> Option<Pubkey> {
-    if data.len() == Account::get_packed_len() {
+    if data.len() == Account::packed_len() {
         Some(Pubkey::new(&data[0..32]))
     } else {
         None
@@ -278,8 +257,8 @@ mod test {
         account.owner = owner_pubkey;
         account.amount = 42;
         account.state = AccountState::Initialized;
-        account.is_native = COption::None;
-        account.close_authority = COption::Some(owner_pubkey);
+        account.is_native = false;
+        account.close_authority = Some(owner_pubkey);
         Account::pack(account, &mut account_data).unwrap();
 
         assert!(parse_token(&account_data, None).is_err());
@@ -305,11 +284,11 @@ mod test {
 
         let mut mint_data = vec![0; Mint::get_packed_len()];
         let mut mint = Mint::unpack_unchecked(&mint_data).unwrap();
-        mint.mint_authority = COption::Some(owner_pubkey);
+        mint.mint_authority = Some(owner_pubkey);
         mint.supply = 42;
         mint.decimals = 3;
         mint.is_initialized = true;
-        mint.freeze_authority = COption::Some(owner_pubkey);
+        mint.freeze_authority = Some(owner_pubkey);
         Mint::pack(mint, &mut mint_data).unwrap();
 
         assert_eq!(

@@ -24,7 +24,7 @@ mundis-runtime = { path = "../runtime", version = "=1.9.14" }
 mundis-sdk = { path = "../sdk", version = "=1.9.14" }
 mundis-vote-program = { path = "../programs/vote", version = "=1.9.14" }
 mundis-memo-program = { path = "../programs/memo", version = "=1.9.14" }
-anima-token = { path = "../anima-services/token", version = "=3.2.0", features = ["no-entrypoint"] }
+mundis-token-program = { path = "../programs/token", version = "=1.9.14" }
 anima-token-account = { path = "../anima-services/token-account", version = "=1.0.3", features = ["no-entrypoint"] }
 thiserror = "1.0"
 

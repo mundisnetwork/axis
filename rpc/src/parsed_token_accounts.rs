@@ -13,9 +13,9 @@ use {
         account::{AccountSharedData, ReadableAccount},
         pubkey::Pubkey,
     },
-    anima_token::{mundis_program::program_pack::Pack, state::Mint},
     std::{collections::HashMap, sync::Arc},
 };
+use mundis_token_program::state::Mint;
 
 pub fn get_parsed_token_account(
     bank: Arc<Bank>,
@@ -79,7 +79,7 @@ pub fn get_mint_owner_and_decimals(bank: &Arc<Bank>, mint: &Pubkey) -> Result<(P
     if mint == &anima_token_native_mint() {
         Ok((
             anima_token_native_mint_program_id(),
-            anima_token::native_mint::DECIMALS,
+            mundis_token_program::native_mint::DECIMALS,
         ))
     } else {
         let mint_account = bank.get_account(mint).ok_or_else(|| {

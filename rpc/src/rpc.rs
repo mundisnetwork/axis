@@ -79,10 +79,7 @@ use {
         TransactionConfirmationStatus, TransactionStatus, UiConfirmedBlock, UiTransactionEncoding,
     },
     mundis_vote_program::vote_state::{VoteState, MAX_LOCKOUT_HISTORY},
-    anima_token::{
-        mundis_program::program_pack::Pack,
-        state::{Account as TokenAccount, Mint},
-    },
+    mundis_token_program::state::{Account as TokenAccount, Mint},
     std::{
         any::type_name,
         cmp::{max, min},
@@ -1753,7 +1750,7 @@ impl JsonRpcRequestProcessor {
         } else {
             // Filter on Token Account state
             filters.push(RpcFilterType::DataSize(
-                TokenAccount::get_packed_len() as u64
+                TokenAccount::packed_len() as u64
             ));
             self.get_filtered_program_accounts(&bank, &token_program_id, filters)?
         };
@@ -1843,7 +1840,7 @@ impl JsonRpcRequestProcessor {
         //
         // Filter on Token Account state
         filters.push(RpcFilterType::DataSize(
-            TokenAccount::get_packed_len() as u64
+            TokenAccount::packed_len() as u64
         ));
         // Filter on Owner address
         filters.push(RpcFilterType::Memcmp(Memcmp {
@@ -1902,7 +1899,7 @@ impl JsonRpcRequestProcessor {
         //
         // Filter on Token Account state
         filters.push(RpcFilterType::DataSize(
-            TokenAccount::get_packed_len() as u64
+            TokenAccount::packed_len() as u64
         ));
         // Filter on Mint address
         filters.push(RpcFilterType::Memcmp(Memcmp {
@@ -2186,7 +2183,7 @@ fn get_anima_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) 
             _ => {}
         }
     }
-    if data_size_filter == Some(TokenAccount::get_packed_len() as u64) {
+    if data_size_filter == Some(TokenAccount::packed_len() as u64) {
         if let Some(incorrect_owner_len) = incorrect_owner_len {
             info!(
                 "Incorrect num bytes ({:?}) provided for anima_token_owner_filter",
@@ -2228,7 +2225,7 @@ fn get_anima_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -
             _ => {}
         }
     }
-    if data_size_filter == Some(TokenAccount::get_packed_len() as u64) {
+    if data_size_filter == Some(TokenAccount::packed_len() as u64) {
         if let Some(incorrect_mint_len) = incorrect_mint_len {
             info!(
                 "Incorrect num bytes ({:?}) provided for anima_token_mint_filter",

@@ -3,25 +3,23 @@ use {
         check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
     },
     serde_json::{json, Map, Value},
-    mundis_account_decoder::parse_token::{pubkey_from_anima_token, token_amount_to_ui_amount},
+    mundis_account_decoder::parse_token::token_amount_to_ui_amount,
     mundis_sdk::{
         instruction::{AccountMeta, CompiledInstruction, Instruction},
         pubkey::Pubkey,
     },
-    anima_token::{
-        instruction::{AuthorityType, TokenInstruction},
-        mundis_program::{
-            instruction::Instruction as SplTokenInstruction, program_option::COption,
-        },
-    },
 };
+use mundis_sdk::program_utils::limited_deserialize;
+use mundis_token_program::token_instruction::{AuthorityType, TokenInstruction};
 
 pub fn parse_token(
     instruction: &CompiledInstruction,
     account_keys: &[Pubkey],
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
-    let token_instruction = TokenInstruction::unpack(&instruction.data)
+    let token_instruction = limited_deserialize(&instruction.data)
         .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::AnimaToken))?;
+    // let token_instruction = TokenInstruction::unpack(&instruction.data)
+    //     .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::AnimaToken))?;
     match instruction.accounts.iter().max() {
         Some(index) if (*index as usize) < account_keys.len() => {}
         _ => {
@@ -45,7 +43,7 @@ pub fn parse_token(
                 "rentSysvar": account_keys[instruction.accounts[1] as usize].to_string(),
             });
             let map = value.as_object_mut().unwrap();
-            if let COption::Some(freeze_authority) = freeze_authority {
+            if let Some(freeze_authority) = freeze_authority {
                 map.insert(
                     "freezeAuthority".to_string(),
                     json!(freeze_authority.to_string()),
@@ -170,8 +168,8 @@ pub fn parse_token(
                 owned: account_keys[instruction.accounts[0] as usize].to_string(),
                 "authorityType": Into::<UiAuthorityType>::into(authority_type),
                 "newAuthority": match new_authority {
-                    COption::Some(authority) => Some(authority.to_string()),
-                    COption::None => None,
+                    Some(authority) => Some(authority.to_string()),
+                    None => None,
                 },
             });
             let map = value.as_object_mut().unwrap();
@@ -438,22 +436,6 @@ fn check_num_token_accounts(accounts: &[u8], num: usize) -> Result<(), ParseInst
     check_num_accounts(accounts, num, ParsableProgram::AnimaToken)
 }
 
-pub fn anima_token_instruction(instruction: SplTokenInstruction) -> Instruction {
-    Instruction {
-        program_id: pubkey_from_anima_token(&instruction.program_id),
-        accounts: instruction
-            .accounts
-            .iter()
-            .map(|meta| AccountMeta {
-                pubkey: pubkey_from_anima_token(&meta.pubkey),
-                is_signer: meta.is_signer,
-                is_writable: meta.is_writable,
-            })
-            .collect(),
-        data: instruction.data,
-    }
-}
-
 #[cfg(test)]
 mod test {
     use {
@@ -468,10 +450,7 @@ mod test {
         },
         std::str::FromStr,
     };
-
-    fn convert_pubkey(pubkey: Pubkey) -> SplTokenPubkey {
-        SplTokenPubkey::from_str(&pubkey.to_string()).unwrap()
-    }
+    use mundis_token_program::token_instruction::*;
 
     fn convert_compiled_instruction(
         instruction: &SplTokenCompiledInstruction,
@@ -493,10 +472,9 @@ mod test {
 
         // Test InitializeMint variations
         let initialize_mint_ix = initialize_mint(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
-            &convert_pubkey(keys[2]),
-            Some(&convert_pubkey(keys[3])),
+            &keys[0],
+            &keys[2],
+            Some(&keys[3]),
             2,
         )
         .unwrap();

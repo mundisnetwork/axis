@@ -47,7 +47,7 @@ mundis-storage-bigtable = { path = "../storage-bigtable", version = "=1.9.14" }
 mundis-transaction-status = { path = "../transaction-status", version = "=1.9.14" }
 mundis-version = { path = "../version", version = "=1.9.14" }
 mundis-vote-program = { path = "../programs/vote", version = "=1.9.14" }
-anima-token = { path = "../anima-services/token", version = "=3.2.0", features = ["no-entrypoint"] }
+mundis-token-program = { path = "../programs/token", version = "=1.9.14" }
 stream-cancel = "0.8.1"
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }

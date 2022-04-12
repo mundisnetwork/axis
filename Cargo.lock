@@ -2354,7 +2354,6 @@ name = "mundis-account-decoder"
 version = "1.9.14"
 dependencies = [
  "Inflector",
- "anima-token",
  "base64 0.12.3",
  "bincode",
  "bs58",
@@ -2362,6 +2361,7 @@ dependencies = [
  "lazy_static",
  "mundis-config-program",
  "mundis-sdk",
+ "mundis-token-program",
  "mundis-vote-program",
  "serde",
  "serde_derive",
@@ -3116,7 +3116,6 @@ dependencies = [
 name = "mundis-rpc"
 version = "1.9.14"
 dependencies = [
- "anima-token",
  "base64 0.12.3",
  "bincode",
  "bs58",
@@ -3149,6 +3148,7 @@ dependencies = [
  "mundis-stake-program",
  "mundis-storage-bigtable",
  "mundis-streamer",
+ "mundis-token-program",
  "mundis-transaction-status",
  "mundis-version",
  "mundis-vote-program",
@@ -3415,7 +3415,6 @@ version = "1.9.14"
 dependencies = [
  "arrayref",
  "bincode",
- "mundis-program",
  "mundis-program-runtime",
  "mundis-sdk",
  "num-derive",
@@ -3431,7 +3430,6 @@ name = "mundis-transaction-status"
 version = "1.9.14"
 dependencies = [
  "Inflector",
- "anima-token",
  "anima-token-account",
  "base64 0.12.3",
  "bincode",
@@ -3444,6 +3442,7 @@ dependencies = [
  "mundis-metrics",
  "mundis-runtime",
  "mundis-sdk",
+ "mundis-token-program",
  "mundis-vote-program",
  "serde",
  "serde_derive",

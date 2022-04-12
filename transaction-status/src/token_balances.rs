@@ -1,19 +1,16 @@
 use {
     crate::TransactionTokenBalance,
     mundis_account_decoder::parse_token::{
-        is_known_anima_token_id, pubkey_from_anima_token, anima_token_native_mint,
+        is_known_anima_token_id, anima_token_native_mint,
         token_amount_to_ui_amount, UiTokenAmount,
     },
     mundis_measure::measure::Measure,
     mundis_metrics::datapoint_debug,
     mundis_runtime::{bank::Bank, transaction_batch::TransactionBatch},
     mundis_sdk::{account::ReadableAccount, pubkey::Pubkey},
-    anima_token::{
-        mundis_program::program_pack::Pack,
-        state::{Account as TokenAccount, Mint},
-    },
     std::collections::HashMap,
 };
+use mundis_token_program::state::{Mint, Account as TokenAccount};
 
 pub type TransactionTokenBalances = Vec<Vec<TransactionTokenBalance>>;
 
@@ -37,7 +34,7 @@ impl TransactionTokenBalancesSet {
 
 fn get_mint_decimals(bank: &Bank, mint: &Pubkey) -> Option<u8> {
     if mint == &anima_token_native_mint() {
-        Some(anima_token::native_mint::DECIMALS)
+        Some(mundis_token_program::native_mint::DECIMALS)
     } else {
         let mint_account = bank.get_account(mint)?;
 
@@ -118,7 +115,7 @@ fn collect_token_balance_from_account(
     }
 
     let token_account = TokenAccount::unpack(account.data()).ok()?;
-    let mint = pubkey_from_anima_token(&token_account.mint);
+    let mint = token_account.mint;
 
     let decimals = mint_decimals.get(&mint).cloned().or_else(|| {
         let decimals = get_mint_decimals(bank, &mint)?;
@@ -151,11 +148,11 @@ mod test {
         let account = Account::new(42, 55, &Pubkey::new_unique());
 
         let mint_data = Mint {
-            mint_authority: COption::None,
+            mint_authority: None,
             supply: 4242,
             decimals: 2,
             is_initialized: true,
-            freeze_authority: COption::None,
+            freeze_authority: None,
         };
         let mut data = [0; Mint::LEN];
         Mint::pack(mint_data, &mut data).unwrap();
@@ -181,11 +178,11 @@ mod test {
             mint: anima_token_pubkey(&mint_pubkey),
             owner: anima_token_pubkey(&token_owner),
             amount: 42,
-            delegate: COption::None,
-            state: anima_token::state::AccountState::Initialized,
-            is_native: COption::Some(100),
+            delegate: None,
+            state: mundis_token_program::state::AccountState::Initialized,
+            is_native: true,
             delegated_amount: 0,
-            close_authority: COption::None,
+            close_authority: None,
         };
         let mut data = [0; TokenAccount::LEN];
         TokenAccount::pack(token_data, &mut data).unwrap();
@@ -209,11 +206,11 @@ mod test {
             mint: anima_token_pubkey(&other_mint_pubkey),
             owner: anima_token_pubkey(&token_owner),
             amount: 42,
-            delegate: COption::None,
-            state: anima_token::state::AccountState::Initialized,
-            is_native: COption::Some(100),
+            delegate: None,
+            state: mundis_token_program::state::AccountState::Initialized,
+            is_native: true,
             delegated_amount: 0,
-            close_authority: COption::None,
+            close_authority: None,
         };
         let mut data = [0; TokenAccount::LEN];
         TokenAccount::pack(other_mint_data, &mut data).unwrap();
