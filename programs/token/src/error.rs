@@ -3,8 +3,8 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use thiserror::Error;
-use mundis_program::decode_error::DecodeError;
-use mundis_program::instruction::InstructionError;
+use mundis_sdk::decode_error::DecodeError;
+use mundis_sdk::instruction::InstructionError;
 
 /// Errors that may be returned by the Token program.
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]

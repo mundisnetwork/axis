@@ -3,14 +3,10 @@
 use arrayref::array_mut_ref;
 use num_enum::TryFromPrimitive;
 use serde_derive::{Deserialize, Serialize};
-
-use mundis_program::{
-    instruction::InstructionError,
-    program_pack::{IsInitialized, Sealed},
-    pubkey::Pubkey,
-};
+use mundis_sdk::instruction::InstructionError;
+use mundis_sdk::program_pack::{IsInitialized, Sealed};
+use mundis_sdk::pubkey::Pubkey;
 use crate::error::TokenError;
-
 use crate::token_instruction::MAX_SIGNERS;
 
 /// Mint data.
@@ -32,7 +28,7 @@ pub struct Mint {
 }
 impl Mint {
     /// The length, in bytes, of the packed representation
-    const LEN: usize = 82;
+    pub const LEN: usize = 82;
 
     pub fn packed_len() -> usize {
         return Self::LEN;
@@ -90,7 +86,7 @@ pub struct Account {
 }
 impl Account {
     /// The length, in bytes, of the packed representation
-    const LEN: usize = 165;
+    pub const LEN: usize = 165;
 
     /// Checks if account is frozen
     pub fn is_frozen(&self) -> bool {
@@ -203,6 +199,7 @@ impl IsInitialized for Multisig {
 #[cfg(test)]
 mod tests {
     use mundis_program::pubkey::Pubkey;
+    use mundis_sdk::pubkey::Pubkey;
     use crate::state::{Account, AccountState, Mint, Multisig};
     use crate::token_instruction::MAX_SIGNERS;
 

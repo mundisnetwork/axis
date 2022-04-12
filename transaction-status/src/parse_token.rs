@@ -5,7 +5,7 @@ use {
     serde_json::{json, Map, Value},
     mundis_account_decoder::parse_token::token_amount_to_ui_amount,
     mundis_sdk::{
-        instruction::{AccountMeta, CompiledInstruction, Instruction},
+        instruction::CompiledInstruction,
         pubkey::Pubkey,
     },
 };
@@ -18,8 +18,7 @@ pub fn parse_token(
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
     let token_instruction = limited_deserialize(&instruction.data)
         .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::AnimaToken))?;
-    // let token_instruction = TokenInstruction::unpack(&instruction.data)
-    //     .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::AnimaToken))?;
+
     match instruction.accounts.iter().max() {
         Some(index) if (*index as usize) < account_keys.len() => {}
         _ => {
@@ -35,12 +34,11 @@ pub fn parse_token(
             mint_authority,
             freeze_authority,
         } => {
-            check_num_token_accounts(&instruction.accounts, 2)?;
+            check_num_token_accounts(&instruction.accounts, 1)?;
             let mut value = json!({
                 "mint": account_keys[instruction.accounts[0] as usize].to_string(),
                 "decimals": decimals,
                 "mintAuthority": mint_authority.to_string(),
-                "rentSysvar": account_keys[instruction.accounts[1] as usize].to_string(),
             });
             let map = value.as_object_mut().unwrap();
             if let Some(freeze_authority) = freeze_authority {
@@ -55,40 +53,37 @@ pub fn parse_token(
             })
         }
         TokenInstruction::InitializeAccount => {
-            check_num_token_accounts(&instruction.accounts, 4)?;
+            check_num_token_accounts(&instruction.accounts, 3)?;
             Ok(ParsedInstructionEnum {
                 instruction_type: "initializeAccount".to_string(),
                 info: json!({
                     "account": account_keys[instruction.accounts[0] as usize].to_string(),
                     "mint": account_keys[instruction.accounts[1] as usize].to_string(),
                     "owner": account_keys[instruction.accounts[2] as usize].to_string(),
-                    "rentSysvar": account_keys[instruction.accounts[3] as usize].to_string(),
                 }),
             })
         }
         TokenInstruction::InitializeAccount2 { owner } => {
-            check_num_token_accounts(&instruction.accounts, 3)?;
+            check_num_token_accounts(&instruction.accounts, 2)?;
             Ok(ParsedInstructionEnum {
                 instruction_type: "initializeAccount2".to_string(),
                 info: json!({
                     "account": account_keys[instruction.accounts[0] as usize].to_string(),
                     "mint": account_keys[instruction.accounts[1] as usize].to_string(),
                     "owner": owner.to_string(),
-                    "rentSysvar": account_keys[instruction.accounts[2] as usize].to_string(),
                 }),
             })
         }
         TokenInstruction::InitializeMultisig { m } => {
-            check_num_token_accounts(&instruction.accounts, 3)?;
+            check_num_token_accounts(&instruction.accounts, 2)?;
             let mut signers: Vec<String> = vec![];
-            for i in instruction.accounts[2..].iter() {
+            for i in instruction.accounts[1..].iter() {
                 signers.push(account_keys[*i as usize].to_string());
             }
             Ok(ParsedInstructionEnum {
                 instruction_type: "initializeMultisig".to_string(),
                 info: json!({
                     "multisig": account_keys[instruction.accounts[0] as usize].to_string(),
-                    "rentSysvar": account_keys[instruction.accounts[1] as usize].to_string(),
                     "signers": signers,
                     "m": m,
                 }),
@@ -441,19 +436,12 @@ mod test {
     use {
         super::*,
         mundis_sdk::instruction::CompiledInstruction,
-        anima_token::{
-            instruction::*,
-            mundis_program::{
-                instruction::CompiledInstruction as SplTokenCompiledInstruction, message::Message,
-                pubkey::Pubkey as SplTokenPubkey,
-            },
-        },
-        std::str::FromStr,
     };
+    use mundis_sdk::message::Message;
     use mundis_token_program::token_instruction::*;
 
     fn convert_compiled_instruction(
-        instruction: &SplTokenCompiledInstruction,
+        instruction: &CompiledInstruction,
     ) -> CompiledInstruction {
         CompiledInstruction {
             program_id_index: instruction.program_id_index,
@@ -489,15 +477,13 @@ mod test {
                     "decimals": 2,
                     "mintAuthority": keys[2].to_string(),
                     "freezeAuthority": keys[3].to_string(),
-                    "rentSysvar": keys[1].to_string(),
                 })
             }
         );
 
         let initialize_mint_ix = initialize_mint(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
-            &convert_pubkey(keys[2]),
+            &keys[0],
+            &keys[2],
             None,
             2,
         )
@@ -512,17 +498,15 @@ mod test {
                    "mint": keys[0].to_string(),
                    "decimals": 2,
                    "mintAuthority": keys[2].to_string(),
-                   "rentSysvar": keys[1].to_string(),
                 })
             }
         );
 
         // Test InitializeAccount
         let initialize_account_ix = initialize_account(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
+            &keys[0],
+            &keys[1],
+            &keys[2],
         )
         .unwrap();
         let message = Message::new(&[initialize_account_ix], None);
@@ -535,19 +519,17 @@ mod test {
                    "account": keys[0].to_string(),
                    "mint": keys[1].to_string(),
                    "owner": keys[2].to_string(),
-                   "rentSysvar": keys[3].to_string(),
                 })
             }
         );
 
         // Test InitializeMultisig
         let initialize_multisig_ix = initialize_multisig(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
+            &keys[0],
             &[
-                &convert_pubkey(keys[2]),
-                &convert_pubkey(keys[3]),
-                &convert_pubkey(keys[4]),
+                &keys[2],
+                &keys[3],
+                &keys[4],
             ],
             2,
         )
@@ -561,18 +543,16 @@ mod test {
                 info: json!({
                    "multisig": keys[0].to_string(),
                    "m": 2,
-                   "rentSysvar": keys[1].to_string(),
-                   "signers": keys[2..5].iter().map(|key| key.to_string()).collect::<Vec<String>>(),
+                   "signers": keys[1..4].iter().map(|key| key.to_string()).collect::<Vec<String>>(),
                 })
             }
         );
 
         // Test Transfer, incl multisig
         let transfer_ix = transfer(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
         )
@@ -593,11 +573,10 @@ mod test {
         );
 
         let transfer_ix = transfer(
-            &anima_token::id(),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[4]),
-            &[&convert_pubkey(keys[0]), &convert_pubkey(keys[1])],
+            &keys[2],
+            &keys[3],
+            &keys[4],
+            &[&keys[0], &keys[1]],
             42,
         )
         .unwrap();
@@ -619,10 +598,9 @@ mod test {
 
         // Test Approve, incl multisig
         let approve_ix = approve(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
         )
@@ -643,11 +621,10 @@ mod test {
         );
 
         let approve_ix = approve(
-            &anima_token::id(),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[4]),
-            &[&convert_pubkey(keys[0]), &convert_pubkey(keys[1])],
+            &keys[2],
+            &keys[3],
+            &keys[4],
+            &[&keys[0], &keys[1]],
             42,
         )
         .unwrap();
@@ -669,9 +646,8 @@ mod test {
 
         // Test Revoke
         let revoke_ix = revoke(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -690,11 +666,10 @@ mod test {
 
         // Test SetOwner
         let set_authority_ix = set_authority(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
-            Some(&convert_pubkey(keys[2])),
+            &keys[0],
+            Some(&keys[2]),
             AuthorityType::FreezeAccount,
-            &convert_pubkey(keys[1]),
+            &keys[1],
             &[],
         )
         .unwrap();
@@ -714,11 +689,10 @@ mod test {
         );
 
         let set_authority_ix = set_authority(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
+            &keys[1],
             None,
             AuthorityType::CloseAccount,
-            &convert_pubkey(keys[0]),
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -740,10 +714,9 @@ mod test {
 
         // Test MintTo
         let mint_to_ix = mint_to(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
         )
@@ -765,10 +738,9 @@ mod test {
 
         // Test Burn
         let burn_ix = burn(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
         )
@@ -790,10 +762,9 @@ mod test {
 
         // Test CloseAccount
         let close_account_ix = close_account(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -813,10 +784,9 @@ mod test {
 
         // Test FreezeAccount
         let freeze_account_ix = freeze_account(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -836,10 +806,9 @@ mod test {
 
         // Test ThawAccount
         let thaw_account_ix = thaw_account(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -859,11 +828,10 @@ mod test {
 
         // Test TransferChecked, incl multisig
         let transfer_ix = transfer_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
+            &keys[0],
+            &keys[1],
+            &keys[2],
+            &keys[3],
             &[],
             42,
             2,
@@ -891,12 +859,11 @@ mod test {
         );
 
         let transfer_ix = transfer_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[4]),
-            &convert_pubkey(keys[5]),
-            &[&convert_pubkey(keys[0]), &convert_pubkey(keys[1])],
+            &keys[2],
+            &keys[3],
+            &keys[4],
+            &keys[5],
+            &[&keys[0], &keys[1]],
             42,
             2,
         )
@@ -925,11 +892,10 @@ mod test {
 
         // Test ApproveChecked, incl multisig
         let approve_ix = approve_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[3],
+            &keys[0],
             &[],
             42,
             2,
@@ -957,12 +923,11 @@ mod test {
         );
 
         let approve_ix = approve_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[4]),
-            &convert_pubkey(keys[5]),
-            &[&convert_pubkey(keys[0]), &convert_pubkey(keys[1])],
+            &keys[2],
+            &keys[3],
+            &keys[4],
+            &keys[5],
+            &[&keys[0], &keys[1]],
             42,
             2,
         )
@@ -991,10 +956,9 @@ mod test {
 
         // Test MintToChecked
         let mint_to_ix = mint_to_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
             2,
@@ -1022,10 +986,9 @@ mod test {
 
         // Test BurnChecked
         let burn_ix = burn_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
             2,
@@ -1052,7 +1015,7 @@ mod test {
         );
 
         // Test SyncNative
-        let sync_native_ix = sync_native(&anima_token::id(), &convert_pubkey(keys[0])).unwrap();
+        let sync_native_ix = sync_native(&keys[0]).unwrap();
         let message = Message::new(&[sync_native_ix], None);
         let compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
         assert_eq!(
@@ -1076,75 +1039,70 @@ mod test {
 
         // Test InitializeMint variations
         let initialize_mint_ix = initialize_mint(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
-            &convert_pubkey(keys[1]),
-            Some(&convert_pubkey(keys[2])),
+            &keys[0],
+            &keys[1],
+            Some(&keys[2]),
             2,
         )
         .unwrap();
         let message = Message::new(&[initialize_mint_ix], None);
         let mut compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
-        assert!(parse_token(&compiled_instruction, &keys[0..1]).is_err());
+        assert!(parse_token(&compiled_instruction, &[]).is_err());
         compiled_instruction.accounts =
             compiled_instruction.accounts[0..compiled_instruction.accounts.len() - 1].to_vec();
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let initialize_mint_ix = initialize_mint(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
-            &convert_pubkey(keys[1]),
+            &keys[0],
+            &keys[1],
             None,
             2,
         )
         .unwrap();
         let message = Message::new(&[initialize_mint_ix], None);
         let mut compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
-        assert!(parse_token(&compiled_instruction, &keys[0..1]).is_err());
+        assert!(parse_token(&compiled_instruction, &[]).is_err());
         compiled_instruction.accounts =
             compiled_instruction.accounts[0..compiled_instruction.accounts.len() - 1].to_vec();
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         // Test InitializeAccount
         let initialize_account_ix = initialize_account(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
+            &keys[0],
+            &keys[1],
+            &keys[2],
         )
         .unwrap();
         let message = Message::new(&[initialize_account_ix], None);
         let mut compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
-        assert!(parse_token(&compiled_instruction, &keys[0..3]).is_err());
+        assert!(parse_token(&compiled_instruction, &keys[0..2]).is_err());
         compiled_instruction.accounts =
             compiled_instruction.accounts[0..compiled_instruction.accounts.len() - 1].to_vec();
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         // Test InitializeMultisig
         let initialize_multisig_ix = initialize_multisig(
-            &anima_token::id(),
-            &convert_pubkey(keys[0]),
+            &keys[0],
             &[
-                &convert_pubkey(keys[1]),
-                &convert_pubkey(keys[2]),
-                &convert_pubkey(keys[3]),
+                &keys[1],
+                &keys[2],
+                &keys[3],
             ],
             2,
         )
         .unwrap();
         let message = Message::new(&[initialize_multisig_ix], None);
         let mut compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
-        assert!(parse_token(&compiled_instruction, &keys[0..4]).is_err());
+        assert!(parse_token(&compiled_instruction, &keys[0..3]).is_err());
         compiled_instruction.accounts =
             compiled_instruction.accounts[0..compiled_instruction.accounts.len() - 3].to_vec();
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         // Test Transfer, incl multisig
         let transfer_ix = transfer(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
         )
@@ -1157,11 +1115,10 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let transfer_ix = transfer(
-            &anima_token::id(),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[4]),
-            &[&convert_pubkey(keys[0]), &convert_pubkey(keys[1])],
+            &keys[2],
+            &keys[3],
+            &keys[4],
+            &[&keys[0], &keys[1]],
             42,
         )
         .unwrap();
@@ -1174,10 +1131,9 @@ mod test {
 
         // Test Approve, incl multisig
         let approve_ix = approve(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
         )
@@ -1190,11 +1146,10 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let approve_ix = approve(
-            &anima_token::id(),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[4]),
-            &[&convert_pubkey(keys[0]), &convert_pubkey(keys[1])],
+            &keys[2],
+            &keys[3],
+            &keys[4],
+            &[&keys[0], &keys[1]],
             42,
         )
         .unwrap();
@@ -1207,9 +1162,8 @@ mod test {
 
         // Test Revoke
         let revoke_ix = revoke(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -1222,11 +1176,10 @@ mod test {
 
         // Test SetAuthority
         let set_authority_ix = set_authority(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            Some(&convert_pubkey(keys[2])),
+            &keys[1],
+            Some(&keys[2]),
             AuthorityType::FreezeAccount,
-            &convert_pubkey(keys[0]),
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -1239,10 +1192,9 @@ mod test {
 
         // Test MintTo
         let mint_to_ix = mint_to(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
         )
@@ -1256,10 +1208,9 @@ mod test {
 
         // Test Burn
         let burn_ix = burn(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
         )
@@ -1273,10 +1224,9 @@ mod test {
 
         // Test CloseAccount
         let close_account_ix = close_account(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -1289,10 +1239,9 @@ mod test {
 
         // Test FreezeAccount
         let freeze_account_ix = freeze_account(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -1305,10 +1254,9 @@ mod test {
 
         // Test ThawAccount
         let thaw_account_ix = thaw_account(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
         )
         .unwrap();
@@ -1321,11 +1269,10 @@ mod test {
 
         // Test TransferChecked, incl multisig
         let transfer_ix = transfer_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[3],
+            &keys[0],
             &[],
             42,
             2,
@@ -1339,12 +1286,11 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let transfer_ix = transfer_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[4]),
-            &convert_pubkey(keys[5]),
-            &[&convert_pubkey(keys[0]), &convert_pubkey(keys[1])],
+            &keys[2],
+            &keys[3],
+            &keys[4],
+            &keys[5],
+            &[&keys[0], &keys[1]],
             42,
             2,
         )
@@ -1358,11 +1304,10 @@ mod test {
 
         // Test ApproveChecked, incl multisig
         let approve_ix = approve_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[3],
+            &keys[0],
             &[],
             42,
             2,
@@ -1376,12 +1321,11 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let approve_ix = approve_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[3]),
-            &convert_pubkey(keys[4]),
-            &convert_pubkey(keys[5]),
-            &[&convert_pubkey(keys[0]), &convert_pubkey(keys[1])],
+            &keys[2],
+            &keys[3],
+            &keys[4],
+            &keys[5],
+            &[&keys[0], &keys[1]],
             42,
             2,
         )
@@ -1395,10 +1339,9 @@ mod test {
 
         // Test MintToChecked
         let mint_to_ix = mint_to_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
             2,
@@ -1413,10 +1356,9 @@ mod test {
 
         // Test BurnChecked
         let burn_ix = burn_checked(
-            &anima_token::id(),
-            &convert_pubkey(keys[1]),
-            &convert_pubkey(keys[2]),
-            &convert_pubkey(keys[0]),
+            &keys[1],
+            &keys[2],
+            &keys[0],
             &[],
             42,
             2,
@@ -1430,7 +1372,7 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         // Test SyncNative
-        let sync_native_ix = sync_native(&anima_token::id(), &convert_pubkey(keys[0])).unwrap();
+        let sync_native_ix = sync_native(&keys[0]).unwrap();
         let message = Message::new(&[sync_native_ix], None);
         let mut compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
         assert!(parse_token(&compiled_instruction, &[]).is_err());

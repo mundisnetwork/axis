@@ -134,9 +134,7 @@ fn collect_token_balance_from_account(
 mod test {
     use {
         super::*,
-        mundis_account_decoder::parse_token::{pubkey_from_anima_token, anima_token_pubkey},
         mundis_sdk::{account::Account, genesis_config::create_genesis_config},
-        anima_token::mundis_program::program_option::COption,
         std::collections::BTreeMap,
     };
 
@@ -155,12 +153,12 @@ mod test {
             freeze_authority: None,
         };
         let mut data = [0; Mint::LEN];
-        Mint::pack(mint_data, &mut data).unwrap();
+        mint_data.pack(&mut data).unwrap();
         let mint_pubkey = Pubkey::new_unique();
         let mint = Account {
             lamports: 100,
             data: data.to_vec(),
-            owner: pubkey_from_anima_token(&anima_token::id()),
+            owner: mundis_sdk::token::program::id(),
             executable: false,
             rent_epoch: 0,
         };
@@ -175,8 +173,8 @@ mod test {
 
         let token_owner = Pubkey::new_unique();
         let token_data = TokenAccount {
-            mint: anima_token_pubkey(&mint_pubkey),
-            owner: anima_token_pubkey(&token_owner),
+            mint: mint_pubkey,
+            owner: token_owner,
             amount: 42,
             delegate: None,
             state: mundis_token_program::state::AccountState::Initialized,
@@ -185,12 +183,12 @@ mod test {
             close_authority: None,
         };
         let mut data = [0; TokenAccount::LEN];
-        TokenAccount::pack(token_data, &mut data).unwrap();
+        token_data.pack(&mut data).unwrap();
 
         let anima_token_account = Account {
             lamports: 100,
             data: data.to_vec(),
-            owner: pubkey_from_anima_token(&anima_token::id()),
+            owner: mundis_sdk::token::program::id(),
             executable: false,
             rent_epoch: 0,
         };
@@ -203,8 +201,8 @@ mod test {
         };
 
         let other_mint_data = TokenAccount {
-            mint: anima_token_pubkey(&other_mint_pubkey),
-            owner: anima_token_pubkey(&token_owner),
+            mint: other_mint_pubkey,
+            owner: token_owner,
             amount: 42,
             delegate: None,
             state: mundis_token_program::state::AccountState::Initialized,
@@ -213,12 +211,12 @@ mod test {
             close_authority: None,
         };
         let mut data = [0; TokenAccount::LEN];
-        TokenAccount::pack(other_mint_data, &mut data).unwrap();
+        other_mint_data.pack(&mut data).unwrap();
 
         let other_mint_token_account = Account {
             lamports: 100,
             data: data.to_vec(),
-            owner: pubkey_from_anima_token(&anima_token::id()),
+            owner: mundis_sdk::token::program::id(),
             executable: false,
             rent_epoch: 0,
         };

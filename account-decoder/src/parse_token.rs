@@ -249,17 +249,17 @@ mod test {
 
     #[test]
     fn test_parse_token() {
-        let mint_pubkey = AnimaTokenPubkey::new(&[2; 32]);
-        let owner_pubkey = AnimaTokenPubkey::new(&[3; 32]);
-        let mut account_data = vec![0; Account::get_packed_len()];
-        let mut account = Account::unpack_unchecked(&account_data).unwrap();
+        let mint_pubkey = Pubkey::new(&[2; 32]);
+        let owner_pubkey = Pubkey::new(&[3; 32]);
+        let mut account_data = vec![0; Account::packed_len()];
+        let mut account = Account::unpack(&account_data).unwrap();
         account.mint = mint_pubkey;
         account.owner = owner_pubkey;
         account.amount = 42;
         account.state = AccountState::Initialized;
         account.is_native = false;
         account.close_authority = Some(owner_pubkey);
-        Account::pack(account, &mut account_data).unwrap();
+        account.pack(&mut account_data).unwrap();
 
         assert!(parse_token(&account_data, None).is_err());
         assert_eq!(
@@ -276,20 +276,19 @@ mod test {
                 delegate: None,
                 state: UiAccountState::Initialized,
                 is_native: false,
-                rent_exempt_reserve: None,
                 delegated_amount: None,
                 close_authority: Some(owner_pubkey.to_string()),
             }),
         );
 
-        let mut mint_data = vec![0; Mint::get_packed_len()];
-        let mut mint = Mint::unpack_unchecked(&mint_data).unwrap();
+        let mut mint_data = vec![0; Mint::packed_len()];
+        let mut mint = Mint::unpack(&mint_data).unwrap();
         mint.mint_authority = Some(owner_pubkey);
         mint.supply = 42;
         mint.decimals = 3;
         mint.is_initialized = true;
         mint.freeze_authority = Some(owner_pubkey);
-        Mint::pack(mint, &mut mint_data).unwrap();
+        mint.pack(&mut mint_data).unwrap();
 
         assert_eq!(
             parse_token(&mint_data, None).unwrap(),
@@ -302,20 +301,20 @@ mod test {
             }),
         );
 
-        let signer1 = AnimaTokenPubkey::new(&[1; 32]);
-        let signer2 = AnimaTokenPubkey::new(&[2; 32]);
-        let signer3 = AnimaTokenPubkey::new(&[3; 32]);
-        let mut multisig_data = vec![0; Multisig::get_packed_len()];
-        let mut signers = [AnimaTokenPubkey::default(); 11];
+        let signer1 = Pubkey::new(&[1; 32]);
+        let signer2 = Pubkey::new(&[2; 32]);
+        let signer3 = Pubkey::new(&[3; 32]);
+        let mut multisig_data = vec![0; Multisig::packed_len()];
+        let mut signers = [Pubkey::default(); 11];
         signers[0] = signer1;
         signers[1] = signer2;
         signers[2] = signer3;
-        let mut multisig = Multisig::unpack_unchecked(&multisig_data).unwrap();
+        let mut multisig = Multisig::unpack(&multisig_data).unwrap();
         multisig.m = 2;
         multisig.n = 3;
         multisig.is_initialized = true;
         multisig.signers = signers;
-        Multisig::pack(multisig, &mut multisig_data).unwrap();
+        multisig.pack(&mut multisig_data).unwrap();
 
         assert_eq!(
             parse_token(&multisig_data, None).unwrap(),
@@ -337,11 +336,11 @@ mod test {
 
     #[test]
     fn test_get_token_account_mint() {
-        let mint_pubkey = AnimaTokenPubkey::new(&[2; 32]);
-        let mut account_data = vec![0; Account::get_packed_len()];
-        let mut account = Account::unpack_unchecked(&account_data).unwrap();
+        let mint_pubkey = Pubkey::new(&[2; 32]);
+        let mut account_data = vec![0; Account::packed_len()];
+        let mut account = Account::unpack(&account_data).unwrap();
         account.mint = mint_pubkey;
-        Account::pack(account, &mut account_data).unwrap();
+        account.pack(&mut account_data).unwrap();
 
         let expected_mint_pubkey = Pubkey::new(&[2; 32]);
         assert_eq!(

@@ -6,9 +6,8 @@ pub mod native_mint;
 pub mod token_processor;
 pub mod state;
 
-use mundis_program::instruction::InstructionError;
-use mundis_program::pubkey::Pubkey;
-
+use mundis_sdk::instruction::InstructionError;
+use mundis_sdk::pubkey::Pubkey;
 pub use mundis_sdk::token::program::{check_id, id};
 
 /// Convert the UI representation of a token amount (using the decimals field defined in its mint)

@@ -1,7 +1,3 @@
-#[deprecated(
-    since = "1.8.0",
-    note = "Please use `mundis_sdk::stake::instruction` or `mundis_program::stake::instruction` instead"
-)]
 pub use mundis_sdk::stake::instruction::*;
 use {
     crate::{config, stake_state::StakeAccount},

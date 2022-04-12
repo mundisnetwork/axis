@@ -1,12 +1,9 @@
 //! Instruction types
 
 use crate::check_program_account;
-use mundis_program::{
-    instruction::Instruction,
-    pubkey::Pubkey,
-};
-use mundis_program::instruction::{AccountMeta, InstructionError};
 use serde_derive::{Deserialize, Serialize};
+use mundis_sdk::instruction::{AccountMeta, Instruction, InstructionError};
+use mundis_sdk::pubkey::Pubkey;
 
 /// Minimum number of multisignature signers (min N)
 pub const MIN_SIGNERS: usize = 1;
