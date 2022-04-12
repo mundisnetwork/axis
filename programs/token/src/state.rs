@@ -1,16 +1,14 @@
 //! State transition types
 
-use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
+use arrayref::array_mut_ref;
 use num_enum::TryFromPrimitive;
 use serde_derive::{Deserialize, Serialize};
 
 use mundis_program::{
     instruction::InstructionError,
-    program_option::COption,
-    program_pack::{IsInitialized, Pack, Sealed},
+    program_pack::{IsInitialized, Sealed},
     pubkey::Pubkey,
 };
-use mundis_program::program_error::ProgramError;
 use crate::error::TokenError;
 
 use crate::token_instruction::MAX_SIGNERS;
