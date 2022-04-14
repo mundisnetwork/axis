@@ -6,10 +6,10 @@ use {
     mundis_sdk::{instruction::CompiledInstruction, pubkey::Pubkey},
 };
 
-// A helper function to convert anima_token_account::id() as mundis_sdk::pubkey::Pubkey
+// A helper function to convert mundis_token_account_program::id() as mundis_sdk::pubkey::Pubkey
 // to mundis_sdk::pubkey::Pubkey
 pub fn anima_associated_token_id() -> Pubkey {
-    Pubkey::new_from_array(anima_token_account::id().to_bytes())
+    Pubkey::new_from_array(mundis_token_account_program::id().to_bytes())
 }
 
 pub fn parse_associated_token(

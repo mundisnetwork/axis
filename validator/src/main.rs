@@ -2310,7 +2310,6 @@ pub fn main() {
         poh_verify: !matches.is_present("skip_poh_verify"),
         debug_keys,
         contact_debug_interval,
-        bpf_jit: !matches.is_present("no_bpf_jit"),
         send_transaction_service_config: send_transaction_service::Config {
             retry_rate_ms: value_t_or_exit!(matches, "rpc_send_transaction_retry_ms", u64),
             leader_forward_count: value_t_or_exit!(

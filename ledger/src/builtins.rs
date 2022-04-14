@@ -10,7 +10,8 @@ macro_rules! to_builtin {
 /// Builtin programs that are always available
 fn genesis_builtins() -> Vec<Builtin> {
     // nothing here for now
-    vec![]
+    vec![
+    ]
 }
 
 /// Dynamic feature transitions for builtin programs

@@ -18,6 +18,10 @@ mundis-program-runtime = { path = "../../program-runtime", version = "=1.9.14" }
 mundis-sdk = { path = "../../sdk", version = "=1.9.14" }
 mundis-token-program = { path = "../token", version = "=1.9.14" }
 
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+mundis-test-harness = { path = "../../test-harness", version = "=1.9.14" }
+
 [build-dependencies]
 rustc_version = "0.4"
 

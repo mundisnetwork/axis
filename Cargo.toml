@@ -47,6 +47,7 @@ members = [
     "rayon-threadlimit",
     "replica-lib",
     "test-validator",
+    "test-harness",
 ]
 
 # TODO: Remove once the "simd-accel" feature from the reed-solomon-erasure

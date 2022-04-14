@@ -644,7 +644,7 @@ impl<'a> InvokeContext<'a> {
                 keyed_account.signer_key().is_some() // Signed in the parent instruction
                 || signers.contains(&account.pubkey) // Signed by the program
             ) {
-                ic_msg!(self, "{}'s signer privilege escalated", account.pubkey);
+                ic_msg!(self, "{}'s signer privilege escalated. Signers: {:?}", account.pubkey, signers);
                 return Err(InstructionError::PrivilegeEscalation);
             }
         }

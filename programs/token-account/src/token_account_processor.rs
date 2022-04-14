@@ -1,3 +1,4 @@
+use mundis_program_runtime::ic_msg;
 use mundis_program_runtime::invoke_context::InvokeContext;
 use mundis_sdk::instruction::InstructionError;
 use mundis_sdk::keyed_account::{keyed_account_at_index, next_keyed_account};
@@ -35,22 +36,22 @@ impl Processor {
         let accounts = &keyed_accounts[first_instruction_account..];
 
         for acc in keyed_accounts {
-            println!("Program account = {}", acc.unsigned_key());
+            ic_msg!(invoke_context, "Program account = {}", acc.unsigned_key());
         }
 
         let accounts_iter = &mut accounts.iter();
 
         let token_program_id = mundis_sdk::token::program::id();
+        ic_msg!(invoke_context, "Token program id = {}", token_program_id);
+
         let funder_info = next_keyed_account(accounts_iter)?;
         let associated_token_account_info = next_keyed_account(accounts_iter)?;
         let wallet_account_info = next_keyed_account(accounts_iter)?;
         let token_mint_info = next_keyed_account(accounts_iter)?;
 
-        let (associated_token_address, bump_seed) = get_associated_token_address_and_bump_seed_internal(
+        let associated_token_address = get_associated_token_address(
             wallet_account_info.unsigned_key(),
             token_mint_info.unsigned_key(),
-            program_id,
-            &token_program_id,
         );
         if associated_token_address != *associated_token_account_info.unsigned_key() {
             return Err(InstructionError::InvalidSeeds);
@@ -63,7 +64,10 @@ impl Processor {
         let wallet_account_key = *wallet_account_info.unsigned_key();
 
         let associated_token_account_signer_seeds = [
-            wallet_account_key, token_program_id, token_mint_info_key
+            wallet_account_key,
+            token_program_id,
+            token_mint_info_key,
+            associated_token_address
         ];
 
         if balance > 0 {
@@ -76,8 +80,8 @@ impl Processor {
                 &associated_token_account_signer_seeds,
             )?;
         } else {
-            println!("funder_info_keyy = {}", funder_info_key);
-            println!("associated_token_account_key = {}", associated_token_account_key);
+            ic_msg!(invoke_context, "funder_info_keyy = {}", funder_info_key);
+            ic_msg!(invoke_context, "associated_token_account_key = {}", associated_token_account_key);
 
             invoke_context.native_invoke(system_instruction::create_account(
                 &funder_info_key,
@@ -104,13 +108,14 @@ impl Processor {
 mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
-    use mundis_program_runtime::invoke_context::{BuiltinProgram, mock_process_instruction, mock_process_instruction_with_sysvars};
+    use mundis_program_runtime::invoke_context::{mock_process_instruction_with_sysvars};
     use mundis_program_runtime::sysvar_cache::SysvarCache;
     use mundis_sdk::account::{AccountSharedData, WritableAccount};
     use mundis_sdk::instruction::{Instruction, InstructionError};
     use mundis_sdk::pubkey::Pubkey;
     use mundis_sdk::system_program;
     use mundis_token_program::state::TokenAccount;
+
     use crate::*;
     use crate::token_account_instruction::create_associated_token_account;
 
@@ -130,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn test_associated_token_address() {
+    fn test_associated_token_address1() {
         let account_key = Pubkey::new_unique();
         let account_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &account_key);
         let wallet_address = Pubkey::new_unique();
