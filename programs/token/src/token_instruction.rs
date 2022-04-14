@@ -380,16 +380,17 @@ pub enum AuthorityType {
 
 /// Creates a `InitializeMint` instruction.
 pub fn initialize_mint(
+    token_program_id: &Pubkey,
     mint_pubkey: &Pubkey,
     mint_authority_pubkey: &Pubkey,
     freeze_authority_pubkey: Option<&Pubkey>,
     decimals: u8,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
     let freeze_authority = freeze_authority_pubkey.cloned().into();
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::InitializeMint {
             mint_authority: *mint_authority_pubkey,
             freeze_authority,
@@ -403,14 +404,15 @@ pub fn initialize_mint(
 
 /// Creates a `InitializeAccount` instruction.
 pub fn initialize_account(
+    token_program_id: &Pubkey,
     account_pubkey: &Pubkey,
     mint_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::InitializeAccount {},
         vec![
             AccountMeta::new(*account_pubkey, false),
@@ -422,14 +424,15 @@ pub fn initialize_account(
 
 /// Creates a `InitializeAccount2` instruction.
 pub fn initialize_account2(
+    token_program_id: &Pubkey,
     account_pubkey: &Pubkey,
     mint_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::InitializeAccount2 {
             owner: *owner_pubkey,
         },
@@ -442,11 +445,12 @@ pub fn initialize_account2(
 
 /// Creates a `InitializeMultisig` instruction.
 pub fn initialize_multisig(
+    token_program_id: &Pubkey,
     multisig_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
     m: u8,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     if !is_valid_signer_index(m as usize)
         || !is_valid_signer_index(signer_pubkeys.len())
@@ -462,7 +466,7 @@ pub fn initialize_multisig(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::InitializeMultisig {
             m,
         },
@@ -472,13 +476,14 @@ pub fn initialize_multisig(
 
 /// Creates a `Transfer` instruction.
 pub fn transfer(
+    token_program_id: &Pubkey,
     source_pubkey: &Pubkey,
     destination_pubkey: &Pubkey,
     authority_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
     amount: u64,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*source_pubkey, false));
@@ -492,7 +497,7 @@ pub fn transfer(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::Transfer {
             amount
         },
@@ -502,13 +507,14 @@ pub fn transfer(
 
 /// Creates an `Approve` instruction.
 pub fn approve(
+    token_program_id: &Pubkey,
     source_pubkey: &Pubkey,
     delegate_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
     amount: u64,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*source_pubkey, false));
@@ -522,7 +528,7 @@ pub fn approve(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::Approve {
             amount
         },
@@ -532,11 +538,12 @@ pub fn approve(
 
 /// Creates a `Revoke` instruction.
 pub fn revoke(
+    token_program_id: &Pubkey,
     source_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(2 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*source_pubkey, false));
@@ -549,7 +556,7 @@ pub fn revoke(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::Revoke,
         accounts
     ))
@@ -557,13 +564,14 @@ pub fn revoke(
 
 /// Creates a `SetAuthority` instruction.
 pub fn set_authority(
+    token_program_id: &Pubkey,
     owned_pubkey: &Pubkey,
     new_authority_pubkey: Option<&Pubkey>,
     authority_type: AuthorityType,
     owner_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let new_authority = new_authority_pubkey.cloned().into();
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
@@ -577,7 +585,7 @@ pub fn set_authority(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::SetAuthority {
             authority_type,
             new_authority,
@@ -588,13 +596,14 @@ pub fn set_authority(
 
 /// Creates a `MintTo` instruction.
 pub fn mint_to(
+    token_program_id: &Pubkey,
     mint_pubkey: &Pubkey,
     account_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
     amount: u64,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*mint_pubkey, false));
@@ -607,7 +616,7 @@ pub fn mint_to(
         accounts.push(AccountMeta::new_readonly(**signer_pubkey, true));
     }
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::MintTo {
             amount,
         },
@@ -617,13 +626,14 @@ pub fn mint_to(
 
 /// Creates a `Burn` instruction.
 pub fn burn(
+    token_program_id: &Pubkey,
     account_pubkey: &Pubkey,
     mint_pubkey: &Pubkey,
     authority_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
     amount: u64,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*account_pubkey, false));
@@ -637,7 +647,7 @@ pub fn burn(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::Burn {
             amount,
         },
@@ -647,12 +657,13 @@ pub fn burn(
 
 /// Creates a `CloseAccount` instruction.
 pub fn close_account(
+    token_program_id: &Pubkey,
     account_pubkey: &Pubkey,
     destination_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*account_pubkey, false));
@@ -666,7 +677,7 @@ pub fn close_account(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::CloseAccount,
         accounts
     ))
@@ -674,12 +685,13 @@ pub fn close_account(
 
 /// Creates a `FreezeAccount` instruction.
 pub fn freeze_account(
+    token_program_id: &Pubkey,
     account_pubkey: &Pubkey,
     mint_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*account_pubkey, false));
@@ -693,7 +705,7 @@ pub fn freeze_account(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::FreezeAccount,
         accounts
     ))
@@ -701,12 +713,13 @@ pub fn freeze_account(
 
 /// Creates a `ThawAccount` instruction.
 pub fn thaw_account(
+    token_program_id: &Pubkey,
     account_pubkey: &Pubkey,
     mint_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
     signer_pubkeys: &[&Pubkey],
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*account_pubkey, false));
@@ -720,7 +733,7 @@ pub fn thaw_account(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::ThawAccount,
         accounts
     ))
@@ -729,6 +742,7 @@ pub fn thaw_account(
 /// Creates a `TransferChecked` instruction.
 #[allow(clippy::too_many_arguments)]
 pub fn transfer_checked(
+    token_program_id: &Pubkey,
     source_pubkey: &Pubkey,
     mint_pubkey: &Pubkey,
     destination_pubkey: &Pubkey,
@@ -737,7 +751,7 @@ pub fn transfer_checked(
     amount: u64,
     decimals: u8,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(4 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*source_pubkey, false));
@@ -752,7 +766,7 @@ pub fn transfer_checked(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::TransferChecked {
             amount,
             decimals
@@ -764,6 +778,7 @@ pub fn transfer_checked(
 /// Creates an `ApproveChecked` instruction.
 #[allow(clippy::too_many_arguments)]
 pub fn approve_checked(
+    token_program_id: &Pubkey,
     source_pubkey: &Pubkey,
     mint_pubkey: &Pubkey,
     delegate_pubkey: &Pubkey,
@@ -772,7 +787,7 @@ pub fn approve_checked(
     amount: u64,
     decimals: u8,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(4 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*source_pubkey, false));
@@ -787,7 +802,7 @@ pub fn approve_checked(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::ApproveChecked {
             amount,
             decimals
@@ -798,6 +813,7 @@ pub fn approve_checked(
 
 /// Creates a `MintToChecked` instruction.
 pub fn mint_to_checked(
+    token_program_id: &Pubkey,
     mint_pubkey: &Pubkey,
     account_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
@@ -805,7 +821,7 @@ pub fn mint_to_checked(
     amount: u64,
     decimals: u8,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*mint_pubkey, false));
@@ -819,7 +835,7 @@ pub fn mint_to_checked(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::MintToChecked {
             amount,
             decimals
@@ -830,6 +846,7 @@ pub fn mint_to_checked(
 
 /// Creates a `BurnChecked` instruction.
 pub fn burn_checked(
+    token_program_id: &Pubkey,
     account_pubkey: &Pubkey,
     mint_pubkey: &Pubkey,
     authority_pubkey: &Pubkey,
@@ -837,7 +854,7 @@ pub fn burn_checked(
     amount: u64,
     decimals: u8,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let mut accounts = Vec::with_capacity(3 + signer_pubkeys.len());
     accounts.push(AccountMeta::new(*account_pubkey, false));
@@ -851,7 +868,7 @@ pub fn burn_checked(
     }
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::BurnChecked {
             amount,
             decimals
@@ -862,14 +879,15 @@ pub fn burn_checked(
 
 /// Creates a `SyncNative` instruction
 pub fn sync_native(
+    token_program_id: &Pubkey,
     account_pubkey: &Pubkey,
 ) -> Result<Instruction, InstructionError> {
-    check_program_account(&mundis_sdk::token::program::id())?;
+    check_program_account(token_program_id)?;
 
     let accounts = vec![AccountMeta::new(*account_pubkey, false)];
 
     Ok(Instruction::new_with_bincode(
-        mundis_sdk::token::program::id(),
+        *token_program_id,
         &TokenInstruction::SyncNative,
         accounts,
     ))

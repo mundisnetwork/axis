@@ -570,6 +570,7 @@ mod tests {
             &keyed_accounts,
             &sysvar_cache,
             super::process_instruction,
+            &[]
         )
     }
 

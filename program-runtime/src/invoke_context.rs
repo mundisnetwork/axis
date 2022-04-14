@@ -1021,13 +1021,14 @@ pub fn mock_process_instruction_with_sysvars(
     keyed_accounts: &[(bool, bool, Pubkey, Rc<RefCell<AccountSharedData>>)],
     sysvar_cache: &SysvarCache,
     process_instruction: ProcessInstructionWithContext,
+    builtin_programs: &[BuiltinProgram]
 ) -> Result<(), InstructionError> {
     let mut preparation =
         prepare_mock_invoke_context(&program_indices, instruction_data, keyed_accounts);
     let processor_account = AccountSharedData::new_ref(0, 0, &mundis_sdk::native_loader::id());
     program_indices.insert(0, preparation.accounts.len());
     preparation.accounts.push((*loader_id, processor_account));
-    let mut invoke_context = InvokeContext::new_mock(&preparation.accounts, &[]);
+    let mut invoke_context = InvokeContext::new_mock(&preparation.accounts, builtin_programs);
     invoke_context.sysvar_cache = Cow::Borrowed(sysvar_cache);
     invoke_context.push(
         &preparation.message,
@@ -1052,6 +1053,7 @@ pub fn mock_process_instruction(
         keyed_accounts,
         &SysvarCache::default(),
         process_instruction,
+        &[]
     )
 }
 

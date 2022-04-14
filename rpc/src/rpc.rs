@@ -79,7 +79,7 @@ use {
         TransactionConfirmationStatus, TransactionStatus, UiConfirmedBlock, UiTransactionEncoding,
     },
     mundis_vote_program::vote_state::{VoteState, MAX_LOCKOUT_HISTORY},
-    mundis_token_program::state::{Account as TokenAccount, Mint},
+    mundis_token_program::state::{TokenAccount as TokenAccount, Mint},
     std::{
         any::type_name,
         cmp::{max, min},

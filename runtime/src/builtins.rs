@@ -208,6 +208,16 @@ fn genesis_builtins() -> Vec<Builtin> {
             "memo_program",
             mundis_memo_program::id(),
             with_program_logging!(mundis_memo_program::memo_processor::process_instruction),
+        ),
+        Builtin::new(
+            "token_program",
+            mundis_token_program::id(),
+            with_program_logging!(mundis_token_program::token_processor::process_instruction),
+        ),
+        Builtin::new(
+            "token_account_program",
+            mundis_token_account_program::id(),
+            with_program_logging!(mundis_token_account_program::token_account_processor::process_instruction),
         )
     ]
 }

@@ -10,7 +10,7 @@ use {
     mundis_sdk::{account::ReadableAccount, pubkey::Pubkey},
     std::collections::HashMap,
 };
-use mundis_token_program::state::{Mint, Account as TokenAccount};
+use mundis_token_program::state::{Mint, TokenAccount as TokenAccount};
 
 pub type TransactionTokenBalances = Vec<Vec<TransactionTokenBalance>>;
 

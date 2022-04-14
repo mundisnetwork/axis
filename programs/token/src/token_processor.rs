@@ -6,14 +6,11 @@ use mundis_sdk::decode_error::DecodeError;
 use mundis_sdk::keyed_account::{keyed_account_at_index, KeyedAccount, next_keyed_account};
 use mundis_sdk::program_utils::limited_deserialize;
 use mundis_sdk::instruction::InstructionError;
+use mundis_sdk::program_memory::{sol_memcmp, sol_memset};
 use mundis_sdk::program_pack::IsInitialized;
 use mundis_sdk::pubkey::Pubkey;
 
-use crate::{
-    error::TokenError,
-    state::{Account, AccountState, Mint, Multisig},
-    token_instruction::{AuthorityType, is_valid_signer_index, MAX_SIGNERS, TokenInstruction},
-};
+use crate::{error::TokenError, state::{TokenAccount, AccountState, Mint, Multisig}, token_instruction::{AuthorityType, is_valid_signer_index, MAX_SIGNERS, TokenInstruction}};
 use crate::error::PrintInstructionError;
 
 pub fn process_instruction(
@@ -53,11 +50,11 @@ impl Processor {
             }
             TokenInstruction::InitializeAccount => {
                 println!("Instruction: InitializeAccount");
-                Self::process_initialize_account(accounts)
+                Self::process_initialize_account(program_id, accounts)
             }
             TokenInstruction::InitializeAccount2 { owner } => {
                 println!("Instruction: InitializeAccount2");
-                Self::process_initialize_account2(accounts, owner)
+                Self::process_initialize_account2(program_id, accounts, owner)
             }
             TokenInstruction::InitializeMultisig { m } => {
                 println!("Instruction: InitializeMultisig");
@@ -149,6 +146,7 @@ impl Processor {
     }
 
     fn _process_initialize_account(
+        program_id: &Pubkey,
         accounts: &[KeyedAccount],
         owner: Option<&Pubkey>,
     ) -> Result<(), InstructionError> {
@@ -160,13 +158,15 @@ impl Processor {
         } else {
             next_keyed_account(accounts_iter)?.unsigned_key()
         };
-        let mut account = Account::unpack(new_account_info.try_account_ref()?.data())
-            .unwrap_or(Account::default());
-        if account.is_initialized() {
+        let mut token_account = TokenAccount::unpack(new_account_info.try_account_ref()?.data())
+            .unwrap_or(TokenAccount::default());
+        if token_account.is_initialized() {
             return Err(TokenError::AlreadyInUse.into());
         }
 
-        if *mint_info.unsigned_key() != crate::native_mint::id() {
+        let is_native_mint = Self::cmp_pubkeys(mint_info.unsigned_key(), &crate::native_mint::id());
+        if !is_native_mint {
+            Self::check_account_owner(program_id, mint_info)?;
             let mint = Mint::unpack(mint_info.try_account_ref()?.data())
                 .unwrap_or(Mint::default());
 
@@ -175,31 +175,31 @@ impl Processor {
             }
         }
 
-        account.mint = *mint_info.unsigned_key();
-        account.owner = *owner;
-        account.delegate = Option::None;
-        account.delegated_amount = 0;
-        account.state = AccountState::Initialized;
+        token_account.mint = *mint_info.unsigned_key();
+        token_account.owner = *owner;
+        token_account.delegate = Option::None;
+        token_account.delegated_amount = 0;
+        token_account.state = AccountState::Initialized;
 
         if *mint_info.unsigned_key() == crate::native_mint::id() {
-            account.is_native = true;
-            account.amount = new_account_info.lamports()?;
+            token_account.is_native = true;
+            token_account.amount = new_account_info.lamports()?;
         } else {
-            account.is_native = false;
-            account.amount = 0;
+            token_account.is_native = false;
+            token_account.amount = 0;
         };
 
-        account.pack(new_account_info.try_account_ref_mut()?.data_mut())
+        token_account.pack(new_account_info.try_account_ref_mut()?.data_mut())
     }
 
     /// Processes an [InitializeAccount](enum.TokenInstruction.html) instruction.
-    pub fn process_initialize_account(accounts: &[KeyedAccount]) -> Result<(), InstructionError> {
-        Self::_process_initialize_account(accounts, None)
+    pub fn process_initialize_account(program_id: &Pubkey, accounts: &[KeyedAccount]) -> Result<(), InstructionError> {
+        Self::_process_initialize_account(program_id, accounts, None)
     }
 
     /// Processes an [InitializeAccount2](enum.TokenInstruction.html) instruction.
-    pub fn process_initialize_account2(accounts: &[KeyedAccount], owner: Pubkey) -> Result<(), InstructionError> {
-        Self::_process_initialize_account(accounts, Some(&owner))
+    pub fn process_initialize_account2(program_id: &Pubkey, accounts: &[KeyedAccount], owner: Pubkey) -> Result<(), InstructionError> {
+        Self::_process_initialize_account(program_id, accounts, Some(&owner))
     }
 
     /// Processes a [InitializeMultisig](enum.TokenInstruction.html) instruction.
@@ -216,7 +216,7 @@ impl Processor {
             return Err(TokenError::AlreadyInUse.into());
         }
 
-        let signer_infos = &accounts[1..];
+        let signer_infos = accounts_iter.as_slice();
         multisig.m = m;
         multisig.n = signer_infos.len() as u8;
         if !is_valid_signer_index(multisig.n as usize) {
@@ -254,8 +254,8 @@ impl Processor {
         let dest_account_info = next_keyed_account(account_info_iter)?;
         let authority_info = next_keyed_account(account_info_iter)?;
 
-        let mut source_account = Account::unpack(source_account_info.try_account_ref()?.data())?;
-        let mut dest_account = Account::unpack(dest_account_info.try_account_ref()?.data())?;
+        let mut source_account = TokenAccount::unpack(source_account_info.try_account_ref()?.data())?;
+        let mut dest_account = TokenAccount::unpack(dest_account_info.try_account_ref()?.data())?;
 
         if source_account.is_frozen() || dest_account.is_frozen() {
             return Err(TokenError::AccountFrozen.into());
@@ -263,12 +263,12 @@ impl Processor {
         if source_account.amount < amount {
             return Err(TokenError::InsufficientFunds.into());
         }
-        if source_account.mint != dest_account.mint {
+        if !Self::cmp_pubkeys(&source_account.mint, &dest_account.mint) {
             return Err(TokenError::MintMismatch.into());
         }
 
         if let Some((mint_info, expected_decimals)) = expected_mint_info {
-            if source_account.mint != *mint_info.unsigned_key() {
+            if !Self::cmp_pubkeys(mint_info.unsigned_key(), &source_account.mint) {
                 return Err(TokenError::MintMismatch.into());
             }
 
@@ -278,10 +278,10 @@ impl Processor {
             }
         }
 
-        let self_transfer = source_account_info.unsigned_key() == dest_account_info.unsigned_key();
+        let self_transfer = Self::cmp_pubkeys(source_account_info.unsigned_key(), dest_account_info.unsigned_key());
 
         match source_account.delegate {
-            Some(ref delegate) if authority_info.unsigned_key() == delegate => {
+            Some(ref delegate) if Self::cmp_pubkeys(authority_info.unsigned_key(),delegate) => {
                 Self::validate_owner(
                     program_id,
                     delegate,
@@ -307,6 +307,11 @@ impl Processor {
                 authority_info,
                 account_info_iter.as_slice(),
             )?,
+        }
+
+        if self_transfer || amount == 0 {
+            Self::check_account_owner(program_id, source_account_info)?;
+            Self::check_account_owner(program_id, dest_account_info)?;
         }
 
         // This check MUST occur just before the amounts are manipulated
@@ -363,14 +368,14 @@ impl Processor {
         let delegate_info = next_keyed_account(account_info_iter)?;
         let owner_info = next_keyed_account(account_info_iter)?;
 
-        let mut source_account = Account::unpack(source_account_info.try_account_ref()?.data())?;
+        let mut source_account = TokenAccount::unpack(source_account_info.try_account_ref()?.data())?;
 
         if source_account.is_frozen() {
             return Err(TokenError::AccountFrozen.into());
         }
 
         if let Some((mint_info, expected_decimals)) = expected_mint_info {
-            if source_account.mint != *mint_info.unsigned_key() {
+            if !Self::cmp_pubkeys(mint_info.unsigned_key(), &source_account.mint) {
                 return Err(TokenError::MintMismatch.into());
             }
 
@@ -401,7 +406,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let source_account_info = next_keyed_account(account_info_iter)?;
 
-        let mut source_account = Account::unpack(source_account_info.try_account_ref()?.data())?;
+        let mut source_account = TokenAccount::unpack(source_account_info.try_account_ref()?.data())?;
 
         let owner_info = next_keyed_account(account_info_iter)?;
 
@@ -432,8 +437,8 @@ impl Processor {
         let account_info = next_keyed_account(account_info_iter)?;
         let authority_info = next_keyed_account(account_info_iter)?;
 
-        if account_info.data_len()? == Account::packed_len() {
-            let mut account = Account::unpack(account_info.try_account_ref()?.data())?;
+        if account_info.data_len()? == TokenAccount::packed_len() {
+            let mut account = TokenAccount::unpack(account_info.try_account_ref()?.data())?;
 
             if account.is_frozen() {
                 return Err(TokenError::AccountFrozen.into());
@@ -529,7 +534,7 @@ impl Processor {
         let dest_account_info = next_keyed_account(account_info_iter)?;
         let owner_info = next_keyed_account(account_info_iter)?;
 
-        let mut dest_account = Account::unpack(dest_account_info.try_account_ref()?.data())?;
+        let mut dest_account = TokenAccount::unpack(dest_account_info.try_account_ref()?.data())?;
 
         if dest_account.is_frozen() {
             return Err(TokenError::AccountFrozen.into());
@@ -559,6 +564,11 @@ impl Processor {
             None => return Err(TokenError::FixedSupply.into()),
         }
 
+        if amount == 0 {
+            Self::check_account_owner(program_id, mint_info)?;
+            Self::check_account_owner(program_id, dest_account_info)?;
+        }
+
         dest_account.amount = dest_account
             .amount
             .checked_add(amount)
@@ -586,7 +596,7 @@ impl Processor {
         let mint_info = next_keyed_account(account_info_iter)?;
         let authority_info = next_keyed_account(account_info_iter)?;
 
-        let mut source_account = Account::unpack(source_account_info.try_account_ref()?.data())?;
+        let mut source_account = TokenAccount::unpack(source_account_info.try_account_ref()?.data())?;
 
         let mut mint = Mint::unpack(mint_info.try_account_ref()?.data())?;
 
@@ -599,7 +609,7 @@ impl Processor {
         if source_account.amount < amount {
             return Err(TokenError::InsufficientFunds.into());
         }
-        if mint_info.unsigned_key() != &source_account.mint {
+        if !Self::cmp_pubkeys(mint_info.unsigned_key(), &source_account.mint) {
             return Err(TokenError::MintMismatch.into());
         }
 
@@ -610,7 +620,7 @@ impl Processor {
         }
 
         match source_account.delegate {
-            Some(ref delegate) if authority_info.unsigned_key() == delegate => {
+            Some(ref delegate) if Self::cmp_pubkeys(authority_info.unsigned_key(), delegate) => {
                 Self::validate_owner(
                     program_id,
                     delegate,
@@ -637,6 +647,11 @@ impl Processor {
             )?,
         }
 
+        if amount == 0 {
+            Self::check_account_owner(program_id, source_account_info)?;
+            Self::check_account_owner(program_id, mint_info)?;
+        }
+
         source_account.amount = source_account
             .amount
             .checked_sub(amount)
@@ -651,19 +666,21 @@ impl Processor {
     }
 
     /// Processes a [CloseAccount](enum.TokenInstruction.html) instruction.
-    pub fn process_close_account(
-        program_id: &Pubkey,
-        accounts: &[KeyedAccount],
-    ) -> Result<(), InstructionError> {
+    pub fn process_close_account(program_id: &Pubkey, accounts: &[KeyedAccount]) -> Result<(), InstructionError> {
         let account_info_iter = &mut accounts.iter();
         let source_account_info = next_keyed_account(account_info_iter)?;
         let dest_account_info = next_keyed_account(account_info_iter)?;
         let authority_info = next_keyed_account(account_info_iter)?;
 
-        let mut source_account = Account::unpack(source_account_info.try_account_ref()?.data())?;
+        if Self::cmp_pubkeys(source_account_info.unsigned_key(), dest_account_info.unsigned_key()) {
+            return Err(InstructionError::InvalidAccountData);
+        }
+
+        let source_account = TokenAccount::unpack(source_account_info.try_account_ref()?.data())?;
         if !source_account.is_native() && source_account.amount != 0 {
             return Err(TokenError::NonNativeHasBalance.into());
         }
+
         let authority = source_account
             .close_authority
             .unwrap_or(source_account.owner);
@@ -675,15 +692,17 @@ impl Processor {
         )?;
 
         let dest_starting_lamports = dest_account_info.lamports()?;
-        dest_account_info.try_account_ref_mut()?.set_lamports(dest_starting_lamports
-            .checked_add(source_account_info.lamports()?)
-            .ok_or(TokenError::Overflow)?
+        dest_account_info.try_account_ref_mut()?.set_lamports(
+            dest_starting_lamports
+                .checked_add(source_account_info.lamports()?)
+                .ok_or(TokenError::Overflow)?
         );
 
         source_account_info.try_account_ref_mut()?.set_lamports(0);
-        source_account.amount = 0;
 
-        source_account.pack(source_account_info.try_account_ref_mut()?.data_mut())
+        sol_memset(source_account_info.try_account_ref_mut()?.data_mut(), 0, TokenAccount::LEN);
+
+        Ok(())
     }
 
     /// Processes a [FreezeAccount](enum.TokenInstruction.html) or a
@@ -694,25 +713,22 @@ impl Processor {
         freeze: bool,
     ) -> Result<(), InstructionError> {
         let account_info_iter = &mut accounts.iter();
-
         let source_account_info = next_keyed_account(account_info_iter)?;
         let mint_info = next_keyed_account(account_info_iter)?;
         let authority_info = next_keyed_account(account_info_iter)?;
 
-        let mut source_account = Account::unpack(source_account_info.try_account_ref()?.data())?;
-
+        let mut source_account = TokenAccount::unpack(source_account_info.try_account_ref()?.data())?;
         if freeze && source_account.is_frozen() || !freeze && !source_account.is_frozen() {
             return Err(TokenError::InvalidState.into());
         }
         if source_account.is_native() {
             return Err(TokenError::NativeNotSupported.into());
         }
-        if mint_info.unsigned_key() != &source_account.mint {
+        if !Self::cmp_pubkeys(mint_info.unsigned_key(), &source_account.mint) {
             return Err(TokenError::MintMismatch.into());
         }
 
         let mint = Mint::unpack(mint_info.try_account_ref()?.data())?;
-
         match mint.freeze_authority {
             Some(authority) => Self::validate_owner(
                 program_id,
@@ -733,25 +749,33 @@ impl Processor {
     }
 
     /// Processes a [SyncNative](enum.TokenInstruction.html) instruction
-    pub fn process_sync_native(
-        program_id: &Pubkey,
-        accounts: &[KeyedAccount],
-    ) -> Result<(), InstructionError> {
+    pub fn process_sync_native(program_id: &Pubkey, accounts: &[KeyedAccount]) -> Result<(), InstructionError> {
         let account_info_iter = &mut accounts.iter();
-
         let native_account_info = next_keyed_account(account_info_iter)?;
+        Self::check_account_owner(program_id, native_account_info)?;
 
-        if native_account_info.owner()? != *program_id {
-            return Err(InstructionError::IncorrectProgramId);
-        }
-
-        let native_account = Account::unpack(native_account_info.try_account_ref()?.data())?;
+        let native_account = TokenAccount::unpack(native_account_info.try_account_ref()?.data())?;
 
         if !native_account.is_native {
             return Err(TokenError::NonNativeNotSupported.into());
         }
 
         native_account.pack(native_account_info.try_account_ref_mut()?.data_mut())
+    }
+
+    /// Checks that the account is owned by the expected program
+    pub fn check_account_owner(program_id: &Pubkey, account_info: &KeyedAccount) -> Result<(), InstructionError> {
+        if !Self::cmp_pubkeys(program_id, &account_info.owner()?) {
+            Err(InstructionError::IncorrectProgramId)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Checks two pubkeys for equality in a computationally cheap way using
+    /// `sol_memcmp`
+    pub fn cmp_pubkeys(a: &Pubkey, b: &Pubkey) -> bool {
+        sol_memcmp(a.as_ref(), b.as_ref(), mundis_sdk::pubkey::PUBKEY_BYTES) == 0
     }
 
     /// Validates owner(s) are present
@@ -761,10 +785,10 @@ impl Processor {
         owner_account_info: &KeyedAccount,
         signers: &[KeyedAccount],
     ) -> Result<(), InstructionError> {
-        if expected_owner != owner_account_info.unsigned_key() {
+        if !Self::cmp_pubkeys(expected_owner, owner_account_info.unsigned_key()) {
             return Err(TokenError::OwnerMismatch.into());
         }
-        if *program_id == owner_account_info.owner()?
+        if Self::cmp_pubkeys(program_id, &owner_account_info.owner()?)
             && owner_account_info.data_len()? == Multisig::packed_len()
         {
             let multisig = Multisig::unpack(owner_account_info.try_account_ref()?.data())?;
@@ -772,7 +796,7 @@ impl Processor {
             let mut matched = [false; MAX_SIGNERS];
             for signer in signers.iter() {
                 for (position, key) in multisig.signers[0..multisig.n as usize].iter().enumerate() {
-                    if key == signer.unsigned_key() && !matched[position] {
+                    if Self::cmp_pubkeys(key, signer.unsigned_key()) && !matched[position] {
                         if signer.signer_key().is_none() {
                             return Err(InstructionError::MissingRequiredSignature);
                         }
@@ -840,15 +864,13 @@ mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use mundis_program::instruction::{Instruction, InstructionError};
-    use mundis_program::pubkey::Pubkey;
     use mundis_program_runtime::invoke_context::mock_process_instruction;
     use mundis_sdk::account::{AccountSharedData, ReadableAccount, WritableAccount};
-    use mundis_sdk::instruction::InstructionError;
+    use mundis_sdk::instruction::{Instruction, InstructionError};
     use mundis_sdk::pubkey::Pubkey;
 
     use crate::error::{PrintInstructionError, TokenError};
-    use crate::state::{Account, Mint, Multisig};
+    use crate::state::{TokenAccount, Mint, Multisig};
     use crate::token_instruction::*;
 
     fn process_token_instruction(
@@ -875,7 +897,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Custom(3)")]
+    #[should_panic(expected = "Custom(2)")]
     fn test_error_unwrap() {
         Err::<(), InstructionError>(return_token_error_as_program_error()).unwrap();
     }
@@ -883,22 +905,23 @@ mod tests {
     #[test]
     fn test_unique_account_sizes() {
         assert_ne!(Mint::packed_len(), 0);
-        assert_ne!(Mint::packed_len(), Account::packed_len());
+        assert_ne!(Mint::packed_len(), TokenAccount::packed_len());
         assert_ne!(Mint::packed_len(), Multisig::packed_len());
-        assert_ne!(Account::packed_len(), 0);
-        assert_ne!(Account::packed_len(), Multisig::packed_len());
+        assert_ne!(TokenAccount::packed_len(), 0);
+        assert_ne!(TokenAccount::packed_len(), Multisig::packed_len());
         assert_ne!(Multisig::packed_len(), 0);
     }
 
     #[test]
     fn test_initialize_mint() {
+        let program_id = mundis_sdk::token::program::id();
         let owner_key = Pubkey::new_unique();
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &mint_key);
+        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
 
         // create new mint
         process_token_instruction(
-            &initialize_mint(&mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id, &mint_key, &owner_key, None, 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ]).unwrap();
@@ -907,7 +930,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::AlreadyInUse.into()),
             process_token_instruction(
-                &initialize_mint(&mint_key, &owner_key, None, 2).unwrap(),
+                &initialize_mint(&program_id, &mint_key, &owner_key, None, 2).unwrap(),
                 &[
                     (true, true, mint_key, mint_account.clone()),
                 ])
@@ -916,18 +939,19 @@ mod tests {
 
     #[test]
     fn test_initialize_mint_account() {
+        let program_id = mundis_sdk::token::program::id();
         let account_key = Pubkey::new_unique();
-        let account_account = AccountSharedData::new_ref(0, Account::packed_len(), &account_key);
+        let account_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &program_id);
         let owner_key = Pubkey::new_unique();
         let owner_account = AccountSharedData::new_ref(0, 0, &owner_key);
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &mint_key);
+        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
 
         // mint is not valid (not initialized)
         assert_eq!(
             Err(TokenError::InvalidMint.into()),
             process_token_instruction(
-                &initialize_account(&account_key, &mint_key, &owner_key).unwrap(),
+                &initialize_account(&program_id, &account_key, &mint_key, &owner_key).unwrap(),
                 &[
                     (true, true, account_key, account_account.clone()),
                     (true, true, mint_key, mint_account.clone()),
@@ -937,14 +961,14 @@ mod tests {
 
         // create mint
         process_token_instruction(
-            &initialize_mint(&mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id, &mint_key, &owner_key, None, 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ]).unwrap();
 
         // create account
         process_token_instruction(
-            &initialize_account(&account_key, &mint_key, &owner_key).unwrap(),
+            &initialize_account(&program_id, &account_key, &mint_key, &owner_key).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -955,7 +979,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::AlreadyInUse.into()),
             process_token_instruction(
-                &initialize_account(&account_key, &mint_key, &owner_key).unwrap(),
+                &initialize_account(&program_id, &account_key, &mint_key, &owner_key).unwrap(),
                 &[
                     (true, true, account_key, account_account.clone()),
                     (true, true, mint_key, mint_account.clone()),
@@ -966,24 +990,25 @@ mod tests {
 
     #[test]
     fn test_transfer_dups() {
+        let program_id = mundis_sdk::token::program::id();
         let account1_key = Pubkey::new_unique();
-        let account1_account = AccountSharedData::new_ref(100, Account::packed_len(), &account1_key);
+        let account1_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
         let account2_key = Pubkey::new_unique();
-        let account2_account = AccountSharedData::new_ref(100, Account::packed_len(), &account2_key);
+        let account2_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
         let account3_key = Pubkey::new_unique();
-        let account3_account = AccountSharedData::new_ref(100, Account::packed_len(), &account3_key);
+        let account3_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
         let account4_key = Pubkey::new_unique();
-        let account4_account = AccountSharedData::new_ref(100, Account::packed_len(), &account4_key);
+        let account4_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
         let owner_key = Pubkey::new_unique();
-        let owner_account = AccountSharedData::new_ref(100, Account::packed_len(), &owner_key);
+        let owner_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &owner_key);
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &mint_key);
+        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
         let multisig_key = Pubkey::new_unique();
-        let multisig_account = AccountSharedData::new_ref(0, Multisig::packed_len(), &multisig_key);
+        let multisig_account = AccountSharedData::new_ref(0, Multisig::packed_len(), &program_id);
 
         // create mint
         process_token_instruction(
-            &initialize_mint(&mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id,&mint_key, &owner_key, None, 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ],
@@ -991,7 +1016,7 @@ mod tests {
 
         // create account
         process_token_instruction(
-            &initialize_account(&account1_key, &mint_key, &account1_key).unwrap(),
+            &initialize_account(&program_id,&account1_key, &mint_key, &account1_key).unwrap(),
             &[
                 (true, true, account1_key, account1_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1001,7 +1026,7 @@ mod tests {
 
         // create another account
         process_token_instruction(
-            &initialize_account(&account2_key, &mint_key, &owner_key).unwrap(),
+            &initialize_account( &program_id,&account2_key, &mint_key, &owner_key).unwrap(),
             &[
                 (true, true, account2_key, account2_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1011,7 +1036,7 @@ mod tests {
 
         // mint to account
         process_token_instruction(
-            &mint_to(&mint_key, &account1_key, &owner_key, &[], 1000).unwrap(),
+            &mint_to(&program_id,&mint_key, &account1_key, &owner_key, &[], 1000).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
                 (true, true, account1_key, account1_account.clone()),
@@ -1021,7 +1046,7 @@ mod tests {
 
         // source-owner transfer
         process_token_instruction(
-            &transfer(&account1_key, &account2_key, &account1_key, &[], 500,).unwrap(),
+            &transfer(&program_id,&account1_key, &account2_key, &account1_key, &[], 500,).unwrap(),
             &[
                 (true, true, account1_key, account1_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1030,14 +1055,14 @@ mod tests {
         ).unwrap();
 
         // source-delegate transfer
-        let mut account = Account::unpack(account1_account.try_borrow().unwrap().data()).unwrap();
+        let mut account = TokenAccount::unpack(account1_account.try_borrow().unwrap().data()).unwrap();
         account.amount = 1000;
         account.delegated_amount = 1000;
         account.delegate = Some(account1_key);
         account.owner = owner_key;
         account.pack(account1_account.try_borrow_mut().unwrap().data_mut()).unwrap();
         process_token_instruction(
-            &transfer(&account1_key, &account2_key, &account1_key, &[], 500,).unwrap(),
+            &transfer(&program_id,&account1_key, &account2_key, &account1_key, &[], 500,).unwrap(),
             &[
                 (true, true, account1_key, account1_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1048,6 +1073,7 @@ mod tests {
         // source-delegate TransferChecked
         process_token_instruction(
             &transfer_checked(
+                &program_id,
                 &account1_key,
                 &mint_key,
                 &account2_key,
@@ -1066,7 +1092,7 @@ mod tests {
 
         // test destination-owner transfer
         process_token_instruction(
-            &initialize_account(&account3_key, &mint_key, &account2_key).unwrap(),
+            &initialize_account(&program_id,&account3_key, &mint_key, &account2_key).unwrap(),
             &[
                 (true, true, account3_key, account3_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1074,7 +1100,7 @@ mod tests {
             ],
         ).unwrap();
         process_token_instruction(
-            &mint_to(&mint_key, &account3_key, &owner_key, &[], 1000).unwrap(),
+            &mint_to(&program_id,&mint_key, &account3_key, &owner_key, &[], 1000).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
                 (true, true, account3_key, account3_account.clone()),
@@ -1082,7 +1108,7 @@ mod tests {
             ],
         ).unwrap();
         process_token_instruction(
-            &transfer(&account3_key, &account2_key, &account2_key, &[], 500,).unwrap(),
+            &transfer(&program_id,&account3_key, &account2_key, &account2_key, &[], 500,).unwrap(),
             &[
                 (true, true, account3_key, account3_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1093,6 +1119,7 @@ mod tests {
         // destination-owner TransferChecked
         process_token_instruction(
             &transfer_checked(
+                &program_id,
                 &account3_key,
                 &mint_key,
                 &account2_key,
@@ -1111,14 +1138,14 @@ mod tests {
 
         // test source-multisig signer
         process_token_instruction(
-            &initialize_multisig(&multisig_key, &[&account4_key], 1).unwrap(),
+            &initialize_multisig(&program_id,&multisig_key, &[&account4_key], 1).unwrap(),
             &[
                 (true, true, multisig_key, multisig_account.clone()),
                 (true, true, account4_key, account4_account.clone())
             ],
         ).unwrap();
         process_token_instruction(
-            &initialize_account(&account4_key, &mint_key, &multisig_key).unwrap(),
+            &initialize_account(&program_id,&account4_key, &mint_key, &multisig_key).unwrap(),
             &[
                 (true, true, account4_key, account4_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1126,7 +1153,7 @@ mod tests {
             ],
         ).unwrap();
         process_token_instruction(
-            &mint_to(&mint_key, &account4_key, &owner_key, &[], 1000).unwrap(),
+            &mint_to(&program_id,&mint_key, &account4_key, &owner_key, &[], 1000).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
                 (true, true, account4_key, account4_account.clone()),
@@ -1136,7 +1163,7 @@ mod tests {
 
         // source-multisig-signer transfer
         process_token_instruction(
-            &transfer(&account4_key, &account2_key, &multisig_key, &[&account4_key], 500,).unwrap(),
+            &transfer(&program_id,&account4_key, &account2_key, &multisig_key, &[&account4_key], 500,).unwrap(),
             &[
                 (true, true, account4_key, account4_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1148,6 +1175,7 @@ mod tests {
         // source-multisig-signer TransferChecked
         process_token_instruction(
             &transfer_checked(
+                &program_id,
                 &account4_key,
                 &mint_key,
                 &account2_key,
@@ -1168,27 +1196,28 @@ mod tests {
 
     #[test]
     fn test_transfer() {
+        let program_id = mundis_sdk::token::program::id();
         let account_key = Pubkey::new_unique();
-        let account_account = AccountSharedData::new_ref(100, Account::packed_len(), &account_key);
+        let account_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
         let account2_key = Pubkey::new_unique();
-        let account2_account = AccountSharedData::new_ref(100, Account::packed_len(), &account2_key);
+        let account2_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
         let account3_key = Pubkey::new_unique();
-        let account3_account = AccountSharedData::new_ref(100, Account::packed_len(), &account3_key);
+        let account3_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
         let delegate_key = Pubkey::new_unique();
         let delegate_account = AccountSharedData::new_ref(0, 0, &delegate_key);
         let mismatch_key = Pubkey::new_unique();
-        let mismatch_account = AccountSharedData::new_ref(100, Account::packed_len(), &mismatch_key);
+        let mismatch_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
         let owner_key = Pubkey::new_unique();
         let owner_account = AccountSharedData::new_ref(0, 0, &owner_key);
         let owner2_key = Pubkey::new_unique();
         let owner2_account = AccountSharedData::new_ref(0, 0, &owner2_key);
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(100, Mint::packed_len(), &mint_key);
+        let mint_account = AccountSharedData::new_ref(100, Mint::packed_len(), &program_id);
         let mint2_key = Pubkey::new_unique();
 
         // create mint
         process_token_instruction(
-            &initialize_mint(&mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id,&mint_key, &owner_key, None, 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ],
@@ -1196,7 +1225,7 @@ mod tests {
 
         // create account
         process_token_instruction(
-            &initialize_account(&account_key, &mint_key, &owner_key).unwrap(),
+            &initialize_account(&program_id,&account_key, &mint_key, &owner_key).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1206,7 +1235,7 @@ mod tests {
 
         // create another account
         process_token_instruction(
-            &initialize_account(&account2_key, &mint_key, &owner_key).unwrap(),
+            &initialize_account(&program_id,&account2_key, &mint_key, &owner_key).unwrap(),
             &[
                 (true, true, account2_key, account2_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1216,7 +1245,7 @@ mod tests {
 
         // create another account
         process_token_instruction(
-            &initialize_account(&account3_key, &mint_key, &owner_key).unwrap(),
+            &initialize_account(&program_id,&account3_key, &mint_key, &owner_key).unwrap(),
             &[
                 (true, true, account3_key, account3_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1226,7 +1255,7 @@ mod tests {
 
         // create mismatch account
         process_token_instruction(
-            &initialize_account(&mismatch_key, &mint_key, &owner_key).unwrap(),
+            &initialize_account(&program_id,&mismatch_key, &mint_key, &owner_key).unwrap(),
             &[
                 (true, true, mismatch_key, mismatch_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1234,13 +1263,13 @@ mod tests {
             ],
         ).unwrap();
 
-        let mut account = Account::unpack(mismatch_account.try_borrow().unwrap().data()).unwrap();
+        let mut account = TokenAccount::unpack(mismatch_account.try_borrow().unwrap().data()).unwrap();
         account.mint = mint2_key;
         account.pack(mismatch_account.try_borrow_mut().unwrap().data_mut()).unwrap();
 
         // mint to account
         process_token_instruction(
-            &mint_to(&mint_key, &account_key, &owner_key, &[], 1000).unwrap(),
+            &mint_to(&program_id,&mint_key, &account_key, &owner_key, &[], 1000).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
                 (true, true, account_key, account_account.clone()),
@@ -1252,7 +1281,7 @@ mod tests {
         assert_eq!(
             Err(InstructionError::MissingRequiredSignature),
             process_token_instruction(
-                &transfer(&account_key, &account2_key, &owner_key, &[], 1000).unwrap(),
+                &transfer(&program_id,&account_key, &account2_key, &owner_key, &[], 1000).unwrap(),
                 &[
                     (true, true, account_key, account_account.clone()),
                     (true, true, account2_key, account2_account.clone()),
@@ -1265,7 +1294,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::MintMismatch.into()),
             process_token_instruction(
-                &transfer(&account_key, &mismatch_key, &owner_key, &[], 1000).unwrap(),
+                &transfer(&program_id,&account_key, &mismatch_key, &owner_key, &[], 1000).unwrap(),
                 &[
                     (true, true, account_key, account_account.clone()),
                     (true, true, mismatch_key, mismatch_account.clone()),
@@ -1278,7 +1307,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::OwnerMismatch.into()),
             process_token_instruction(
-                &transfer(&account_key, &account2_key, &owner2_key, &[], 1000).unwrap(),
+                &transfer(&program_id,&account_key, &account2_key, &owner2_key, &[], 1000).unwrap(),
                 &[
                     (true, true, account_key, account_account.clone()),
                     (true, true, account2_key, account2_account.clone()),
@@ -1289,7 +1318,7 @@ mod tests {
 
         // transfer
         process_token_instruction(
-            &transfer(&account_key, &account2_key, &owner_key, &[], 1000).unwrap(),
+            &transfer(&program_id,&account_key, &account2_key, &owner_key, &[], 1000).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1301,7 +1330,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::InsufficientFunds.into()),
             process_token_instruction(
-                &transfer(&account_key, &account2_key, &owner_key, &[], 1).unwrap(),
+                &transfer(&program_id,&account_key, &account2_key, &owner_key, &[], 1).unwrap(),
                 &[
                     (true, true, account_key, account_account.clone()),
                     (true, true, account2_key, account2_account.clone()),
@@ -1312,7 +1341,7 @@ mod tests {
 
         // transfer half back
         process_token_instruction(
-            &transfer(&account2_key, &account_key, &owner_key, &[], 500).unwrap(),
+            &transfer(&program_id,&account2_key, &account_key, &owner_key, &[], 500).unwrap(),
             &[
                 (true, true, account2_key, account2_account.clone()),
                 (true, true, account_key, account_account.clone()),
@@ -1325,6 +1354,7 @@ mod tests {
             Err(TokenError::MintDecimalsMismatch.into()),
             process_token_instruction(
                 &transfer_checked(
+                    &program_id,
                     &account2_key,
                     &mint_key,
                     &account_key,
@@ -1347,6 +1377,7 @@ mod tests {
             Err(TokenError::MintMismatch.into()),
             process_token_instruction(
                 &transfer_checked(
+                    &program_id,
                     &account2_key,
                     &account3_key, // <-- incorrect mint
                     &account_key,
@@ -1367,6 +1398,7 @@ mod tests {
         // transfer rest with explicit decimals
         process_token_instruction(
             &transfer_checked(
+                &program_id,
                 &account2_key,
                 &mint_key,
                 &account_key,
@@ -1387,7 +1419,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::InsufficientFunds.into()),
             process_token_instruction(
-                &transfer(&account2_key, &account_key, &owner_key, &[], 1).unwrap(),
+                &transfer(&program_id,&account2_key, &account_key, &owner_key, &[], 1).unwrap(),
                 &[
                     (true, true, account2_key, account2_account.clone()),
                     (true, true, account_key, account_account.clone()),
@@ -1399,6 +1431,7 @@ mod tests {
         // approve delegate
         process_token_instruction(
             &approve(
+                &program_id,
                 &account_key,
                 &delegate_key,
                 &owner_key,
@@ -1414,7 +1447,7 @@ mod tests {
 
         // transfer via delegate
         process_token_instruction(
-            &transfer(&account_key, &account2_key, &delegate_key, &[], 100).unwrap(),
+            &transfer(&program_id,&account_key, &account2_key, &delegate_key, &[], 100).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1426,7 +1459,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::OwnerMismatch.into()),
             process_token_instruction(
-                &transfer(&account_key, &account2_key, &delegate_key, &[], 100).unwrap(),
+                &transfer(&program_id,&account_key, &account2_key, &delegate_key, &[], 100).unwrap(),
                 &[
                     (true, true, account_key, account_account.clone()),
                     (true, true, account2_key, account2_account.clone()),
@@ -1437,7 +1470,7 @@ mod tests {
 
         // transfer rest
         process_token_instruction(
-            &transfer(&account_key, &account2_key, &owner_key, &[], 900).unwrap(),
+            &transfer(&program_id,&account_key, &account2_key, &owner_key, &[], 900).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1448,6 +1481,7 @@ mod tests {
         // approve delegate
         process_token_instruction(
             &approve(
+                &program_id,
                 &account_key,
                 &delegate_key,
                 &owner_key,
@@ -1465,7 +1499,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::InsufficientFunds.into()),
             process_token_instruction(
-                &transfer(&account_key, &account2_key, &delegate_key, &[], 100).unwrap(),
+                &transfer(&program_id,&account_key, &account2_key, &delegate_key, &[], 100).unwrap(),
                 &[
                     (true, true, account_key, account_account.clone()),
                     (true, true, account2_key, account2_account.clone()),
@@ -1477,24 +1511,25 @@ mod tests {
 
     #[test]
     fn test_initialize_account2() {
+        let program_id = mundis_sdk::token::program::id();
         let account_key = Pubkey::new_unique();
-        let account_account = AccountSharedData::new_ref(0, Account::packed_len(), &account_key);
+        let account_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &program_id);
         let account2_key = Pubkey::new_unique();
-        let account2_account = AccountSharedData::new_ref(0, Account::packed_len(), &account2_key);
+        let account2_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &program_id);
         let owner_key = Pubkey::new_unique();
         let owner_account = AccountSharedData::new_ref(0, 0, &owner_key);
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &mint_key);
+        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
 
         // create mint
         process_token_instruction(
-            &initialize_mint(&mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id,&mint_key, &owner_key, None, 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ]).unwrap();
 
         process_token_instruction(
-            &initialize_account(&account_key, &mint_key, &owner_key).unwrap(),
+            &initialize_account(&program_id,&account_key, &mint_key, &owner_key).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1502,7 +1537,7 @@ mod tests {
             ]).unwrap();
 
         process_token_instruction(
-            &initialize_account2(&account_key, &mint_key, &owner_key).unwrap(),
+            &initialize_account2(&program_id,&account_key, &mint_key, &owner_key).unwrap(),
             &[
                 (true, true, account2_key, account2_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1513,25 +1548,26 @@ mod tests {
 
     #[test]
     fn test_multisig() {
+        let program_id = mundis_sdk::token::program::id();
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &mint_key);
+        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
 
         let multisig_key = Pubkey::new_unique();
-        let multisig_account = AccountSharedData::new_ref(42, Multisig::packed_len(), &multisig_key);
+        let multisig_account = AccountSharedData::new_ref(42, Multisig::packed_len(), &program_id);
 
         let multisig_delegate_key = Pubkey::new_unique();
-        let multisig_delegate_account = AccountSharedData::new_ref(0, Multisig::packed_len(), &multisig_delegate_key);
+        let multisig_delegate_account = AccountSharedData::new_ref(0, Multisig::packed_len(), &program_id);
 
         let signer_keys = vec![Pubkey::new_unique(); MAX_SIGNERS];
         let signer_key_refs: Vec<&Pubkey> = signer_keys.iter().collect();
         let mut signer_accounts = vec![];
-        for i in 0..MAX_SIGNERS {
-            signer_accounts.push(AccountSharedData::new_ref(0, 0, &signer_keys[i]));
+        for _ in 0..MAX_SIGNERS {
+            signer_accounts.push(AccountSharedData::new_ref(0, 0, &program_id));
         }
 
         // single signer
         process_token_instruction(
-            &initialize_multisig(&multisig_key, &[&signer_keys[0]], 1).unwrap(),
+            &initialize_multisig(&program_id,&multisig_key, &[&signer_keys[0]], 1).unwrap(),
             &[
                 (true, true, multisig_key, multisig_account.clone()),
                 (true, true, signer_keys[0], signer_accounts[0].clone())
@@ -1540,7 +1576,7 @@ mod tests {
 
         // multiple signers
         process_token_instruction(
-            &initialize_multisig(&multisig_key, &signer_key_refs, MAX_SIGNERS as u8).unwrap(),
+            &initialize_multisig(&program_id,&multisig_key, &signer_key_refs, MAX_SIGNERS as u8).unwrap(),
             &[
                 (true, true, multisig_delegate_key, multisig_delegate_account.clone()),
                 (true, true, signer_keys[0], signer_accounts[0].clone()),
@@ -1559,7 +1595,7 @@ mod tests {
 
         // create new mint with multisig owner
         process_token_instruction(
-            &initialize_mint(&mint_key, &multisig_key, None, 2).unwrap(),
+            &initialize_mint(&program_id,&mint_key, &multisig_key, None, 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ],
@@ -1567,9 +1603,9 @@ mod tests {
 
         // create account with multisig owner
         let account_key = Pubkey::new_unique();
-        let account_account = AccountSharedData::new_ref(84, Account::packed_len(), &account_key);
+        let account_account = AccountSharedData::new_ref(84, TokenAccount::packed_len(), &account_key);
         process_token_instruction(
-            &initialize_account(&account_key, &mint_key, &multisig_key).unwrap(),
+            &initialize_account(&program_id,&account_key, &mint_key, &multisig_key).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1579,9 +1615,9 @@ mod tests {
 
         // create another account with multisig owner
         let account2_key = Pubkey::new_unique();
-        let account2_account = AccountSharedData::new_ref(0, Account::packed_len(), &account2_key);
+        let account2_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &account2_key);
         process_token_instruction(
-            &initialize_account(&account2_key, &mint_key, &multisig_delegate_key).unwrap(),
+            &initialize_account(&program_id,&account2_key, &mint_key, &multisig_delegate_key).unwrap(),
             &[
                 (true, true, account2_key, account2_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1591,7 +1627,7 @@ mod tests {
 
         // mint to account
         process_token_instruction(
-            &mint_to(&mint_key, &account_key, &multisig_key, &[&signer_keys[0]], 1000).unwrap(),
+            &mint_to(&program_id,&mint_key, &account_key, &multisig_key, &[&signer_keys[0]], 1000).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
                 (true, true, account_key, account_account.clone()),
@@ -1602,7 +1638,7 @@ mod tests {
 
         // approve
         process_token_instruction(
-            &approve(&account_key, &multisig_delegate_key, &multisig_key, &[&signer_keys[0]], 100).unwrap(),
+            &approve(&program_id,&account_key, &multisig_delegate_key, &multisig_key, &[&signer_keys[0]], 100).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, multisig_delegate_key, multisig_delegate_account.clone()),
@@ -1613,7 +1649,7 @@ mod tests {
 
         // transfer
         process_token_instruction(
-            &transfer(&account_key, &account2_key, &multisig_key, &[&signer_keys[0]], 42).unwrap(),
+            &transfer(&program_id,&account_key, &account2_key, &multisig_key, &[&signer_keys[0]], 42).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1624,7 +1660,7 @@ mod tests {
 
         // transfer via delegate
         process_token_instruction(
-            &transfer(&account_key, &account2_key, &multisig_delegate_key, &signer_key_refs, 42).unwrap(),
+            &transfer(&program_id,&account_key, &account2_key, &multisig_delegate_key, &signer_key_refs, 42).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1645,7 +1681,7 @@ mod tests {
 
         // mint to
         process_token_instruction(
-            &mint_to(&mint_key, &account2_key, &multisig_key, &[&signer_keys[0]], 42).unwrap(),
+            &mint_to(&program_id,&mint_key, &account2_key, &multisig_key, &[&signer_keys[0]], 42).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
                 (true, true, account2_key, account2_account.clone()),
@@ -1656,7 +1692,7 @@ mod tests {
 
         // burn
         process_token_instruction(
-            &burn(&account_key, &mint_key, &multisig_key, &[&signer_keys[0]], 42).unwrap(),
+            &burn(&program_id,&account_key, &mint_key, &multisig_key, &[&signer_keys[0]], 42).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1667,7 +1703,7 @@ mod tests {
 
         // burn via delegate
         process_token_instruction(
-            &burn(&account_key, &mint_key, &multisig_delegate_key, &signer_key_refs, 42).unwrap(),
+            &burn(&program_id,&account_key, &mint_key, &multisig_delegate_key, &signer_key_refs, 42).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, mint_key, mint_account.clone()),
@@ -1688,11 +1724,11 @@ mod tests {
 
         // freeze account
         let account3_key = Pubkey::new_unique();
-        let account3_account = AccountSharedData::new_ref(0, Account::packed_len(), &account3_key);
+        let account3_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &program_id);
         let mint2_key = Pubkey::new_unique();
-        let mint2_account = AccountSharedData::new_ref(0, Mint::packed_len(), &mint2_key);
+        let mint2_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
         process_token_instruction(
-            &initialize_mint(&mint2_key, &multisig_key, Some(&multisig_key), 2).unwrap(),
+            &initialize_mint(&program_id,&mint2_key, &multisig_key, Some(&multisig_key), 2).unwrap(),
             &[
                 (true, true, mint2_key, mint2_account.clone()),
             ],
@@ -1701,7 +1737,7 @@ mod tests {
         let owner_key = Pubkey::new_unique();
         let owner_account = AccountSharedData::new_ref(0, 0, &owner_key);
         process_token_instruction(
-            &initialize_account(&account3_key, &mint2_key, &owner_key).unwrap(),
+            &initialize_account(&program_id,&account3_key, &mint2_key, &owner_key).unwrap(),
             &[
                 (true, true, account3_key, account3_account.clone()),
                 (true, true, mint2_key, mint2_account.clone()),
@@ -1709,7 +1745,7 @@ mod tests {
             ],
         ).unwrap();
         process_token_instruction(
-            &mint_to(&mint2_key, &account3_key, &multisig_key, &[&signer_keys[0]], 1000).unwrap(),
+            &mint_to(&program_id,&mint2_key, &account3_key, &multisig_key, &[&signer_keys[0]], 1000).unwrap(),
             &[
                 (true, true, mint2_key, mint2_account.clone()),
                 (true, true, account3_key, account3_account.clone()),
@@ -1718,7 +1754,7 @@ mod tests {
             ],
         ).unwrap();
         process_token_instruction(
-            &freeze_account(&account3_key, &mint2_key, &multisig_key, &[&signer_keys[0]]).unwrap(),
+            &freeze_account(&program_id,&account3_key, &mint2_key, &multisig_key, &[&signer_keys[0]]).unwrap(),
             &[
                 (true, true, account3_key, account3_account.clone()),
                 (true, true, mint2_key, mint2_account.clone()),
@@ -1729,7 +1765,7 @@ mod tests {
 
         // do SetAuthority on mint
         process_token_instruction(
-            &set_authority(&mint_key, Some(&owner_key), AuthorityType::MintTokens, &multisig_key, &[&signer_keys[0]]).unwrap(),
+            &set_authority(&program_id,&mint_key, Some(&owner_key), AuthorityType::MintTokens, &multisig_key, &[&signer_keys[0]]).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
                 (true, true, multisig_key, multisig_account.clone()),
@@ -1739,7 +1775,7 @@ mod tests {
 
         // do SetAuthority on account
         process_token_instruction(
-            &set_authority(&account_key, Some(&owner_key), AuthorityType::AccountOwner, &multisig_key, &[&signer_keys[0]]).unwrap(),
+            &set_authority(&program_id,&account_key, Some(&owner_key), AuthorityType::AccountOwner, &multisig_key, &[&signer_keys[0]]).unwrap(),
             &[
                 (true, true, account_key, account_account.clone()),
                 (true, true, multisig_key, multisig_account.clone()),

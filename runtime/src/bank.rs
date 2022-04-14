@@ -6378,14 +6378,6 @@ impl Bank {
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }
 
-        if new_feature_activations.contains(&feature_set::spl_token_v3_3_0_release::id()) {
-            self.replace_program_account(
-                &inline_anima_token::id(),
-                &inline_anima_token::new_token_program::id(),
-                "bank-apply_spl_token_v3_3_0_release",
-            );
-        }
-
         if new_feature_activations.contains(&feature_set::spl_associated_token_account_v1_0_4::id())
         {
             self.replace_program_account(

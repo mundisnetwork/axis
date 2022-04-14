@@ -60,28 +60,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
 
 [[package]]
-name = "anima-token"
-version = "3.2.0"
-dependencies = [
- "arrayref",
- "mundis-program",
- "mundis-sdk",
- "num-derive",
- "num-traits",
- "num_enum",
- "thiserror",
-]
-
-[[package]]
-name = "anima-token-account"
-version = "1.0.3"
-dependencies = [
- "anima-token",
- "mundis-program",
- "mundis-sdk",
-]
-
-[[package]]
 name = "ansi_term"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3205,6 +3183,8 @@ dependencies = [
  "mundis-rayon-threadlimit",
  "mundis-sdk",
  "mundis-stake-program",
+ "mundis-token-account-program",
+ "mundis-token-program",
  "mundis-vote-program",
  "num-derive",
  "num-traits",
@@ -3410,6 +3390,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "mundis-token-account-program"
+version = "1.9.14"
+dependencies = [
+ "bincode",
+ "log 0.4.14",
+ "mundis-program-runtime",
+ "mundis-sdk",
+ "mundis-token-program",
+ "num-derive",
+ "num-traits",
+ "rustc_version 0.4.0",
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
 name = "mundis-token-program"
 version = "1.9.14"
 dependencies = [
@@ -3430,7 +3426,6 @@ name = "mundis-transaction-status"
 version = "1.9.14"
 dependencies = [
  "Inflector",
- "anima-token-account",
  "base64 0.12.3",
  "bincode",
  "bs58",
@@ -3442,6 +3437,7 @@ dependencies = [
  "mundis-metrics",
  "mundis-runtime",
  "mundis-sdk",
+ "mundis-token-account-program",
  "mundis-token-program",
  "mundis-vote-program",
  "serde",

@@ -4,12 +4,11 @@
 pub const DECIMALS: u8 = 9;
 
 // The Mint for native MUN Token accounts
-mundis_sdk::declare_id!("So11111111111111111111111111111111111111112");
+mundis_sdk::declare_id!("Mun1111111111111111111111111111111111111112");
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mundis_program::native_token::*;
     use mundis_sdk::native_token::{lamports_to_mun, mun_to_lamports};
 
     #[test]

@@ -3,10 +3,6 @@ use mundis_sdk::pubkey::{Pubkey, PUBKEY_BYTES};
 
 mundis_sdk::declare_id!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 
-pub(crate) mod new_token_program {
-        mundis_sdk::declare_id!("nTok2oJvx1CgbYA2SznfJLmnKLEL6sYdh2ypZms2nhm");
-}
-
 /*
     anima_token::state::Account {
         mint: Pubkey,
@@ -72,7 +68,7 @@ impl GenericTokenAccount for Account {
 }
 
 pub mod native_mint {
-    mundis_sdk::declare_id!("So11111111111111111111111111111111111111112");
+    mundis_sdk::declare_id!("Mun1111111111111111111111111111111111111112");
 
     /*
         Mint {

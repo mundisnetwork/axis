@@ -231,10 +231,6 @@ pub mod nonce_must_be_writable {
     mundis_sdk::declare_id!("BiCU7M5w8ZCMykVSyhZ7Q3m2SWoR2qrEQ86ERcDX77ME");
 }
 
-pub mod spl_token_v3_3_0_release {
-    mundis_sdk::declare_id!("Ftok2jhqAqxUWEiCVRrfRs9DPppWP8cgTB7NQNKL88mS");
-}
-
 pub mod leave_nonce_on_success {
     mundis_sdk::declare_id!("E8MkiWZNNPGU6n55jkGzyj8ghUmjCHRmDFdYYFYHxWhQ");
 }
@@ -351,7 +347,6 @@ lazy_static! {
         (disable_fee_calculator::id(), "deprecate fee calculator"),
         (add_compute_budget_program::id(), "Add compute_budget_program"),
         (nonce_must_be_writable::id(), "nonce must be writable"),
-        (spl_token_v3_3_0_release::id(), "spl-token v3.3.0 release"),
         (leave_nonce_on_success::id(), "leave nonce as is on success"),
         (reject_empty_instruction_without_program::id(), "fail instructions which have native_loader as program_id directly"),
         (reject_non_rent_exempt_vote_withdraws::id(), "fail vote withdraw instructions which leave the account non-rent-exempt"),

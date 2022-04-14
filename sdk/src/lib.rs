@@ -104,16 +104,6 @@ pub use mundis_sdk_macro::respan;
 #[cfg(debug_assertions)]
 pub trait AutoTraitBreakSendSync: Send + Sync {}
 
-// Unused `mundis_sdk::program_stubs!()` macro retained for source backwards compatibility with older programs
-#[macro_export]
-#[deprecated(
-    since = "1.4.3",
-    note = "program_stubs macro is obsolete and can be safely removed"
-)]
-macro_rules! program_stubs {
-    () => {};
-}
-
 /// Convenience macro for `AddAssign` with saturating arithmetic.
 /// Replace by `std::num::Saturating` once stable
 #[macro_export]

@@ -6,7 +6,7 @@ use {
     mundis_sdk::pubkey::Pubkey,
     std::str::FromStr,
 };
-use mundis_token_program::state::{Account, AccountState, Mint, Multisig};
+use mundis_token_program::state::{TokenAccount, AccountState, Mint, Multisig};
 
 // A helper function to convert anima_token::id() to mundis_sdk::pubkey::Pubkey
 fn anima_token_id() -> Pubkey {
@@ -37,8 +37,8 @@ pub fn parse_token(
     data: &[u8],
     mint_decimals: Option<u8>,
 ) -> Result<TokenAccountType, ParseAccountError> {
-    if data.len() == Account::packed_len() {
-        let account = Account::unpack(data)
+    if data.len() == TokenAccount::packed_len() {
+        let account = TokenAccount::unpack(data)
             .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::AnimaToken))?;
         let decimals = mint_decimals.ok_or_else(|| {
             ParseAccountError::AdditionalDataMissing(
@@ -236,7 +236,7 @@ pub struct UiMultisig {
 }
 
 pub fn get_token_account_mint(data: &[u8]) -> Option<Pubkey> {
-    if data.len() == Account::packed_len() {
+    if data.len() == TokenAccount::packed_len() {
         Some(Pubkey::new(&data[0..32]))
     } else {
         None
@@ -251,8 +251,8 @@ mod test {
     fn test_parse_token() {
         let mint_pubkey = Pubkey::new(&[2; 32]);
         let owner_pubkey = Pubkey::new(&[3; 32]);
-        let mut account_data = vec![0; Account::packed_len()];
-        let mut account = Account::unpack(&account_data).unwrap();
+        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let mut account = TokenAccount::unpack(&account_data).unwrap();
         account.mint = mint_pubkey;
         account.owner = owner_pubkey;
         account.amount = 42;
@@ -337,8 +337,8 @@ mod test {
     #[test]
     fn test_get_token_account_mint() {
         let mint_pubkey = Pubkey::new(&[2; 32]);
-        let mut account_data = vec![0; Account::packed_len()];
-        let mut account = Account::unpack(&account_data).unwrap();
+        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let mut account = TokenAccount::unpack(&account_data).unwrap();
         account.mint = mint_pubkey;
         account.pack(&mut account_data).unwrap();
 

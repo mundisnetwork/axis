@@ -63,7 +63,7 @@ impl IsInitialized for Mint {
 
 /// Account data.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
-pub struct Account {
+pub struct TokenAccount {
     /// The mint associated with this account
     pub mint: Pubkey,
     /// The owner of this account.
@@ -84,7 +84,7 @@ pub struct Account {
     /// Optional authority to close the account.
     pub close_authority: Option<Pubkey>,
 }
-impl Account {
+impl TokenAccount {
     /// The length, in bytes, of the packed representation
     pub const LEN: usize = 165;
 
@@ -102,7 +102,7 @@ impl Account {
     }
 
     pub fn pack(&self, dst: &mut [u8]) -> Result<(), InstructionError> {
-        let dst = array_mut_ref![dst, 0, Account::LEN];
+        let dst = array_mut_ref![dst, 0, TokenAccount::LEN];
         let serialized_data = bincode::serialize(&self)
             .unwrap();
 
@@ -113,16 +113,16 @@ impl Account {
         Ok(())
     }
 
-    pub fn unpack(data: &[u8]) -> Result<Account, InstructionError> {
-        let deser = bincode::deserialize::<Account>(data);
+    pub fn unpack(data: &[u8]) -> Result<TokenAccount, InstructionError> {
+        let deser = bincode::deserialize::<TokenAccount>(data);
         if deser.is_err() {
             return Err(TokenError::InvalidState.into());
         }
         return Ok(deser.unwrap());
     }
 }
-impl Sealed for Account {}
-impl IsInitialized for Account {
+impl Sealed for TokenAccount {}
+impl IsInitialized for TokenAccount {
     fn is_initialized(&self) -> bool {
         self.state != AccountState::Uninitialized
     }
@@ -198,9 +198,8 @@ impl IsInitialized for Multisig {
 
 #[cfg(test)]
 mod tests {
-    use mundis_program::pubkey::Pubkey;
     use mundis_sdk::pubkey::Pubkey;
-    use crate::state::{Account, AccountState, Mint, Multisig};
+    use crate::state::{TokenAccount, AccountState, Mint, Multisig};
     use crate::token_instruction::MAX_SIGNERS;
 
     #[test]
@@ -220,7 +219,7 @@ mod tests {
         assert_eq!(check, bincode::deserialize::<Mint>(&packed).unwrap());
 
         // Account
-        let check = Account {
+        let check = TokenAccount {
             mint: Pubkey::new(&[1; 32]),
             owner: Pubkey::new(&[2; 32]),
             amount: 3,
@@ -231,10 +230,10 @@ mod tests {
             close_authority: Some(Pubkey::new(&[7; 32])),
         };
         let packed_len = bincode::serialized_size(&check).unwrap();
-        assert!(packed_len <= Account::packed_len() as u64);
+        assert!(packed_len <= TokenAccount::packed_len() as u64);
 
         let packed = bincode::serialize(&check).unwrap();
-        assert_eq!(check, bincode::deserialize::<Account>(&packed).unwrap());
+        assert_eq!(check, bincode::deserialize::<TokenAccount>(&packed).unwrap());
 
         // Multisig
         let check = Multisig {
