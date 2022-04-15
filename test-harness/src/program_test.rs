@@ -74,6 +74,7 @@ impl Default for ProgramTest {
         mundis_logger::setup_with_default(
              "mundis_runtime::message_processor=debug,\
              mundis_runtime::system_instruction_processor=trace,\
+             mundis_runtime::accounts=info,\
              mundis_program_test=info",
         );
         Self {

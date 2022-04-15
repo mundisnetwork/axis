@@ -1,4 +1,5 @@
 use num_traits::FromPrimitive;
+use mundis_program_runtime::ic_msg;
 
 use mundis_program_runtime::invoke_context::InvokeContext;
 use mundis_sdk::account::{ReadableAccount, WritableAccount};
@@ -45,50 +46,50 @@ impl Processor {
                 mint_authority,
                 freeze_authority,
             } => {
-                println!("Instruction: InitializeMint");
+                ic_msg!(invoke_context, "Instruction: InitializeMint");
                 Self::process_initialize_mint(accounts, decimals, mint_authority, freeze_authority)
             }
             TokenInstruction::InitializeAccount => {
-                println!("Instruction: InitializeAccount");
+                ic_msg!(invoke_context, "Instruction: InitializeAccount");
                 Self::process_initialize_account(program_id, accounts)
             }
             TokenInstruction::InitializeAccount2 { owner } => {
-                println!("Instruction: InitializeAccount2");
+                ic_msg!(invoke_context, "Instruction: InitializeAccount2");
                 Self::process_initialize_account2(program_id, accounts, owner)
             }
             TokenInstruction::InitializeMultisig { m } => {
-                println!("Instruction: InitializeMultisig");
+                ic_msg!(invoke_context, "Instruction: InitializeMultisig");
                 Self::process_initialize_multisig(accounts, m)
             }
             TokenInstruction::Transfer { amount } => {
-                println!("Instruction: Transfer");
+                ic_msg!(invoke_context, "Instruction: Transfer");
                 Self::process_transfer(program_id, accounts, amount, None)
             }
             TokenInstruction::Approve { amount } => {
-                println!("Instruction: Approve");
+                ic_msg!(invoke_context, "Instruction: Approve");
                 Self::process_approve(program_id, accounts, amount, None)
             }
             TokenInstruction::Revoke => {
-                println!("Instruction: Revoke");
+                ic_msg!(invoke_context, "Instruction: Revoke");
                 Self::process_revoke(program_id, accounts)
             }
             TokenInstruction::SetAuthority {
                 authority_type,
                 new_authority,
             } => {
-                println!("Instruction: SetAuthority");
+                ic_msg!(invoke_context, "Instruction: SetAuthority");
                 Self::process_set_authority(program_id, accounts, authority_type, new_authority)
             }
             TokenInstruction::MintTo { amount } => {
-                println!("Instruction: MintTo");
+                ic_msg!(invoke_context, "Instruction: MintTo");
                 Self::process_mint_to(program_id, accounts, amount, None)
             }
             TokenInstruction::Burn { amount } => {
-                println!("Instruction: Burn");
+                ic_msg!(invoke_context, "Instruction: Burn");
                 Self::process_burn(program_id, accounts, amount, None)
             }
             TokenInstruction::CloseAccount => {
-                println!("Instruction: CloseAccount");
+                ic_msg!(invoke_context, "Instruction: CloseAccount");
                 Self::process_close_account(program_id, accounts)
             }
             TokenInstruction::FreezeAccount => {
@@ -96,27 +97,27 @@ impl Processor {
                 Self::process_toggle_freeze_account(program_id, accounts, true)
             }
             TokenInstruction::ThawAccount => {
-                println!("Instruction: ThawAccount");
+                ic_msg!(invoke_context, "Instruction: ThawAccount");
                 Self::process_toggle_freeze_account(program_id, accounts, false)
             }
             TokenInstruction::TransferChecked { amount, decimals } => {
-                println!("Instruction: TransferChecked");
+                ic_msg!(invoke_context, "Instruction: TransferChecked");
                 Self::process_transfer(program_id, accounts, amount, Some(decimals))
             }
             TokenInstruction::ApproveChecked { amount, decimals } => {
-                println!("Instruction: ApproveChecked");
+                ic_msg!(invoke_context, "Instruction: ApproveChecked");
                 Self::process_approve(program_id, accounts, amount, Some(decimals))
             }
             TokenInstruction::MintToChecked { amount, decimals } => {
-                println!("Instruction: MintToChecked");
+                ic_msg!(invoke_context, "Instruction: MintToChecked");
                 Self::process_mint_to(program_id, accounts, amount, Some(decimals))
             }
             TokenInstruction::BurnChecked { amount, decimals } => {
-                println!("Instruction: BurnChecked");
+                ic_msg!(invoke_context, "Instruction: BurnChecked");
                 Self::process_burn(program_id, accounts, amount, Some(decimals))
             }
             TokenInstruction::SyncNative => {
-                println!("Instruction: SyncNative");
+                ic_msg!(invoke_context, "Instruction: SyncNative");
                 Self::process_sync_native(program_id, accounts)
             }
         }

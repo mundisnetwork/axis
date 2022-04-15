@@ -159,11 +159,6 @@ impl BanksClient {
         })
     }
 
-    /// Return the cluster rent
-    pub fn get_rent(&mut self) -> impl Future<Output = io::Result<Rent>> + '_ {
-        self.get_sysvar::<Rent>()
-    }
-
     /// Send a transaction and return after the transaction has been rejected or
     /// reached the given level of commitment.
     pub fn process_transaction_with_commitment(
