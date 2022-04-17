@@ -34,6 +34,7 @@ pub mod nonce;
 pub mod spend_utils;
 pub mod stake;
 pub mod test_utils;
+pub mod token;
 pub mod validator_info;
 pub mod vote;
 pub mod wallet;

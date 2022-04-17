@@ -1,7 +1,7 @@
 use {
     crate::{
         clap_app::*, cluster_query::*, feature::*, inflation::*, nonce::*,
-        spend_utils::*, stake::*, validator_info::*, vote::*, wallet::*,
+        spend_utils::*, stake::*, validator_info::*, vote::*, wallet::*, token::*
     },
     clap::{crate_description, crate_name, value_t_or_exit, ArgMatches, Shell},
     log::*,
@@ -36,8 +36,6 @@ use {
     std::{collections::HashMap, error, io::stdout, str::FromStr, sync::Arc, time::Duration},
     thiserror::Error,
 };
-use crate::memo::{parse_memo_publish_command, parse_memo_verify_command, process_set_memo};
-
 pub const DEFAULT_RPC_TIMEOUT_SECONDS: &str = "30";
 pub const DEFAULT_CONFIRM_TX_TIMEOUT_SECONDS: &str = "5";
 const CHECKED: bool = true;
@@ -280,9 +278,7 @@ pub enum CliCommand {
         force_keybase: bool,
         info_pubkey: Option<Pubkey>,
     },
-    // Memo Commands
-    SetMemo(String),
-    VerifyMemo(String),
+    // TODO: Mundis: Token Commands
     // Vote Commands
     CreateVoteAccount {
         vote_account: SignerIndex,
@@ -773,14 +769,9 @@ pub fn parse_command(
             ("get", Some(matches)) => parse_get_validator_info_command(matches),
             _ => unreachable!(),
         },
-        // Memo Commands
-        ("memo", Some(matches)) => match matches.subcommand() {
-            ("publish", Some(matches)) => {
-                parse_memo_publish_command(matches, default_signer, wallet_manager)
-            }
-            ("verify", Some(matches)) => parse_memo_verify_command(matches, default_signer, wallet_manager),
-            _ => unreachable!(),
-        },
+        // TODO: Mundis: Token Commands
+
+
         // Vote Commands
         ("create-vote-account", Some(matches)) => {
             parse_create_vote_account(matches, default_signer, wallet_manager)
@@ -1354,9 +1345,7 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             *info_pubkey,
         ),
 
-        // Memo Commands
-        CliCommand::SetMemo(memo) => process_set_memo(&rpc_client, config, memo),
-        CliCommand::VerifyMemo(memo) => process_set_memo(&rpc_client, config, memo),
+        // TODO: Mundis: Token Commands
 
         // Vote Commands
 

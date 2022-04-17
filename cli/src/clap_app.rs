@@ -7,7 +7,7 @@ use {
     mundis_clap_utils::{self, input_validators::*, keypair::*},
     mundis_cli_config::CONFIG_FILE,
 };
-use crate::memo::MemoSubCommands;
+use crate::token::TokenSubCommands;
 
 pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, 'v> {
     App::new(name)
@@ -124,7 +124,7 @@ pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> A
         .cluster_query_subcommands()
         .feature_subcommands()
         .inflation_subcommands()
-        .memo_subcommands()
+        .token_subcommands()
         .nonce_subcommands()
         .stake_subcommands()
         .validator_info_subcommands()
