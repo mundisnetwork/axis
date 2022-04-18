@@ -1,13 +1,37 @@
+use std::process::exit;
 use std::str::FromStr;
-use clap::{App, AppSettings, Arg, SubCommand};
+use std::sync::Arc;
+use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, value_t, value_t_or_exit};
+use serde::de::Error;
 use mundis_clap_utils::{ArgConstant, offline};
-use mundis_clap_utils::fee_payer::fee_payer_arg;
+use mundis_clap_utils::fee_payer::{fee_payer_arg, FEE_PAYER_ARG};
+use mundis_clap_utils::input_parsers::{pubkey_of, pubkey_of_signer, signer_of};
 use mundis_clap_utils::input_validators::{is_amount, is_amount_or_all, is_parsable, is_valid_pubkey, is_valid_signer};
-use mundis_clap_utils::memo::memo_arg;
-use mundis_clap_utils::nonce::NonceArgs;
-use mundis_clap_utils::offline::{BLOCKHASH_ARG, OfflineArgs, SIGN_ONLY_ARG};
+use mundis_clap_utils::keypair::{CliSignerInfo, CliSigners, DefaultSigner, pubkey_from_path, signer_from_path, SignerIndex};
+use mundis_clap_utils::memo::{memo_arg, MEMO_ARG};
+use mundis_clap_utils::nonce::{NONCE_ARG, NONCE_AUTHORITY_ARG, NonceArgs};
+use mundis_clap_utils::offline::{BLOCKHASH_ARG, DUMP_TRANSACTION_MESSAGE, OfflineArgs, SIGN_ONLY_ARG};
+use mundis_cli_config::Config;
+use mundis_cli_output::{return_signers_with_config, ReturnSignersConfig};
+use mundis_client::blockhash_query::BlockhashQuery;
+use mundis_client::nonce_utils;
+use mundis_client::rpc_client::RpcClient;
+use mundis_memo_program::memo_instruction;
+use mundis_remote_wallet::remote_wallet::RemoteWalletManager;
+use mundis_sdk::message::Message;
+use mundis_sdk::native_token::lamports_to_mun;
+use mundis_sdk::pubkey::Pubkey;
+use mundis_sdk::signature::Keypair;
+use mundis_sdk::signer::Signer;
+use mundis_sdk::system_instruction;
+use mundis_sdk::system_instruction::SystemError;
+use mundis_sdk::transaction::Transaction;
 use mundis_token_program::native_mint;
-use mundis_token_program::token_instruction::{MAX_SIGNERS, MIN_SIGNERS};
+use mundis_token_program::state::Mint;
+use mundis_token_program::token_instruction::{initialize_mint, MAX_SIGNERS, MIN_SIGNERS};
+use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, log_instruction_custom_error, ProcessResult};
+use crate::memo::WithMemo;
+use crate::nonce::check_nonce_account;
 
 pub const OWNER_ADDRESS_ARG: ArgConstant<'static> = ArgConstant {
     name: "owner",
@@ -46,6 +70,7 @@ pub const MULTISIG_SIGNER_ARG: ArgConstant<'static> = ArgConstant {
 };
 
 struct SignOnlyNeedsMintDecimals {}
+
 impl offline::ArgsConfig for SignOnlyNeedsMintDecimals {
     fn sign_only_arg<'a, 'b>(&self, arg: Arg<'a, 'b>) -> Arg<'a, 'b> {
         arg.requires_all(&[MINT_DECIMALS_ARG.name])
@@ -53,6 +78,7 @@ impl offline::ArgsConfig for SignOnlyNeedsMintDecimals {
 }
 
 struct SignOnlyNeedsFullMintSpec {}
+
 impl offline::ArgsConfig for SignOnlyNeedsFullMintSpec {
     fn sign_only_arg<'a, 'b>(&self, arg: Arg<'a, 'b>) -> Arg<'a, 'b> {
         arg.requires_all(&[MINT_ADDRESS_ARG.name, MINT_DECIMALS_ARG.name])
@@ -60,6 +86,7 @@ impl offline::ArgsConfig for SignOnlyNeedsFullMintSpec {
 }
 
 struct SignOnlyNeedsMintAddress {}
+
 impl offline::ArgsConfig for SignOnlyNeedsMintAddress {
     fn sign_only_arg<'a, 'b>(&self, arg: Arg<'a, 'b>) -> Arg<'a, 'b> {
         arg.requires_all(&[MINT_ADDRESS_ARG.name])
@@ -67,6 +94,7 @@ impl offline::ArgsConfig for SignOnlyNeedsMintAddress {
 }
 
 struct SignOnlyNeedsDelegateAddress {}
+
 impl offline::ArgsConfig for SignOnlyNeedsDelegateAddress {
     fn sign_only_arg<'a, 'b>(&self, arg: Arg<'a, 'b>) -> Arg<'a, 'b> {
         arg.requires_all(&[DELEGATE_ADDRESS_ARG.name])
@@ -150,7 +178,6 @@ impl TokenSubCommands for App<'_, '_> {
                                     "Enable the mint authority to freeze associated token accounts."
                                 ),
                         )
-
                 )
                 .subcommand(
                     SubCommand::with_name("create-account")
@@ -368,7 +395,7 @@ impl TokenSubCommands for App<'_, '_> {
                         .arg(mint_decimals_arg())
                         .nonce_args(true)
                         .arg(memo_arg())
-                        .offline_args_config(&SignOnlyNeedsMintDecimals{}),
+                        .offline_args_config(&SignOnlyNeedsMintDecimals {}),
                 )
                 .subcommand(
                     SubCommand::with_name("burn")
@@ -402,7 +429,7 @@ impl TokenSubCommands for App<'_, '_> {
                         .mint_args()
                         .nonce_args(true)
                         .arg(memo_arg())
-                        .offline_args_config(&SignOnlyNeedsFullMintSpec{}),
+                        .offline_args_config(&SignOnlyNeedsFullMintSpec {}),
                 )
                 .subcommand(
                     SubCommand::with_name("mint")
@@ -449,7 +476,7 @@ impl TokenSubCommands for App<'_, '_> {
                         .arg(mint_decimals_arg())
                         .arg(multisig_signer_arg())
                         .nonce_args(true)
-                        .offline_args_config(&SignOnlyNeedsMintDecimals{}),
+                        .offline_args_config(&SignOnlyNeedsMintDecimals {}),
                 )
                 .subcommand(
                     SubCommand::with_name("freeze")
@@ -479,7 +506,7 @@ impl TokenSubCommands for App<'_, '_> {
                         .arg(mint_address_arg())
                         .arg(multisig_signer_arg())
                         .nonce_args(true)
-                        .offline_args_config(&SignOnlyNeedsMintAddress{}),
+                        .offline_args_config(&SignOnlyNeedsMintAddress {}),
                 )
                 .subcommand(
                     SubCommand::with_name("thaw")
@@ -509,11 +536,11 @@ impl TokenSubCommands for App<'_, '_> {
                         .arg(mint_address_arg())
                         .arg(multisig_signer_arg())
                         .nonce_args(true)
-                        .offline_args_config(&SignOnlyNeedsMintAddress{}),
+                        .offline_args_config(&SignOnlyNeedsMintAddress {}),
                 )
                 .subcommand(
                     SubCommand::with_name("wrap")
-                        .about("Wrap native SOL in a SOL token account")
+                        .about("Wrap native MUN in a MUN token account")
                         .arg(
                             Arg::with_name("amount")
                                 .validator(is_amount)
@@ -610,7 +637,7 @@ impl TokenSubCommands for App<'_, '_> {
                         .arg(multisig_signer_arg())
                         .mint_args()
                         .nonce_args(true)
-                        .offline_args_config(&SignOnlyNeedsFullMintSpec{}),
+                        .offline_args_config(&SignOnlyNeedsFullMintSpec {}),
                 )
                 .subcommand(
                     SubCommand::with_name("revoke")
@@ -629,7 +656,7 @@ impl TokenSubCommands for App<'_, '_> {
                         .arg(delegate_address_arg())
                         .arg(multisig_signer_arg())
                         .nonce_args(true)
-                        .offline_args_config(&SignOnlyNeedsDelegateAddress{}),
+                        .offline_args_config(&SignOnlyNeedsDelegateAddress {}),
                 )
                 .subcommand(
                     SubCommand::with_name("close")
@@ -752,7 +779,7 @@ impl TokenSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("account-info")
-                        .about("Query details of an SPL Token account by address")
+                        .about("Query details of aa token account by address")
                         .arg(
                             Arg::with_name("token")
                                 .validator(is_valid_pubkey)
@@ -784,7 +811,7 @@ impl TokenSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("multisig-info")
-                        .about("Query details about and SPL Token multisig account by address")
+                        .about("Query details about token multisig account by address")
                         .arg(
                             Arg::with_name("address")
                                 .validator(is_valid_pubkey)
@@ -796,7 +823,7 @@ impl TokenSubCommands for App<'_, '_> {
                         ),
                 )
                 .subcommand(
-                    SubCommand::with_name("gc")
+                    SubCommand::with_name("cleanup")
                         .about("Cleanup unnecessary token accounts")
                         .arg(owner_keypair_arg())
                         .arg(
@@ -808,7 +835,7 @@ impl TokenSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("sync-native")
-                        .about("Sync a native SOL token account to its underlying lamports")
+                        .about("Sync a native MUN token account to its underlying lamports")
                         .arg(
                             owner_address_arg()
                                 .index(1)
@@ -908,6 +935,629 @@ fn is_multisig_minimum_signers(string: String) -> Result<(), String> {
         Err(format!("must be at least {}", MIN_SIGNERS))
     } else if v > MAX_SIGNERS {
         Err(format!("must be at most {}", MAX_SIGNERS))
+    } else {
+        Ok(())
+    }
+}
+
+pub fn parse_create_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    let decimals = value_t_or_exit!(matches, "decimals", u8);
+    let blockhash_query = BlockhashQuery::new_from_matches(matches);
+    let sign_only = matches.is_present(SIGN_ONLY_ARG.name);
+    let dump_transaction_message = matches.is_present(DUMP_TRANSACTION_MESSAGE.name);
+    let no_wait = matches.is_present("no_wait");
+
+    let mint_authority = pubkey_or_default(matches, "mint_authority", default_signer, wallet_manager);
+    let (fee_payer, fee_payer_pubkey) = signer_of(matches, FEE_PAYER_ARG.name, wallet_manager)?;
+    let mut bulk_signers = vec![fee_payer];
+
+    let nonce_account = pubkey_of(matches, NONCE_ARG.name);
+    let (nonce_authority, nonce_authority_pubkey) =
+        signer_of(matches, NONCE_AUTHORITY_ARG.name, wallet_manager)?;
+    if nonce_account.is_some() {
+        bulk_signers.push(nonce_authority);
+    }
+
+    let multisig_signers = signers_of(matches, MULTISIG_SIGNER_ARG.name, wallet_manager)
+        .unwrap_or_else(|e| {
+            eprintln!("error: {}", e);
+            exit(1);
+        });
+
+    if let Some(mut multisig_signers) = multisig_signers {
+        multisig_signers.sort_by(|(_, lp), (_, rp)| lp.cmp(rp));
+        let (signers, pubkeys): (Vec<_>, Vec<_>) = multisig_signers.into_iter().unzip();
+        bulk_signers.extend(signers);
+    }
+
+    let (token_signer, token) = signer_of(matches, "token_keypair", wallet_manager)
+        .map(|signer| {
+            if let Some(s) = signer.0 {
+                let pubkey = s.pubkey();
+                (s, pubkey)
+            } else {
+                let keypair = Keypair::new();
+                let pubkey = keypair.pubkey();
+                (Box::new(keypair) as Box<dyn Signer>, pubkey)
+            }
+        })?;
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
+    Ok(CliCommandInfo {
+        command: CliCommand::CreateToken {
+            token,
+            authority: mint_authority,
+            decimals,
+            enable_freeze: matches.is_present("enable_freeze"),
+            memo: matches.value_of(MEMO_ARG.name).map(String::from),
+            fee_payer: signer_info.index_of(fee_payer_pubkey).unwrap(),
+            blockhash_query,
+            nonce_account,
+            nonce_authority: signer_info.index_of(nonce_authority_pubkey).unwrap(),
+            sign_only,
+            dump_transaction_message,
+            no_wait
+        },
+        signers: signer_info.signers,
+    })
+}
+
+pub fn process_create_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+    token: &Pubkey,
+    authority: Pubkey,
+    decimals: u8,
+    enable_freeze: bool,
+    memo: Option<&String>,
+    fee_payer: SignerIndex,
+    blockhash_query: &BlockhashQuery,
+    nonce_account: Option<&Pubkey>,
+    nonce_authority: SignerIndex,
+    sign_only: bool,
+    dump_transaction_message: bool,
+    no_wait: bool,
+) -> ProcessResult {
+    let freeze_authority_pubkey = if enable_freeze { Some(authority) } else { None };
+    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
+    let nonce_authority = config.signers[nonce_authority];
+    let fee_payer = config.signers[fee_payer];
+
+    let minimum_balance_for_rent_exemption = if !sign_only {
+        rpc_client.get_minimum_balance_for_rent_exemption(Mint::packed_len())?
+    } else {
+        0
+    };
+
+    let instructions = vec![
+        system_instruction::create_account(
+            &fee_payer.pubkey(),
+            &token,
+            1,
+            Mint::packed_len() as u64,
+            &mundis_token_program::id(),
+        ),
+        initialize_mint(
+            &mundis_token_program::id(),
+            &token,
+            &authority,
+            freeze_authority_pubkey.as_ref(),
+            decimals,
+        )?,
+    ].with_memo(memo);
+
+    // handle tx
+    let message = if let Some(nonce_account) = &nonce_account {
+        Message::new_with_nonce(
+            instructions,
+            Some(&fee_payer.pubkey()),
+            nonce_account,
+            &nonce_authority.pubkey(),
+        )
+    } else {
+        Message::new(&instructions, Some(&fee_payer.pubkey()))
+    };
+
+    let message_fee = rpc_client.get_fee_for_message(&message)
+        .unwrap_or_else(|e| {
+            eprintln!("error: {}", e);
+            exit(1);
+        });
+
+    if !sign_only {
+        check_fee_payer_balance(
+            rpc_client,
+            &fee_payer.pubkey(),
+            minimum_balance_for_rent_exemption + message_fee,
+        )?;
+    }
+
+    let mut tx = Transaction::new_unsigned(message);
+    if sign_only {
+        tx.try_partial_sign(&config.signers, recent_blockhash)?;
+        return return_signers_with_config(
+            &tx,
+            &config.output_format,
+            &ReturnSignersConfig {
+                dump_transaction_message,
+            },
+        )
+    } else {
+        if let Some(nonce_account) = &nonce_account {
+            let nonce_account = nonce_utils::get_account_with_commitment(
+                rpc_client,
+                nonce_account,
+                config.commitment,
+            )?;
+            check_nonce_account(&nonce_account, &nonce_authority.pubkey(), &recent_blockhash)?;
+        }
+
+        tx.try_sign(&config.signers, recent_blockhash)?;
+        let result = if no_wait {
+            rpc_client.send_transaction(&tx)
+        } else {
+            rpc_client.send_and_confirm_transaction_with_spinner(&tx)
+        };
+        log_instruction_custom_error::<SystemError>(result, config)
+    }
+}
+
+pub fn parse_create_token_account_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::CreateTokenAccount,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_create_token_account_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_create_multisig_token_account_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::CreateMultisigToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_create_multisig_token_account_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_authorize_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::AuthorizeToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_authorize_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_transfer_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::TransferToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_transfer_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_burn_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::BurnToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_burn_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_mint_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::MintToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_mint_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_freeze_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::FreezeTokenAccount,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_freeze_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_thaw_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::ThawTokenAccount,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_thaw_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_wrap_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::WrapToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_wrap_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_unwrap_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::UnwrapToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_unwrap_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_approve_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::ApproveToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_approve_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_revoke_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::RevokeToken,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_revoke_token_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_close_token_account_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::CloseTokenAccount,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_close_token_account_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_token_balance_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::GetTokenAccountBalance,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_token_balance_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_token_supply_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::GetTokenSupply,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_token_supply_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_token_list_accounts_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::ListTokenAccounts,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_token_list_accounts_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_token_wallet_address_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::GetTokenWalletAddress,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_token_wallet_address_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_token_account_info_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::GetTokenAccountByAddress,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_token_account_info_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_token_multisig_info_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::GetTokenMultisigAccountByAddress,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_token_multisig_info_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_token_cleanup_accounts_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::CleanupTokenAccounts,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_token_cleanup_accounts_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+pub fn parse_token_sync_native_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    Ok(CliCommandInfo {
+        command: CliCommand::SyncTokenAccount,
+        signers: CliSigners::new(),
+    })
+}
+
+pub fn process_token_sync_native_command(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+) -> ProcessResult {
+    Ok("ok".to_string())
+}
+
+// Checks if an explicit address was provided, otherwise return the default address.
+fn pubkey_or_default(
+    arg_matches: &ArgMatches,
+    address_name: &str,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Pubkey {
+    if address_name != "owner" {
+        if let Some(address) =
+        pubkey_of_signer(arg_matches, address_name, wallet_manager).unwrap() {
+            return address;
+        }
+    }
+
+    return default_address(arg_matches, default_signer, wallet_manager)
+        .unwrap_or_else(|e| {
+            eprintln!("error: {}", e);
+            exit(1);
+        });
+}
+
+fn default_address(
+    matches: &ArgMatches,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<Pubkey, Box<dyn std::error::Error>> {
+    if let Some(address) = pubkey_of_signer(matches, "owner", wallet_manager).unwrap() {
+        return Ok(address);
+    }
+
+    pubkey_from_path(matches, &default_signer.path, "default", wallet_manager)
+}
+
+type SignersOf = Vec<(Option<Box<dyn Signer>>, Option<Pubkey>)>;
+pub fn signers_of(
+    matches: &ArgMatches<'_>,
+    name: &str,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<Option<SignersOf>, Box<dyn std::error::Error>> {
+    if let Some(values) = matches.values_of(name) {
+        let mut results = Vec::new();
+        for (i, value) in values.enumerate() {
+            let name = format!("{}-{}", name, i + 1);
+            let signer = signer_from_path(matches, value, &name, wallet_manager)?;
+            let signer_pubkey = signer.pubkey();
+            results.push((Some(signer), Some(signer_pubkey)));
+        }
+        Ok(Some(results))
+    } else {
+        Ok(None)
+    }
+}
+
+fn new_throwaway_signer() -> (Option<Box<dyn Signer>>, Option<Pubkey>) {
+    let keypair = Keypair::new();
+    let pubkey = keypair.pubkey();
+    (Some(Box::new(keypair) as Box<dyn Signer>), Some(pubkey))
+}
+
+pub fn check_fee_payer_balance(rpc_client: &RpcClient, fee_payer: &Pubkey, required_balance: u64) -> Result<(), Box<dyn std::error::Error>> {
+    let balance = rpc_client.get_balance(fee_payer)?;
+    if balance < required_balance {
+        Err(format!(
+            "Fee payer, {}, has insufficient balance: {} required, {} available",
+            fee_payer,
+            lamports_to_mun(required_balance),
+            lamports_to_mun(balance)
+        )
+            .into())
     } else {
         Ok(())
     }

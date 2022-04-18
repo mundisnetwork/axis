@@ -278,7 +278,44 @@ pub enum CliCommand {
         force_keybase: bool,
         info_pubkey: Option<Pubkey>,
     },
-    // TODO: Mundis: Token Commands
+
+    // Token Commands
+    CreateToken {
+        decimals: u8,
+        token: Pubkey,
+        authority: Pubkey,
+        enable_freeze: bool,
+        memo: Option<String>,
+        fee_payer: SignerIndex,
+        blockhash_query: BlockhashQuery,
+        nonce_account: Option<Pubkey>,
+        nonce_authority: SignerIndex,
+        sign_only: bool,
+        dump_transaction_message: bool,
+        no_wait: bool,
+    },
+    CreateTokenAccount,
+    CreateMultisigToken,
+    AuthorizeToken,
+    TransferToken,
+    BurnToken,
+    MintToken,
+    FreezeTokenAccount,
+    ThawTokenAccount,
+    WrapToken,
+    UnwrapToken,
+    ApproveToken,
+    RevokeToken,
+    CloseTokenAccount,
+    GetTokenAccountBalance,
+    GetTokenSupply,
+    ListTokenAccounts,
+    GetTokenWalletAddress,
+    GetTokenAccountByAddress,
+    GetTokenMultisigAccountByAddress,
+    CleanupTokenAccounts,
+    SyncTokenAccount,
+
     // Vote Commands
     CreateVoteAccount {
         vote_account: SignerIndex,
@@ -761,6 +798,7 @@ pub fn parse_command(
         }
         ("stake-account", Some(matches)) => parse_show_stake_account(matches, wallet_manager),
         ("stake-history", Some(matches)) => parse_show_stake_history(matches),
+
         // Validator Info Commands
         ("validator-info", Some(matches)) => match matches.subcommand() {
             ("publish", Some(matches)) => {
@@ -769,8 +807,33 @@ pub fn parse_command(
             ("get", Some(matches)) => parse_get_validator_info_command(matches),
             _ => unreachable!(),
         },
-        // TODO: Mundis: Token Commands
 
+        // Token Commands
+        ("token", Some(matches)) => match matches.subcommand() {
+            ("create-token", Some(matches)) => parse_create_token_command(matches, default_signer, wallet_manager),
+            ("create-account", Some(matches)) => parse_create_token_account_command(matches, default_signer, wallet_manager),
+            ("create-multisig", Some(matches)) => parse_create_multisig_token_account_command(matches, default_signer, wallet_manager),
+            ("authorize", Some(matches)) => parse_authorize_token_command(matches, default_signer, wallet_manager),
+            ("transfer", Some(matches)) => parse_transfer_token_command(matches, default_signer, wallet_manager),
+            ("burn", Some(matches)) => parse_burn_token_command(matches, default_signer, wallet_manager),
+            ("mint", Some(matches)) => parse_mint_token_command(matches, default_signer, wallet_manager),
+            ("freeze", Some(matches)) => parse_freeze_token_command(matches, default_signer, wallet_manager),
+            ("thaw", Some(matches)) => parse_thaw_token_command(matches, default_signer, wallet_manager),
+            ("wrap", Some(matches)) => parse_wrap_token_command(matches, default_signer, wallet_manager),
+            ("unwrap", Some(matches)) => parse_unwrap_token_command(matches, default_signer, wallet_manager),
+            ("approve", Some(matches)) => parse_approve_token_command(matches, default_signer, wallet_manager),
+            ("revoke", Some(matches)) => parse_revoke_token_command(matches, default_signer, wallet_manager),
+            ("close-account", Some(matches)) => parse_close_token_account_command(matches, default_signer, wallet_manager),
+            ("balance", Some(matches)) => parse_token_balance_command(matches, default_signer, wallet_manager),
+            ("supply", Some(matches)) => parse_token_supply_command(matches, default_signer, wallet_manager),
+            ("accounts", Some(matches)) => parse_token_list_accounts_command(matches, default_signer, wallet_manager),
+            ("address", Some(matches)) => parse_token_wallet_address_command(matches, default_signer, wallet_manager),
+            ("account-info", Some(matches)) => parse_token_account_info_command(matches, default_signer, wallet_manager),
+            ("multisig-info", Some(matches)) => parse_token_multisig_info_command(matches, default_signer, wallet_manager),
+            ("cleanup", Some(matches)) => parse_token_cleanup_accounts_command(matches, default_signer, wallet_manager),
+            ("sync-native", Some(matches)) => parse_token_sync_native_command(matches, default_signer, wallet_manager),
+            _ => unreachable!(),
+        },
 
         // Vote Commands
         ("create-vote-account", Some(matches)) => {
@@ -1345,8 +1408,6 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             *info_pubkey,
         ),
 
-        // TODO: Mundis: Token Commands
-
         // Vote Commands
 
         // Create vote account
@@ -1575,6 +1636,58 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             derived_address_seed.clone(),
             derived_address_program_id.as_ref(),
         ),
+
+        // Token Commands
+        CliCommand::CreateToken {
+            token,
+            authority,
+            decimals,
+            enable_freeze,
+            memo,
+            fee_payer,
+            ref blockhash_query,
+            ref nonce_account,
+            nonce_authority,
+            sign_only,
+            dump_transaction_message,
+            no_wait,
+        } => process_create_token_command(
+            &rpc_client,
+            config,
+            token,
+            *authority,
+            *decimals,
+            *enable_freeze,
+            memo.as_ref(),
+            *fee_payer,
+            blockhash_query,
+            nonce_account.as_ref(),
+            *nonce_authority,
+            *sign_only,
+            *dump_transaction_message,
+            *no_wait
+        ),
+        CliCommand::CreateTokenAccount => process_create_token_account_command(&rpc_client, config),
+        CliCommand::CreateMultisigToken => process_create_multisig_token_account_command(&rpc_client, config),
+        CliCommand::AuthorizeToken => process_authorize_token_command(&rpc_client, config),
+        CliCommand::TransferToken => process_transfer_token_command(&rpc_client, config),
+        CliCommand::BurnToken => process_burn_token_command(&rpc_client, config),
+        CliCommand::MintToken => process_mint_token_command(&rpc_client, config),
+        CliCommand::FreezeTokenAccount => process_freeze_token_command(&rpc_client, config),
+        CliCommand::ThawTokenAccount => process_thaw_token_command(&rpc_client, config),
+        CliCommand::WrapToken => process_wrap_token_command(&rpc_client, config),
+        CliCommand::UnwrapToken => process_unwrap_token_command(&rpc_client, config),
+        CliCommand::ApproveToken => process_approve_token_command(&rpc_client, config),
+        CliCommand::RevokeToken => process_revoke_token_command(&rpc_client, config),
+        CliCommand::CloseTokenAccount => process_close_token_account_command(&rpc_client, config),
+        CliCommand::GetTokenAccountBalance => process_token_balance_command(&rpc_client, config),
+        CliCommand::GetTokenSupply => process_token_supply_command(&rpc_client, config),
+        CliCommand::ListTokenAccounts => process_token_list_accounts_command(&rpc_client, config),
+        CliCommand::GetTokenWalletAddress => process_token_wallet_address_command(&rpc_client, config),
+        CliCommand::GetTokenAccountByAddress => process_token_account_info_command(&rpc_client, config),
+        CliCommand::GetTokenMultisigAccountByAddress => process_token_multisig_info_command(&rpc_client, config),
+        CliCommand::CleanupTokenAccounts => process_token_cleanup_accounts_command(&rpc_client, config),
+        CliCommand::SyncTokenAccount => process_token_sync_native_command(&rpc_client, config),
     }
 }
 
@@ -2250,56 +2363,6 @@ mod tests {
         assert!(process_command(&config).is_err());
 
         config.command = CliCommand::GetTransactionCount;
-        assert!(process_command(&config).is_err());
-    }
-
-    #[test]
-    fn test_cli_deploy() {
-        mundis_logger::setup();
-        let mut pathbuf = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        pathbuf.push("tests");
-        pathbuf.push("fixtures");
-        pathbuf.push("noop");
-        pathbuf.set_extension("so");
-
-        // Success case
-        let mut config = CliConfig::default();
-        let account_info_response = json!(Response {
-            context: RpcResponseContext { slot: 1 },
-            value: Value::Null,
-        });
-        let mut mocks = HashMap::new();
-        mocks.insert(RpcRequest::GetAccountInfo, account_info_response);
-        let rpc_client = RpcClient::new_mock_with_mocks("".to_string(), mocks);
-
-        config.rpc_client = Some(Arc::new(rpc_client));
-        let default_keypair = Keypair::new();
-        config.signers = vec![&default_keypair];
-
-        config.command = CliCommand::Deploy {
-            program_location: pathbuf.to_str().unwrap().to_string(),
-            address: None,
-            allow_excessive_balance: false,
-        };
-        config.output_format = OutputFormat::JsonCompact;
-        let result = process_command(&config);
-        let json: Value = serde_json::from_str(&result.unwrap()).unwrap();
-        let program_id = json
-            .as_object()
-            .unwrap()
-            .get("programId")
-            .unwrap()
-            .as_str()
-            .unwrap();
-
-        assert!(program_id.parse::<Pubkey>().is_ok());
-
-        // Failure case
-        config.command = CliCommand::Deploy {
-            program_location: "bad/file/location.so".to_string(),
-            address: None,
-            allow_excessive_balance: false,
-        };
         assert!(process_command(&config).is_err());
     }
 

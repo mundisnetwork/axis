@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+
 use {
     mundis_sdk::{instruction::Instruction, pubkey::Pubkey},
 };
@@ -8,6 +8,7 @@ use mundis_client::rpc_client::RpcClient;
 use mundis_remote_wallet::remote_wallet::RemoteWalletManager;
 use mundis_sdk::message::Message;
 use mundis_sdk::transaction::Transaction;
+
 use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, ProcessResult};
 use crate::spend_utils::{resolve_spend_tx_and_check_account_balance, SpendAmount};
 
