@@ -1,3 +1,4 @@
+use std::fmt::Formatter;
 use {
     crate::{
         display::{
@@ -2690,6 +2691,32 @@ impl fmt::Display for CliPingConfirmationStats {
 }
 impl QuietDisplay for CliPingConfirmationStats {}
 impl VerboseDisplay for CliPingConfirmationStats {}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliMint<T>
+    where T: Serialize + fmt::Display + QuietDisplay + VerboseDisplay,
+{
+    pub address: String,
+    pub decimals: u8,
+    pub transaction_data: T,
+}
+
+impl<T> fmt::Display for CliMint<T>
+    where T: Serialize + fmt::Display + QuietDisplay + VerboseDisplay,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        writeln!(f)?;
+        writeln_name_value(f, "Address: ", &self.address)?;
+        writeln_name_value(f, "Decimals: ", &format!("{}", self.decimals))?;
+        fmt::Display::fmt(&self.transaction_data, f)
+    }
+}
+
+impl<T> QuietDisplay for CliMint<T>
+    where T: Serialize + fmt::Display + QuietDisplay + VerboseDisplay, {}
+impl<T> VerboseDisplay for CliMint<T>
+    where T: Serialize + fmt::Display + QuietDisplay + VerboseDisplay, {}
 
 #[cfg(test)]
 mod tests {

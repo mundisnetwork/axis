@@ -1,8 +1,10 @@
+use std::fmt::Display;
 use std::process::exit;
 use std::str::FromStr;
 use std::sync::Arc;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, value_t, value_t_or_exit};
 use serde::de::Error;
+use serde::Serialize;
 use mundis_clap_utils::{ArgConstant, offline};
 use mundis_clap_utils::fee_payer::{fee_payer_arg, FEE_PAYER_ARG};
 use mundis_clap_utils::input_parsers::{pubkey_of, pubkey_of_signer, signer_of};
@@ -12,12 +14,13 @@ use mundis_clap_utils::memo::{memo_arg, MEMO_ARG};
 use mundis_clap_utils::nonce::{NONCE_ARG, NONCE_AUTHORITY_ARG, NonceArgs};
 use mundis_clap_utils::offline::{BLOCKHASH_ARG, DUMP_TRANSACTION_MESSAGE, OfflineArgs, SIGN_ONLY_ARG};
 use mundis_cli_config::Config;
-use mundis_cli_output::{return_signers_with_config, ReturnSignersConfig};
+use mundis_cli_output::{CliSignature, CliSignOnlyData, QuietDisplay, return_signers_data, return_signers_with_config, ReturnSignersConfig, VerboseDisplay, CliMint};
 use mundis_client::blockhash_query::BlockhashQuery;
 use mundis_client::nonce_utils;
 use mundis_client::rpc_client::RpcClient;
 use mundis_memo_program::memo_instruction;
 use mundis_remote_wallet::remote_wallet::RemoteWalletManager;
+use mundis_sdk::instruction::Instruction;
 use mundis_sdk::message::Message;
 use mundis_sdk::native_token::lamports_to_mun;
 use mundis_sdk::pubkey::Pubkey;
@@ -110,6 +113,11 @@ impl MintArgs for App<'_, '_> {
         self.arg(mint_address_arg().requires(MINT_DECIMALS_ARG.name))
             .arg(mint_decimals_arg().requires(MINT_ADDRESS_ARG.name))
     }
+}
+
+enum TransactionReturnData {
+    CliSignature(CliSignature),
+    CliSignOnlyData(CliSignOnlyData),
 }
 
 pub trait TokenSubCommands {
@@ -985,6 +993,7 @@ pub fn parse_create_token_command(
                 (Box::new(keypair) as Box<dyn Signer>, pubkey)
             }
         })?;
+    bulk_signers.push(Some(token_signer));
 
     let signer_info = default_signer.generate_unique_signers(
         bulk_signers,
@@ -1028,8 +1037,6 @@ pub fn process_create_token_command(
     no_wait: bool,
 ) -> ProcessResult {
     let freeze_authority_pubkey = if enable_freeze { Some(authority) } else { None };
-    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
-    let nonce_authority = config.signers[nonce_authority];
     let fee_payer = config.signers[fee_payer];
 
     let minimum_balance_for_rent_exemption = if !sign_only {
@@ -1055,8 +1062,51 @@ pub fn process_create_token_command(
         )?,
     ].with_memo(memo);
 
-    // handle tx
-    let message = if let Some(nonce_account) = &nonce_account {
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        fee_payer,
+        false,
+        minimum_balance_for_rent_exemption,
+        instructions,
+        sign_only,
+        blockhash_query,
+        nonce_account,
+        nonce_authority,
+        dump_transaction_message,
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(cli_signature) => config.output_format.formatted_string(
+            &CliMint {
+                address: token.to_string(),
+                decimals,
+                transaction_data: cli_signature,
+            },
+        ),
+        TransactionReturnData::CliSignOnlyData(ref cli_sign_only_data) => {
+            config.output_format.formatted_string(cli_sign_only_data)
+        }
+    })
+}
+
+fn handle_tx(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+    fee_payer: &dyn Signer,
+    no_wait: bool,
+    minimum_balance_for_rent_exemption: u64,
+    instructions: Vec<Instruction>,
+    sign_only: bool,
+    blockhash_query: &BlockhashQuery,
+    nonce_account: Option<&Pubkey>,
+    nonce_authority: SignerIndex,
+    dump_transaction_message: bool,
+) -> Result<TransactionReturnData, Box<dyn std::error::Error>> {
+    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
+    let nonce_authority = config.signers[nonce_authority];
+
+    let mut message = if let Some(nonce_account) = &nonce_account {
         Message::new_with_nonce(
             instructions,
             Some(&fee_payer.pubkey()),
@@ -1067,6 +1117,7 @@ pub fn process_create_token_command(
         Message::new(&instructions, Some(&fee_payer.pubkey()))
     };
 
+    message.recent_blockhash = recent_blockhash;
     let message_fee = rpc_client.get_fee_for_message(&message)
         .unwrap_or_else(|e| {
             eprintln!("error: {}", e);
@@ -1084,30 +1135,22 @@ pub fn process_create_token_command(
     let mut tx = Transaction::new_unsigned(message);
     if sign_only {
         tx.try_partial_sign(&config.signers, recent_blockhash)?;
-        return return_signers_with_config(
+        Ok(TransactionReturnData::CliSignOnlyData(return_signers_data(
             &tx,
-            &config.output_format,
             &ReturnSignersConfig {
                 dump_transaction_message,
-            },
-        )
+            }
+        )))
     } else {
-        if let Some(nonce_account) = &nonce_account {
-            let nonce_account = nonce_utils::get_account_with_commitment(
-                rpc_client,
-                nonce_account,
-                config.commitment,
-            )?;
-            check_nonce_account(&nonce_account, &nonce_authority.pubkey(), &recent_blockhash)?;
-        }
-
         tx.try_sign(&config.signers, recent_blockhash)?;
-        let result = if no_wait {
-            rpc_client.send_transaction(&tx)
+        let signature = if no_wait {
+            rpc_client.send_transaction(&tx)?
         } else {
-            rpc_client.send_and_confirm_transaction_with_spinner(&tx)
+            rpc_client.send_and_confirm_transaction_with_spinner(&tx)?
         };
-        log_instruction_custom_error::<SystemError>(result, config)
+        Ok(TransactionReturnData::CliSignature(CliSignature {
+            signature: signature.to_string(),
+        }))
     }
 }
 
@@ -1548,7 +1591,7 @@ fn new_throwaway_signer() -> (Option<Box<dyn Signer>>, Option<Pubkey>) {
     (Some(Box::new(keypair) as Box<dyn Signer>), Some(pubkey))
 }
 
-pub fn check_fee_payer_balance(rpc_client: &RpcClient, fee_payer: &Pubkey, required_balance: u64) -> Result<(), Box<dyn std::error::Error>> {
+fn check_fee_payer_balance(rpc_client: &RpcClient, fee_payer: &Pubkey, required_balance: u64) -> Result<(), Box<dyn std::error::Error>> {
     let balance = rpc_client.get_balance(fee_payer)?;
     if balance < required_balance {
         Err(format!(

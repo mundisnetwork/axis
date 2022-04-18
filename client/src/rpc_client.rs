@@ -4378,7 +4378,6 @@ impl RpcClient {
         Ok(result)
     }
 
-    #[allow(deprecated)]
     pub fn get_fee_for_message(&self, message: &Message) -> ClientResult<u64> {
         let serialized_encoded =
             serialize_and_encode::<Message>(message, UiTransactionEncoding::Base64)?;
