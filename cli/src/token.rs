@@ -35,7 +35,7 @@ use mundis_token_account_program::get_associated_token_address;
 use mundis_token_account_program::token_account_instruction::create_associated_token_account;
 use mundis_token_program::native_mint;
 use mundis_token_program::state::{Mint, Multisig, TokenAccount};
-use mundis_token_program::token_instruction::{AuthorityType, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS, set_authority};
+use mundis_token_program::token_instruction::{AuthorityType, burn, burn_checked, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS, set_authority, transfer, transfer_checked};
 
 use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, create_tx_info, log_instruction_custom_error, ProcessResult, TxInfo};
 use crate::memo::WithMemo;
@@ -1472,17 +1472,249 @@ pub fn parse_transfer_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let token = pubkey_of_signer(matches, "token", wallet_manager)
+        .unwrap()
+        .unwrap();
+    let amount = match matches.value_of("amount").unwrap() {
+        "ALL" => None,
+        amount => Some(amount.parse::<f64>().unwrap()),
+    };
+    let recipient = pubkey_of_signer(matches, "recipient", wallet_manager)
+        .unwrap()
+        .unwrap();
+    let sender = pubkey_of_signer(matches, "from", wallet_manager).unwrap();
+
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let default_signer_key = default_signer.signer_from_path(matches, wallet_manager)?;
+    let default_signer_pubkey = default_signer_key.pubkey();
+    let (owner_signer, owner) = signer_of(matches, "owner",  wallet_manager)?;
+    if owner.is_some() {
+        bulk_signers.push(owner_signer);
+    } else {
+        bulk_signers.push(Some(default_signer_key));
+    }
+
+    let mint_decimals = value_of::<u8>(matches, MINT_DECIMALS_ARG.name);
+    let fund_recipient = matches.is_present("fund_recipient");
+    let allow_unfunded_recipient = matches.is_present("allow_empty_recipient")
+        || matches.is_present("allow_unfunded_recipient");
+
+    let recipient_is_ata_owner = matches.is_present("recipient_is_ata_owner");
+    let use_unchecked_instruction = matches.is_present("use_unchecked_instruction");
+    let memo =matches.value_of(MEMO_ARG.name).map(String::from);
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::TransferToken,
-        signers: CliSigners::new(),
+        command: CliCommand::TransferToken {
+            token,
+            ui_amount: amount,
+            recipient,
+            sender,
+            sender_owner: owner.or(Some(default_signer_pubkey)).unwrap(),
+            allow_unfunded_recipient,
+            fund_recipient,
+            mint_decimals,
+            recipient_is_ata_owner,
+            use_unchecked_instruction,
+            memo,
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers
     })
 }
 
 pub fn process_transfer_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    token: Pubkey,
+    ui_amount: Option<f64>,
+    recipient: Pubkey,
+    sender: Option<Pubkey>,
+    sender_owner: Pubkey,
+    allow_unfunded_recipient: bool,
+    fund_recipient: bool,
+    mint_decimals: Option<u8>,
+    recipient_is_ata_owner: bool,
+    use_unchecked_instruction: bool,
+    memo: Option<&String>,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let sender = if let Some(sender) = sender {
+        sender
+    } else {
+        get_associated_token_address(&sender_owner, &token)
+    };
+    let (mint_pubkey, decimals) = resolve_mint_info(rpc_client, tx_info.sign_only, &sender, Some(token), mint_decimals)?;
+    let maybe_transfer_balance =
+        ui_amount.map(|ui_amount| mundis_token_program::ui_amount_to_amount(ui_amount, decimals));
+    let transfer_balance = if !tx_info.sign_only {
+        let sender_token_amount = rpc_client.get_token_account_balance(&sender)
+            .map_err(|err| {
+                format!(
+                    "Error: Failed to get token balance of sender address {}: {}",
+                    sender, err
+                )
+            })?;
+        let sender_balance = sender_token_amount.amount.parse::<u64>().map_err(|err| {
+            format!(
+                "Token account {} balance could not be parsed: {}",
+                sender, err
+            )
+        })?;
+
+        let transfer_balance = maybe_transfer_balance.unwrap_or(sender_balance);
+        println_display(
+            config,
+            format!(
+                "Transfer {} tokens\n  Sender: {}\n  Recipient: {}",
+                mundis_token_program::amount_to_ui_amount(transfer_balance, decimals),
+                sender,
+                recipient
+            ),
+        );
+
+        if transfer_balance > sender_balance {
+            return Err(format!(
+                "Error: Sender has insufficient funds, current balance is {}",
+                sender_token_amount.real_number_string_trimmed()
+            )
+                .into());
+        }
+        transfer_balance
+    } else {
+        maybe_transfer_balance.unwrap()
+    };
+
+    let mut instructions: Vec<Instruction> = vec![];
+
+    let mut recipient_token_account = recipient;
+    let mut minimum_balance_for_rent_exemption = 0;
+
+    let recipient_is_token_account = if !tx_info.sign_only {
+        let recipient_account_info = rpc_client
+            .get_account_with_commitment(&recipient, config.commitment)?
+            .value
+            .map(|account| account.owner == mundis_token_program::id() && account.data.len() == TokenAccount::packed_len());
+
+        if recipient_account_info.is_none() && !allow_unfunded_recipient {
+            return Err("Error: The recipient address is not funded. \
+                                    Add `--allow-unfunded-recipient` to complete the transfer \
+                                   "
+                .into());
+        }
+
+        recipient_account_info.unwrap_or(false)
+    } else {
+        !recipient_is_ata_owner
+    };
+
+    if !recipient_is_token_account {
+        recipient_token_account = get_associated_token_address(&recipient, &mint_pubkey);
+        println_display(
+            config,
+            format!(
+                "  Recipient associated token account: {}",
+                recipient_token_account
+            ),
+        );
+
+        let needs_funding = if !tx_info.sign_only {
+            if let Some(recipient_token_account_data) = rpc_client
+                .get_account_with_commitment(&recipient_token_account, config.commitment)?
+                .value
+            {
+                if recipient_token_account_data.owner == system_program::id() {
+                    true
+                } else if recipient_token_account_data.owner == mundis_token_program::id() {
+                    false
+                } else {
+                    return Err(
+                        format!("Error: Unsupported recipient address: {}", recipient).into(),
+                    );
+                }
+            } else {
+                true
+            }
+        } else {
+            fund_recipient
+        };
+
+        if needs_funding {
+            if fund_recipient {
+                if !tx_info.sign_only {
+                    minimum_balance_for_rent_exemption += rpc_client.get_minimum_balance_for_rent_exemption(TokenAccount::packed_len())?;
+                    println_display(
+                        config,
+                        format!(
+                            "  Funding recipient: {} ({} MUN)",
+                            recipient_token_account,
+                            lamports_to_mun(minimum_balance_for_rent_exemption)
+                        ),
+                    );
+                }
+                instructions.push(create_associated_token_account(
+                    &config.signers[tx_info.fee_payer].pubkey(),
+                    &recipient,
+                    &mint_pubkey,
+                ));
+            } else {
+                return Err(
+                    "Error: Recipient's associated token account does not exist. \
+                                    Add `--fund-recipient` to fund their account"
+                        .into(),
+                );
+            }
+        }
+    }
+
+    if use_unchecked_instruction {
+        instructions.push(transfer(
+            &mundis_token_program::id(),
+            &sender,
+            &recipient_token_account,
+            &sender_owner,
+            multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+            transfer_balance,
+        )?);
+    } else {
+        instructions.push(transfer_checked(
+            &mundis_token_program::id(),
+            &sender,
+            &mint_pubkey,
+            &recipient_token_account,
+            &sender_owner,
+            multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+            transfer_balance,
+            decimals,
+        )?);
+    }
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        minimum_balance_for_rent_exemption,
+        instructions.with_memo(memo),
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_burn_token_command(
@@ -1490,8 +1722,47 @@ pub fn parse_burn_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let source = pubkey_of_signer(matches, "source", wallet_manager)
+        .unwrap()
+        .unwrap();
+
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let default_signer_key = default_signer.signer_from_path(matches, wallet_manager)?;
+    let default_signer_pubkey = default_signer_key.pubkey();
+    let (owner_signer, owner) = signer_of(matches, "owner",  wallet_manager)?;
+    if owner.is_some() {
+        bulk_signers.push(owner_signer);
+    } else {
+        bulk_signers.push(Some(default_signer_key));
+    }
+
+    let amount = value_t_or_exit!(matches, "amount", f64);
+    let mint_address = pubkey_of_signer(matches, MINT_ADDRESS_ARG.name, wallet_manager).unwrap();
+    let mint_decimals = value_of::<u8>(matches, MINT_DECIMALS_ARG.name);
+    let use_unchecked_instruction = matches.is_present("use_unchecked_instruction");
+    let memo = matches.value_of(MEMO_ARG.name).map(String::from);
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::BurnToken,
+        command: CliCommand::BurnToken {
+            source,
+            source_owner: owner.or(Some(default_signer_pubkey)).unwrap(),
+            ui_amount: amount,
+            mint_address,
+            mint_decimals,
+            use_unchecked_instruction,
+            memo,
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
         signers: CliSigners::new(),
     })
 }
@@ -1499,8 +1770,60 @@ pub fn parse_burn_token_command(
 pub fn process_burn_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    source: Pubkey,
+    source_owner: Pubkey,
+    ui_amount: f64,
+    mint_address: Option<Pubkey>,
+    mint_decimals: Option<u8>,
+    use_unchecked_instruction: bool,
+    memo: Option<&String>,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    println_display(
+        config,
+        format!("Burn {} tokens\n  Source: {}", ui_amount, source),
+    );
+
+    let (mint_pubkey, decimals) = resolve_mint_info(rpc_client, tx_info.sign_only, &source, mint_address, mint_decimals)?;
+    let amount = mundis_token_program::ui_amount_to_amount(ui_amount, decimals);
+    let mut instructions = if use_unchecked_instruction {
+        vec![burn(
+            &mundis_token_program::id(),
+            &source,
+            &mint_pubkey,
+            &source_owner,
+            &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+            amount,
+        )?]
+    } else {
+        vec![burn_checked(
+            &mundis_token_program::id(),
+            &source,
+            &mint_pubkey,
+            &source_owner,
+            &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+            amount,
+            decimals,
+        )?]
+    };
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions.with_memo(memo),
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_mint_token_command(
@@ -1929,4 +2252,34 @@ fn new_throwaway_signer() -> (Option<Box<dyn Signer>>, Option<Pubkey>) {
     let keypair = Keypair::new();
     let pubkey = keypair.pubkey();
     (Some(Box::new(keypair) as Box<dyn Signer>), Some(pubkey))
+}
+
+pub(crate) fn resolve_mint_info(
+    rpc_client: &RpcClient,
+    sign_only: bool,
+    token_account: &Pubkey,
+    mint_address: Option<Pubkey>,
+    mint_decimals: Option<u8>,
+) -> Result<(Pubkey, u8), Box<dyn std::error::Error>> {
+    if !sign_only {
+        let source_account = rpc_client
+            .get_token_account(token_account)?
+            .ok_or_else(|| format!("Could not find token account {}", token_account))?;
+        let source_mint = Pubkey::from_str(&source_account.mint)?;
+        if let Some(mint) = mint_address {
+            if source_mint != mint {
+                return Err(format!(
+                    "Source {:?} does not contain {:?} tokens",
+                    token_account, mint
+                )
+                    .into());
+            }
+        }
+        Ok((source_mint, source_account.token_amount.decimals))
+    } else {
+        Ok((
+            mint_address.unwrap_or_default(),
+            mint_decimals.unwrap_or_default(),
+        ))
+    }
 }
