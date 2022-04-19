@@ -36,6 +36,9 @@ use {
     std::{collections::HashMap, error, io::stdout, str::FromStr, sync::Arc, time::Duration},
     thiserror::Error,
 };
+use mundis_clap_utils::offline::{DUMP_TRANSACTION_MESSAGE, SIGN_ONLY_ARG};
+use mundis_token_program::token_instruction::AuthorityType;
+
 pub const DEFAULT_RPC_TIMEOUT_SECONDS: &str = "30";
 pub const DEFAULT_CONFIRM_TX_TIMEOUT_SECONDS: &str = "5";
 const CHECKED: bool = true;
@@ -286,17 +289,28 @@ pub enum CliCommand {
         authority: Pubkey,
         enable_freeze: bool,
         memo: Option<String>,
-        fee_payer: SignerIndex,
-        blockhash_query: BlockhashQuery,
-        nonce_account: Option<Pubkey>,
-        nonce_authority: SignerIndex,
-        sign_only: bool,
-        dump_transaction_message: bool,
-        no_wait: bool,
+        tx_info: TxInfo,
     },
-    CreateTokenAccount,
-    CreateMultisigToken,
-    AuthorizeToken,
+    CreateTokenAccount {
+        token: Pubkey,
+        owner: Pubkey,
+        account: Option<Pubkey>,
+        tx_info: TxInfo,
+    },
+    CreateMultisigToken {
+        multisig: Pubkey,
+        minimum_signers: u8,
+        multisig_members: Vec<Pubkey>,
+        tx_info: TxInfo,
+    },
+    AuthorizeToken {
+        account: Pubkey,
+        authority_type: AuthorityType,
+        authority: Option<Pubkey>,
+        new_authority: Option<Pubkey>,
+        force_authorize: bool,
+        tx_info: TxInfo,
+    },
     TransferToken,
     BurnToken,
     MintToken,
@@ -440,6 +454,17 @@ pub enum CliCommand {
 pub struct CliCommandInfo {
     pub command: CliCommand,
     pub signers: CliSigners,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct TxInfo {
+    pub fee_payer: SignerIndex,
+    pub blockhash_query: BlockhashQuery,
+    pub nonce_account: Option<Pubkey>,
+    pub nonce_authority: SignerIndex,
+    pub sign_only: bool,
+    pub dump_transaction_message: bool,
+    pub no_wait: bool,
 }
 
 #[derive(Debug, Error)]
@@ -1644,13 +1669,7 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             decimals,
             enable_freeze,
             memo,
-            fee_payer,
-            ref blockhash_query,
-            ref nonce_account,
-            nonce_authority,
-            sign_only,
-            dump_transaction_message,
-            no_wait,
+            ref tx_info,
         } => process_create_token_command(
             &rpc_client,
             config,
@@ -1659,17 +1678,47 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             *decimals,
             *enable_freeze,
             memo.as_ref(),
-            *fee_payer,
-            blockhash_query,
-            nonce_account.as_ref(),
-            *nonce_authority,
-            *sign_only,
-            *dump_transaction_message,
-            *no_wait
+            tx_info
         ),
-        CliCommand::CreateTokenAccount => process_create_token_account_command(&rpc_client, config),
-        CliCommand::CreateMultisigToken => process_create_multisig_token_account_command(&rpc_client, config),
-        CliCommand::AuthorizeToken => process_authorize_token_command(&rpc_client, config),
+        CliCommand::CreateTokenAccount {
+            token,
+            owner,
+            account,
+            ref tx_info
+        } => process_create_token_account_command(
+            &rpc_client,
+            config,
+            *token,
+            *owner,
+            *account,
+            tx_info
+        ),
+
+        CliCommand::CreateMultisigToken {
+            multisig,
+            minimum_signers,
+            ref multisig_members,
+            ref tx_info
+        } => process_create_multisig_token_account_command(&rpc_client, config, *multisig, *minimum_signers, multisig_members, tx_info),
+
+        CliCommand::AuthorizeToken {
+            account,
+            ref authority_type,
+            authority,
+            new_authority,
+            force_authorize,
+            tx_info
+        } => process_authorize_token_command(
+            &rpc_client,
+            config,
+            *account,
+            *authority,
+            authority_type,
+            *new_authority,
+            *force_authorize,
+            tx_info
+        ),
+
         CliCommand::TransferToken => process_transfer_token_command(&rpc_client, config),
         CliCommand::BurnToken => process_burn_token_command(&rpc_client, config),
         CliCommand::MintToken => process_mint_token_command(&rpc_client, config),
@@ -1754,6 +1803,24 @@ where
             };
             Ok(config.output_format.formatted_string(&signature))
         }
+    }
+}
+
+pub(crate) fn create_tx_info(
+    matches: &ArgMatches<'_>,
+    signer_info: &CliSignerInfo,
+    fee_payer_pubkey: Option<Pubkey>,
+    nonce_account: Option<Pubkey>,
+    nonce_authority_pubkey: Option<Pubkey>,
+) -> TxInfo {
+    TxInfo {
+        fee_payer: signer_info.index_of(fee_payer_pubkey).unwrap(),
+        blockhash_query: BlockhashQuery::new_from_matches(matches),
+        nonce_account,
+        nonce_authority: signer_info.index_of(nonce_authority_pubkey).unwrap(),
+        sign_only: matches.is_present(SIGN_ONLY_ARG.name),
+        dump_transaction_message: matches.is_present(DUMP_TRANSACTION_MESSAGE.name),
+        no_wait: matches.is_present("no_wait")
     }
 }
 

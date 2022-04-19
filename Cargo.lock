@@ -2453,6 +2453,7 @@ dependencies = [
  "mundis-sdk",
  "mundis-streamer",
  "mundis-test-validator",
+ "mundis-token-account-program",
  "mundis-token-program",
  "mundis-transaction-status",
  "mundis-version",

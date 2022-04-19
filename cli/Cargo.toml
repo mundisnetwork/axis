@@ -41,6 +41,7 @@ mundis-version = { path = "../version", version = "=1.9.14" }
 mundis-vote-program = { path = "../programs/vote", version = "=1.9.14" }
 mundis-memo-program = { path = "../programs/memo", version = "=1.9.14" }
 mundis-token-program = { path = "../programs/token", version = "=1.9.14" }
+mundis-token-account-program = { path = "../programs/token-account", version = "=1.9.14" }
 thiserror = "1.0.30"
 tiny-bip39 = "0.8.2"
 

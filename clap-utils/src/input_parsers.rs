@@ -134,6 +134,23 @@ pub fn signer_of(
     }
 }
 
+pub fn signer_of_or_else<F>(
+    matches: &ArgMatches<'_>,
+    name: &str,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+    func: F
+) -> Result<(Option<Box<dyn Signer>>, Option<Pubkey>), Box<dyn std::error::Error>>
+where F: FnOnce() -> (Option<Box<dyn Signer>>, Option<Pubkey>) + Copy
+{
+    let result = signer_of(matches, name, wallet_manager)
+        .unwrap_or_else(|e| func());
+
+    match result {
+        (None, None) => Ok(func()),
+        _ => Ok(result)
+    }
+}
+
 pub fn pubkey_of_signer(
     matches: &ArgMatches<'_>,
     name: &str,

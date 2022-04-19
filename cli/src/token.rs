@@ -2,19 +2,21 @@ use std::fmt::Display;
 use std::process::exit;
 use std::str::FromStr;
 use std::sync::Arc;
+
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, value_t, value_t_or_exit};
 use serde::de::Error;
 use serde::Serialize;
+
 use mundis_clap_utils::{ArgConstant, offline};
 use mundis_clap_utils::fee_payer::{fee_payer_arg, FEE_PAYER_ARG};
-use mundis_clap_utils::input_parsers::{pubkey_of, pubkey_of_signer, signer_of};
+use mundis_clap_utils::input_parsers::{pubkey_of, pubkey_of_signer, pubkeys_of_multiple_signers, signer_of, signer_of_or_else, value_of};
 use mundis_clap_utils::input_validators::{is_amount, is_amount_or_all, is_parsable, is_valid_pubkey, is_valid_signer};
 use mundis_clap_utils::keypair::{CliSignerInfo, CliSigners, DefaultSigner, pubkey_from_path, signer_from_path, SignerIndex};
 use mundis_clap_utils::memo::{memo_arg, MEMO_ARG};
 use mundis_clap_utils::nonce::{NONCE_ARG, NONCE_AUTHORITY_ARG, NonceArgs};
 use mundis_clap_utils::offline::{BLOCKHASH_ARG, DUMP_TRANSACTION_MESSAGE, OfflineArgs, SIGN_ONLY_ARG};
 use mundis_cli_config::Config;
-use mundis_cli_output::{CliSignature, CliSignOnlyData, QuietDisplay, return_signers_data, return_signers_with_config, ReturnSignersConfig, VerboseDisplay, CliMint};
+use mundis_cli_output::{CliMint, CliSignature, CliSignOnlyData, OutputFormat, QuietDisplay, return_signers_data, return_signers_with_config, ReturnSignersConfig, VerboseDisplay};
 use mundis_client::blockhash_query::BlockhashQuery;
 use mundis_client::nonce_utils;
 use mundis_client::rpc_client::RpcClient;
@@ -26,13 +28,16 @@ use mundis_sdk::native_token::lamports_to_mun;
 use mundis_sdk::pubkey::Pubkey;
 use mundis_sdk::signature::Keypair;
 use mundis_sdk::signer::Signer;
-use mundis_sdk::system_instruction;
+use mundis_sdk::{system_instruction, system_program};
 use mundis_sdk::system_instruction::SystemError;
 use mundis_sdk::transaction::Transaction;
+use mundis_token_account_program::get_associated_token_address;
+use mundis_token_account_program::token_account_instruction::create_associated_token_account;
 use mundis_token_program::native_mint;
-use mundis_token_program::state::Mint;
-use mundis_token_program::token_instruction::{initialize_mint, MAX_SIGNERS, MIN_SIGNERS};
-use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, log_instruction_custom_error, ProcessResult};
+use mundis_token_program::state::{Mint, Multisig, TokenAccount};
+use mundis_token_program::token_instruction::{AuthorityType, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS};
+
+use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, create_tx_info, log_instruction_custom_error, ProcessResult, TxInfo};
 use crate::memo::WithMemo;
 use crate::nonce::check_nonce_account;
 
@@ -948,21 +953,16 @@ fn is_multisig_minimum_signers(string: String) -> Result<(), String> {
     }
 }
 
-pub fn parse_create_token_command(
+pub fn add_default_signers(
     matches: &ArgMatches<'_>,
-    default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
-) -> Result<CliCommandInfo, CliError> {
-    let decimals = value_t_or_exit!(matches, "decimals", u8);
-    let blockhash_query = BlockhashQuery::new_from_matches(matches);
-    let sign_only = matches.is_present(SIGN_ONLY_ARG.name);
-    let dump_transaction_message = matches.is_present(DUMP_TRANSACTION_MESSAGE.name);
-    let no_wait = matches.is_present("no_wait");
-
-    let mint_authority = pubkey_or_default(matches, "mint_authority", default_signer, wallet_manager);
+    bulk_signers: &mut Vec<Option<Box<dyn Signer>>>,
+) -> Result<(Option<Pubkey>, Option<Pubkey>, Option<Pubkey>), CliError> {
+    // fee payer
     let (fee_payer, fee_payer_pubkey) = signer_of(matches, FEE_PAYER_ARG.name, wallet_manager)?;
-    let mut bulk_signers = vec![fee_payer];
+    bulk_signers.push(fee_payer);
 
+    // nonce account
     let nonce_account = pubkey_of(matches, NONCE_ARG.name);
     let (nonce_authority, nonce_authority_pubkey) =
         signer_of(matches, NONCE_AUTHORITY_ARG.name, wallet_manager)?;
@@ -970,6 +970,7 @@ pub fn parse_create_token_command(
         bulk_signers.push(nonce_authority);
     }
 
+    // multisig signers
     let multisig_signers = signers_of(matches, MULTISIG_SIGNER_ARG.name, wallet_manager)
         .unwrap_or_else(|e| {
             eprintln!("error: {}", e);
@@ -978,22 +979,27 @@ pub fn parse_create_token_command(
 
     if let Some(mut multisig_signers) = multisig_signers {
         multisig_signers.sort_by(|(_, lp), (_, rp)| lp.cmp(rp));
-        let (signers, pubkeys): (Vec<_>, Vec<_>) = multisig_signers.into_iter().unzip();
+        let (signers, _): (Vec<_>, Vec<_>) = multisig_signers.into_iter().unzip();
         bulk_signers.extend(signers);
     }
 
-    let (token_signer, token) = signer_of(matches, "token_keypair", wallet_manager)
-        .map(|signer| {
-            if let Some(s) = signer.0 {
-                let pubkey = s.pubkey();
-                (s, pubkey)
-            } else {
-                let keypair = Keypair::new();
-                let pubkey = keypair.pubkey();
-                (Box::new(keypair) as Box<dyn Signer>, pubkey)
-            }
-        })?;
-    bulk_signers.push(Some(token_signer));
+   Ok((fee_payer_pubkey, nonce_account, nonce_authority_pubkey))
+}
+
+pub fn parse_create_token_command(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let decimals = value_t_or_exit!(matches, "decimals", u8);
+    let mint_authority = pubkey_or_default(matches, "mint_authority", default_signer, wallet_manager);
+    let (token_signer, token) = signer_of_or_else(matches, "token_keypair", wallet_manager, new_throwaway_signer)?;
+
+    bulk_signers.push(Some(token_signer.unwrap()));
 
     let signer_info = default_signer.generate_unique_signers(
         bulk_signers,
@@ -1003,18 +1009,12 @@ pub fn parse_create_token_command(
 
     Ok(CliCommandInfo {
         command: CliCommand::CreateToken {
-            token,
+            token: token.unwrap(),
             authority: mint_authority,
             decimals,
             enable_freeze: matches.is_present("enable_freeze"),
             memo: matches.value_of(MEMO_ARG.name).map(String::from),
-            fee_payer: signer_info.index_of(fee_payer_pubkey).unwrap(),
-            blockhash_query,
-            nonce_account,
-            nonce_authority: signer_info.index_of(nonce_authority_pubkey).unwrap(),
-            sign_only,
-            dump_transaction_message,
-            no_wait
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
         },
         signers: signer_info.signers,
     })
@@ -1028,26 +1028,21 @@ pub fn process_create_token_command(
     decimals: u8,
     enable_freeze: bool,
     memo: Option<&String>,
-    fee_payer: SignerIndex,
-    blockhash_query: &BlockhashQuery,
-    nonce_account: Option<&Pubkey>,
-    nonce_authority: SignerIndex,
-    sign_only: bool,
-    dump_transaction_message: bool,
-    no_wait: bool,
+    tx_info: &TxInfo
 ) -> ProcessResult {
-    let freeze_authority_pubkey = if enable_freeze { Some(authority) } else { None };
-    let fee_payer = config.signers[fee_payer];
+    println_display(config, format!("Creating token {}", token));
 
-    let minimum_balance_for_rent_exemption = if !sign_only {
+    let minimum_balance_for_rent_exemption = if !tx_info.sign_only {
         rpc_client.get_minimum_balance_for_rent_exemption(Mint::packed_len())?
     } else {
         0
     };
 
+    let freeze_authority_pubkey = if enable_freeze { Some(authority) } else { None };
+
     let instructions = vec![
         system_instruction::create_account(
-            &fee_payer.pubkey(),
+            &config.signers[tx_info.fee_payer].pubkey(),
             &token,
             1,
             Mint::packed_len() as u64,
@@ -1065,15 +1060,9 @@ pub fn process_create_token_command(
     let tx_return = handle_tx(
         rpc_client,
         config,
-        fee_payer,
-        false,
         minimum_balance_for_rent_exemption,
         instructions,
-        sign_only,
-        blockhash_query,
-        nonce_account,
-        nonce_authority,
-        dump_transaction_message,
+        tx_info
     )?;
 
     Ok(match tx_return {
@@ -1090,86 +1079,116 @@ pub fn process_create_token_command(
     })
 }
 
-fn handle_tx(
-    rpc_client: &RpcClient,
-    config: &CliConfig,
-    fee_payer: &dyn Signer,
-    no_wait: bool,
-    minimum_balance_for_rent_exemption: u64,
-    instructions: Vec<Instruction>,
-    sign_only: bool,
-    blockhash_query: &BlockhashQuery,
-    nonce_account: Option<&Pubkey>,
-    nonce_authority: SignerIndex,
-    dump_transaction_message: bool,
-) -> Result<TransactionReturnData, Box<dyn std::error::Error>> {
-    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
-    let nonce_authority = config.signers[nonce_authority];
-
-    let mut message = if let Some(nonce_account) = &nonce_account {
-        Message::new_with_nonce(
-            instructions,
-            Some(&fee_payer.pubkey()),
-            nonce_account,
-            &nonce_authority.pubkey(),
-        )
-    } else {
-        Message::new(&instructions, Some(&fee_payer.pubkey()))
-    };
-
-    message.recent_blockhash = recent_blockhash;
-    let message_fee = rpc_client.get_fee_for_message(&message)
-        .unwrap_or_else(|e| {
-            eprintln!("error: {}", e);
-            exit(1);
-        });
-
-    if !sign_only {
-        check_fee_payer_balance(
-            rpc_client,
-            &fee_payer.pubkey(),
-            minimum_balance_for_rent_exemption + message_fee,
-        )?;
-    }
-
-    let mut tx = Transaction::new_unsigned(message);
-    if sign_only {
-        tx.try_partial_sign(&config.signers, recent_blockhash)?;
-        Ok(TransactionReturnData::CliSignOnlyData(return_signers_data(
-            &tx,
-            &ReturnSignersConfig {
-                dump_transaction_message,
-            }
-        )))
-    } else {
-        tx.try_sign(&config.signers, recent_blockhash)?;
-        let signature = if no_wait {
-            rpc_client.send_transaction(&tx)?
-        } else {
-            rpc_client.send_and_confirm_transaction_with_spinner(&tx)?
-        };
-        Ok(TransactionReturnData::CliSignature(CliSignature {
-            signature: signature.to_string(),
-        }))
-    }
-}
-
 pub fn parse_create_token_account_command(
     matches: &ArgMatches<'_>,
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let token = pubkey_of_signer(matches, "token", wallet_manager)
+        .unwrap()
+        .unwrap();
+
+    // No need to add a signer when creating an associated token account
+    let (account, account_key) = signer_of(matches, "account_keypair", wallet_manager)?;
+    if account.is_some() {
+        bulk_signers.push(account);
+    }
+
+    let owner = pubkey_or_default(matches, "owner", default_signer, wallet_manager);
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::CreateTokenAccount,
-        signers: CliSigners::new(),
+        command: CliCommand::CreateTokenAccount {
+            token,
+            owner,
+            account: account_key,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_create_token_account_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    token: Pubkey,
+    owner: Pubkey,
+    maybe_account: Option<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let fee_payer = config.signers[tx_info.fee_payer];
+
+    let minimum_balance_for_rent_exemption = if !tx_info.sign_only {
+        rpc_client.get_minimum_balance_for_rent_exemption(TokenAccount::packed_len())?
+    } else {
+        0
+    };
+
+    let (account, system_account_ok, instructions) = if let Some(account) = maybe_account {
+        println_display(config, format!("Creating account {}", account));
+        (
+            account,
+            false,
+            vec![
+                system_instruction::create_account(
+                    &fee_payer.pubkey(),
+                    &account,
+                    minimum_balance_for_rent_exemption,
+                    TokenAccount::packed_len() as u64,
+                    &mundis_token_program::id(),
+                ),
+                initialize_account(&mundis_token_program::id(), &account, &token, &owner)?,
+            ],
+        )
+    } else {
+        let account = get_associated_token_address(&owner, &token);
+        println_display(config, format!("Creating account {}", account));
+        (
+            account,
+            true,
+            vec![create_associated_token_account(
+                &fee_payer.pubkey(),
+                &owner,
+                &token,
+            )],
+        )
+    };
+
+    if !tx_info.sign_only {
+        if let Some(account_data) = rpc_client.get_account_with_commitment(&account, config.commitment)?
+            .value
+        {
+            if !(account_data.owner == system_program::id() && system_account_ok) {
+                return Err(format!("Error: Account already exists: {}", account).into());
+            }
+        }
+    }
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        minimum_balance_for_rent_exemption,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_create_multisig_token_account_command(
@@ -1177,17 +1196,105 @@ pub fn parse_create_multisig_token_account_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let minimum_signers = value_of::<u8>(matches, "minimum_signers").unwrap();
+    let multisig_members =
+        pubkeys_of_multiple_signers(matches, "multisig_member", wallet_manager)
+            .unwrap_or_else(|e| {
+                eprintln!("error: {}", e);
+                exit(1);
+            })
+            .unwrap();
+
+    if minimum_signers as usize > multisig_members.len() {
+        eprintln!(
+            "error: MINIMUM_SIGNERS cannot be greater than the number \
+                          of MULTISIG_MEMBERs passed"
+        );
+        exit(1);
+    }
+
+    let (signer, account) = signer_of_or_else(matches, "address_keypair", wallet_manager, new_throwaway_signer)?;
+
+    bulk_signers.push(signer);
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::CreateMultisigToken,
-        signers: CliSigners::new(),
+        command: CliCommand::CreateMultisigToken {
+            multisig: account.unwrap(),
+            minimum_signers,
+            multisig_members,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_create_multisig_token_account_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    multisig: Pubkey,
+    minimum_signers: u8,
+    multisig_members: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    println_display(
+        config,
+        format!(
+            "Creating {}/{} multisig {}",
+            minimum_signers,
+            multisig_members.len(),
+            multisig
+        ),
+    );
+
+    let minimum_balance_for_rent_exemption = if !tx_info.sign_only {
+        rpc_client.get_minimum_balance_for_rent_exemption(Multisig::packed_len())?
+    } else {
+        0
+    };
+
+    let fee_payer = config.signers[tx_info.fee_payer];
+    let instructions = vec![
+        system_instruction::create_account(
+            &fee_payer.pubkey(),
+            &multisig,
+            minimum_balance_for_rent_exemption,
+            Multisig::packed_len() as u64,
+            &mundis_token_program::id(),
+        ),
+        initialize_multisig(
+            &mundis_token_program::id(),
+            &multisig,
+            multisig_members.iter().collect::<Vec<_>>().as_slice(),
+            minimum_signers,
+        )?,
+    ];
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        minimum_balance_for_rent_exemption,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_authorize_token_command(
@@ -1195,15 +1302,61 @@ pub fn parse_authorize_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let address = pubkey_of_signer(matches, "address", wallet_manager)
+        .unwrap()
+        .unwrap();
+
+    let authority_type = matches.value_of("authority_type").unwrap();
+    let authority_type = match authority_type {
+        "mint" => AuthorityType::MintTokens,
+        "freeze" => AuthorityType::FreezeAccount,
+        "owner" => AuthorityType::AccountOwner,
+        "close" => AuthorityType::CloseAccount,
+        _ => unreachable!(),
+    };
+
+    let (authority_signer, authority) = signer_of(matches, "authority",  wallet_manager)?;
+    if authority.is_some() {
+        bulk_signers.push(authority_signer);
+    } else {
+        bulk_signers.push(Some(default_signer.signer_from_path(matches, wallet_manager)?));
+    }
+
+    let new_authority = pubkey_of_signer(matches, "new_authority", wallet_manager)?;
+    let force_authorize = matches.is_present("force");
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::AuthorizeToken,
-        signers: CliSigners::new(),
+        command: CliCommand::AuthorizeToken {
+            account: address,
+            authority_type,
+            authority,
+            new_authority,
+            force_authorize,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_authorize_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    account: Pubkey,
+    option: Option<Pubkey>,
+    authority_type: &AuthorityType,
+    new_authority: Option<Pubkey>,
+    force_authorize: bool,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1585,12 +1738,6 @@ pub fn signers_of(
     }
 }
 
-fn new_throwaway_signer() -> (Option<Box<dyn Signer>>, Option<Pubkey>) {
-    let keypair = Keypair::new();
-    let pubkey = keypair.pubkey();
-    (Some(Box::new(keypair) as Box<dyn Signer>), Some(pubkey))
-}
-
 fn check_fee_payer_balance(rpc_client: &RpcClient, fee_payer: &Pubkey, required_balance: u64) -> Result<(), Box<dyn std::error::Error>> {
     let balance = rpc_client.get_balance(fee_payer)?;
     if balance < required_balance {
@@ -1604,4 +1751,76 @@ fn check_fee_payer_balance(rpc_client: &RpcClient, fee_payer: &Pubkey, required_
     } else {
         Ok(())
     }
+}
+
+fn handle_tx(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+    minimum_balance_for_rent_exemption: u64,
+    instructions: Vec<Instruction>,
+    tx_info: &TxInfo
+) -> Result<TransactionReturnData, Box<dyn std::error::Error>> {
+    let recent_blockhash = tx_info.blockhash_query.get_blockhash(rpc_client, config.commitment)?;
+
+    let mut message = if let Some(nonce_account) = &tx_info.nonce_account {
+        Message::new_with_nonce(
+            instructions,
+            Some(&config.signers[tx_info.fee_payer].pubkey()),
+            nonce_account,
+            &config.signers[tx_info.nonce_authority].pubkey(),
+        )
+    } else {
+        Message::new(&instructions, Some(&config.signers[tx_info.fee_payer].pubkey()))
+    };
+
+    message.recent_blockhash = recent_blockhash;
+    let message_fee = rpc_client.get_fee_for_message(&message)
+        .unwrap_or_else(|e| {
+            eprintln!("error: {}", e);
+            exit(1);
+        });
+
+    if !tx_info.sign_only {
+        check_fee_payer_balance(
+            rpc_client,
+            &config.signers[tx_info.fee_payer].pubkey(),
+            minimum_balance_for_rent_exemption + message_fee,
+        )?;
+    }
+
+    let mut tx = Transaction::new_unsigned(message);
+    if tx_info.sign_only {
+        tx.try_partial_sign(&config.signers, recent_blockhash)?;
+        Ok(TransactionReturnData::CliSignOnlyData(return_signers_data(
+            &tx,
+            &ReturnSignersConfig {
+                dump_transaction_message: tx_info.dump_transaction_message,
+            }
+        )))
+    } else {
+        tx.try_sign(&config.signers, recent_blockhash)?;
+        let signature = if tx_info.no_wait {
+            rpc_client.send_transaction(&tx)?
+        } else {
+            rpc_client.send_and_confirm_transaction_with_spinner(&tx)?
+        };
+        Ok(TransactionReturnData::CliSignature(CliSignature {
+            signature: signature.to_string(),
+        }))
+    }
+}
+
+pub(crate) fn println_display(config: &CliConfig, message: String) {
+    match config.output_format {
+        OutputFormat::Display | OutputFormat::DisplayVerbose => {
+            println!("{}", message);
+        }
+        _ => {}
+    }
+}
+
+fn new_throwaway_signer() -> (Option<Box<dyn Signer>>, Option<Pubkey>) {
+    let keypair = Keypair::new();
+    let pubkey = keypair.pubkey();
+    (Some(Box::new(keypair) as Box<dyn Signer>), Some(pubkey))
 }
