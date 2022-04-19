@@ -4,8 +4,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, value_t, value_t_or_exit};
-use serde::de::Error;
 use serde::Serialize;
+use thiserror::Error;
 
 use mundis_clap_utils::{ArgConstant, offline};
 use mundis_clap_utils::fee_payer::{fee_payer_arg, FEE_PAYER_ARG};
@@ -35,7 +35,7 @@ use mundis_token_account_program::get_associated_token_address;
 use mundis_token_account_program::token_account_instruction::create_associated_token_account;
 use mundis_token_program::native_mint;
 use mundis_token_program::state::{Mint, Multisig, TokenAccount};
-use mundis_token_program::token_instruction::{AuthorityType, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS};
+use mundis_token_program::token_instruction::{AuthorityType, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS, set_authority};
 
 use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, create_tx_info, log_instruction_custom_error, ProcessResult, TxInfo};
 use crate::memo::WithMemo;
@@ -953,11 +953,11 @@ fn is_multisig_minimum_signers(string: String) -> Result<(), String> {
     }
 }
 
-pub fn add_default_signers(
+pub fn add_default_signers<'a>(
     matches: &ArgMatches<'_>,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
     bulk_signers: &mut Vec<Option<Box<dyn Signer>>>,
-) -> Result<(Option<Pubkey>, Option<Pubkey>, Option<Pubkey>), CliError> {
+) -> Result<(Option<Pubkey>, Option<Pubkey>, Option<Pubkey>, Vec<Pubkey>), CliError> {
     // fee payer
     let (fee_payer, fee_payer_pubkey) = signer_of(matches, FEE_PAYER_ARG.name, wallet_manager)?;
     bulk_signers.push(fee_payer);
@@ -971,6 +971,7 @@ pub fn add_default_signers(
     }
 
     // multisig signers
+    let mut multisigner_ids = Vec::new();
     let multisig_signers = signers_of(matches, MULTISIG_SIGNER_ARG.name, wallet_manager)
         .unwrap_or_else(|e| {
             eprintln!("error: {}", e);
@@ -979,11 +980,13 @@ pub fn add_default_signers(
 
     if let Some(mut multisig_signers) = multisig_signers {
         multisig_signers.sort_by(|(_, lp), (_, rp)| lp.cmp(rp));
-        let (signers, _): (Vec<_>, Vec<_>) = multisig_signers.into_iter().unzip();
+        let (signers, pubkeys): (Vec<_>, Vec<_>) = multisig_signers.into_iter().unzip();
         bulk_signers.extend(signers);
+        multisigner_ids = pubkeys;
     }
+    let multisigner_pubkeys = multisigner_ids.iter().map(|pk| pk.unwrap()).collect::<Vec<_>>();
 
-   Ok((fee_payer_pubkey, nonce_account, nonce_authority_pubkey))
+   Ok((fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys))
 }
 
 pub fn parse_create_token_command(
@@ -992,7 +995,7 @@ pub fn parse_create_token_command(
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
     let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
-    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey) =
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, _) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
     let decimals = value_t_or_exit!(matches, "decimals", u8);
@@ -1085,7 +1088,7 @@ pub fn parse_create_token_account_command(
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
     let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
-    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey) =
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, _) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
     let token = pubkey_of_signer(matches, "token", wallet_manager)
@@ -1197,7 +1200,7 @@ pub fn parse_create_multisig_token_account_command(
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
     let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
-    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey) =
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, _) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
     let minimum_signers = value_of::<u8>(matches, "minimum_signers").unwrap();
@@ -1303,7 +1306,7 @@ pub fn parse_authorize_token_command(
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
     let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
-    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey) =
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
     let address = pubkey_of_signer(matches, "address", wallet_manager)
@@ -1319,11 +1322,13 @@ pub fn parse_authorize_token_command(
         _ => unreachable!(),
     };
 
+    let default_signer_key = default_signer.signer_from_path(matches, wallet_manager)?;
+    let default_signer_pubkey = default_signer_key.pubkey();
     let (authority_signer, authority) = signer_of(matches, "authority",  wallet_manager)?;
     if authority.is_some() {
         bulk_signers.push(authority_signer);
     } else {
-        bulk_signers.push(Some(default_signer.signer_from_path(matches, wallet_manager)?));
+        bulk_signers.push(Some(default_signer_key));
     }
 
     let new_authority = pubkey_of_signer(matches, "new_authority", wallet_manager)?;
@@ -1339,9 +1344,10 @@ pub fn parse_authorize_token_command(
         command: CliCommand::AuthorizeToken {
             account: address,
             authority_type,
-            authority,
+            authority: authority.or(Some(default_signer_pubkey)).unwrap(),
             new_authority,
             force_authorize,
+            multisigner_pubkeys,
             tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
         },
         signers: signer_info.signers,
@@ -1352,13 +1358,113 @@ pub fn process_authorize_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
     account: Pubkey,
-    option: Option<Pubkey>,
-    authority_type: &AuthorityType,
+    authority: Pubkey,
+    authority_type: AuthorityType,
     new_authority: Option<Pubkey>,
     force_authorize: bool,
+    multisigner_pubkeys: &Vec<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let auth_str = match authority_type {
+        AuthorityType::MintTokens => "mint authority",
+        AuthorityType::FreezeAccount => "freeze authority",
+        AuthorityType::AccountOwner => "owner",
+        AuthorityType::CloseAccount => "close authority",
+    };
+
+    let previous_authority = if !tx_info.sign_only {
+        let target_account = rpc_client.get_account(&account)?;
+        if let Ok(mint) = Mint::unpack(&target_account.data) {
+            match authority_type {
+                AuthorityType::AccountOwner | AuthorityType::CloseAccount => Err(format!(
+                    "Authority type `{}` not supported for SPL Token mints",
+                    auth_str
+                )),
+                AuthorityType::MintTokens => Ok(mint.mint_authority),
+                AuthorityType::FreezeAccount => Ok(mint.freeze_authority),
+            }
+        } else if let Ok(token_account) = TokenAccount::unpack(&target_account.data) {
+            let check_associated_token_account = || -> Result<(),  Box<dyn std::error::Error>> {
+                let maybe_associated_token_account =
+                    get_associated_token_address(&token_account.owner, &token_account.mint);
+                if account == maybe_associated_token_account
+                    && !force_authorize
+                    && Some(authority) != new_authority
+                {
+                    return Err(format!(
+                        "Error: attempting to change the `{}` of an associated token account",
+                        auth_str
+                    )
+                        .into())
+                } else {
+                    Ok(())
+                }
+            };
+
+            match authority_type {
+                AuthorityType::MintTokens | AuthorityType::FreezeAccount => Err(format!(
+                    "Authority type `{}` not supported for SPL Token accounts",
+                    auth_str
+                )),
+                AuthorityType::AccountOwner => {
+                    check_associated_token_account()?;
+                    Ok(Some(token_account.owner))
+                }
+                AuthorityType::CloseAccount => {
+                    check_associated_token_account()?;
+                    Ok(Some(
+                        token_account.close_authority.unwrap_or(token_account.owner),
+                    ))
+                }
+            }
+        }  else {
+            Err("Unsupported account data format".to_string())
+        }?
+    } else {
+        None
+    };
+
+    println_display(
+        config,
+        format!(
+            "Updating {}\n  Current {}: {}\n  New {}: {}",
+            account,
+            auth_str,
+            previous_authority
+                .map(|pubkey| pubkey.to_string())
+                .unwrap_or_else(|| "disabled".to_string()),
+            auth_str,
+            new_authority
+                .map(|pubkey| pubkey.to_string())
+                .unwrap_or_else(|| "disabled".to_string())
+        ),
+    );
+
+    let instructions = vec![set_authority(
+        &mundis_token_program::id(),
+        &account,
+        new_authority.as_ref(),
+        authority_type,
+        &authority,
+        multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice()
+    )?];
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_transfer_token_command(

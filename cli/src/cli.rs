@@ -306,9 +306,10 @@ pub enum CliCommand {
     AuthorizeToken {
         account: Pubkey,
         authority_type: AuthorityType,
-        authority: Option<Pubkey>,
+        authority: Pubkey,
         new_authority: Option<Pubkey>,
         force_authorize: bool,
+        multisigner_pubkeys: Vec<Pubkey>,
         tx_info: TxInfo,
     },
     TransferToken,
@@ -1703,19 +1704,21 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
 
         CliCommand::AuthorizeToken {
             account,
-            ref authority_type,
+            authority_type,
             authority,
             new_authority,
             force_authorize,
+            ref multisigner_pubkeys,
             tx_info
         } => process_authorize_token_command(
             &rpc_client,
             config,
             *account,
             *authority,
-            authority_type,
+            *authority_type,
             *new_authority,
             *force_authorize,
+            multisigner_pubkeys,
             tx_info
         ),
 
