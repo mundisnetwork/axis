@@ -338,22 +338,96 @@ pub enum CliCommand {
         multisigner_pubkeys: Vec<Pubkey>,
         tx_info: TxInfo,
     },
-    MintToken,
-    FreezeTokenAccount,
-    ThawTokenAccount,
-    WrapToken,
-    UnwrapToken,
-    ApproveToken,
-    RevokeToken,
-    CloseTokenAccount,
-    GetTokenAccountBalance,
-    GetTokenSupply,
-    ListTokenAccounts,
-    GetTokenWalletAddress,
-    GetTokenAccountByAddress,
-    GetTokenMultisigAccountByAddress,
-    CleanupTokenAccounts,
-    SyncTokenAccount,
+    MintToken {
+        token: Pubkey,
+        ui_amount: f64,
+        recipient: Pubkey,
+        mint_decimals: Option<u8>,
+        mint_authority: Pubkey,
+        use_unchecked_instruction: bool,
+        multisigner_pubkeys: Vec<Pubkey>,
+        tx_info: TxInfo,
+    },
+    FreezeTokenAccount {
+        account: Pubkey,
+        mint_address: Option<Pubkey>,
+        freeze_authority: Pubkey,
+        multisigner_pubkeys: Vec<Pubkey>,
+        tx_info: TxInfo,
+    },
+    ThawTokenAccount {
+        account: Pubkey,
+        mint_address: Option<Pubkey>,
+        freeze_authority: Pubkey,
+        multisigner_pubkeys: Vec<Pubkey>,
+        tx_info: TxInfo,
+    },
+    WrapToken {
+        mun: f64,
+        wallet_address: Pubkey,
+        wrapped_sol_account: Option<Pubkey>,
+        tx_info: TxInfo,
+    },
+    UnwrapToken {
+        wallet_address: Pubkey,
+        address: Option<Pubkey>,
+        tx_info: TxInfo,
+    },
+    ApproveToken {
+        account: Pubkey,
+        owner: Pubkey,
+        ui_amount: f64,
+        delegate: Pubkey,
+        mint_address: Option<Pubkey>,
+        mint_decimals: Option<u8>,
+        use_unchecked_instruction: bool,
+        multisigner_pubkeys: Vec<Pubkey>,
+        tx_info: TxInfo,
+    },
+    RevokeToken {
+        account: Pubkey,
+        owner: Pubkey,
+        delegate: Option<Pubkey>,
+        multisigner_pubkeys: Vec<Pubkey>,
+        tx_info: TxInfo,
+    },
+    CloseTokenAccount {
+        account: Pubkey,
+        close_authority: Pubkey,
+        recipient: Pubkey,
+        multisigner_pubkeys: Vec<Pubkey>,
+        tx_info: TxInfo,
+    },
+    GetTokenAccountBalance {
+        address: Pubkey
+    },
+    GetTokenSupply {
+        address: Pubkey
+    },
+    ListTokenAccounts {
+        token: Option<Pubkey>,
+        owner: Pubkey
+    },
+    GetTokenWalletAddress {
+        token: Option<Pubkey>,
+        owner: Pubkey
+    },
+    GetTokenAccountByAddress {
+        address: Pubkey
+    },
+    GetTokenMultisigAccountByAddress {
+        address: Pubkey
+    },
+    CleanupTokenAccounts {
+        owner: Pubkey,
+        close_empty_associated_accounts: bool,
+        multisigner_pubkeys: Vec<Pubkey>,
+        tx_info: TxInfo,
+    },
+    SyncTokenAccount {
+        native_account_address: Pubkey,
+        tx_info: TxInfo,
+    },
 
     // Vote Commands
     CreateVoteAccount {
@@ -1802,22 +1876,129 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             tx_info
         ),
 
-        CliCommand::MintToken => process_mint_token_command(&rpc_client, config),
-        CliCommand::FreezeTokenAccount => process_freeze_token_command(&rpc_client, config),
-        CliCommand::ThawTokenAccount => process_thaw_token_command(&rpc_client, config),
-        CliCommand::WrapToken => process_wrap_token_command(&rpc_client, config),
-        CliCommand::UnwrapToken => process_unwrap_token_command(&rpc_client, config),
-        CliCommand::ApproveToken => process_approve_token_command(&rpc_client, config),
-        CliCommand::RevokeToken => process_revoke_token_command(&rpc_client, config),
-        CliCommand::CloseTokenAccount => process_close_token_account_command(&rpc_client, config),
-        CliCommand::GetTokenAccountBalance => process_token_balance_command(&rpc_client, config),
-        CliCommand::GetTokenSupply => process_token_supply_command(&rpc_client, config),
-        CliCommand::ListTokenAccounts => process_token_list_accounts_command(&rpc_client, config),
-        CliCommand::GetTokenWalletAddress => process_token_wallet_address_command(&rpc_client, config),
-        CliCommand::GetTokenAccountByAddress => process_token_account_info_command(&rpc_client, config),
-        CliCommand::GetTokenMultisigAccountByAddress => process_token_multisig_info_command(&rpc_client, config),
-        CliCommand::CleanupTokenAccounts => process_token_cleanup_accounts_command(&rpc_client, config),
-        CliCommand::SyncTokenAccount => process_token_sync_native_command(&rpc_client, config),
+        CliCommand::MintToken {
+            token,
+            ui_amount,
+            recipient,
+            mint_decimals,
+            mint_authority,
+            use_unchecked_instruction,
+            ref multisigner_pubkeys,
+            ref tx_info
+        } => process_mint_token_command(
+            &rpc_client,
+            config,
+            *token,
+            *ui_amount,
+            *recipient,
+            *mint_decimals,
+            *mint_authority,
+            *use_unchecked_instruction,
+            multisigner_pubkeys,
+            tx_info,
+        ),
+
+        CliCommand::FreezeTokenAccount {
+            account,
+            mint_address,
+            freeze_authority,
+            ref multisigner_pubkeys,
+            ref tx_info
+        } => process_freeze_token_command(&rpc_client, config, *account, *mint_address, *freeze_authority, multisigner_pubkeys, tx_info),
+
+        CliCommand::ThawTokenAccount {
+            account,
+            mint_address,
+            freeze_authority,
+            ref multisigner_pubkeys,
+            ref tx_info
+        } => process_thaw_token_command(&rpc_client, config, *account, *mint_address, *freeze_authority, multisigner_pubkeys, tx_info),
+
+        CliCommand::WrapToken {
+            mun,
+            wallet_address,
+            wrapped_sol_account,
+            ref tx_info
+        } => process_wrap_token_command(&rpc_client, config, *mun, *wallet_address, *wrapped_sol_account, tx_info),
+
+        CliCommand::UnwrapToken {
+            wallet_address,
+            address,
+            ref tx_info
+        } => process_unwrap_token_command(&rpc_client, config, *wallet_address, *address, tx_info),
+
+        CliCommand::ApproveToken {
+            account,
+            owner,
+            ui_amount,
+            delegate,
+            mint_address,
+            mint_decimals,
+            use_unchecked_instruction,
+            ref multisigner_pubkeys,
+            ref tx_info
+        } => process_approve_token_command(
+            &rpc_client,
+            config,
+            *account,
+            *owner,
+            *ui_amount,
+            *delegate,
+            *mint_address,
+            *mint_decimals,
+            *use_unchecked_instruction,
+            multisigner_pubkeys,
+            tx_info
+        ),
+
+        CliCommand::RevokeToken {
+            account,
+            owner,
+            delegate,
+            ref multisigner_pubkeys,
+            ref tx_info
+        } => process_revoke_token_command(&rpc_client, config, *account, *owner, *delegate, multisigner_pubkeys, tx_info),
+
+        CliCommand::CloseTokenAccount {
+            account,
+            close_authority,
+            recipient,
+            ref multisigner_pubkeys,
+            ref tx_info
+        } => process_close_token_account_command(&rpc_client, config, *account, *close_authority, *recipient, multisigner_pubkeys, tx_info),
+
+        CliCommand::GetTokenAccountBalance {
+            address
+        } => process_token_balance_command(&rpc_client, config, *address),
+
+        CliCommand::GetTokenSupply {
+            address
+        } => process_token_supply_command(&rpc_client, config, *address),
+
+        CliCommand::ListTokenAccounts {
+            token, owner
+        } => process_token_list_accounts_command(&rpc_client, config, *token, *owner),
+
+        CliCommand::GetTokenWalletAddress {
+            token, owner
+        } => process_token_wallet_address_command(&rpc_client, config, *token, *owner),
+
+        CliCommand::GetTokenAccountByAddress {
+            address
+        } => process_token_account_info_command(&rpc_client, config, *address),
+
+        CliCommand::GetTokenMultisigAccountByAddress {
+            address
+        } => process_token_multisig_info_command(&rpc_client, config, *address),
+
+        CliCommand::CleanupTokenAccounts {
+            owner, close_empty_associated_accounts, ref multisigner_pubkeys, ref tx_info
+        } => process_token_cleanup_accounts_command(&rpc_client, config, *owner, *close_empty_associated_accounts, multisigner_pubkeys, tx_info),
+
+        CliCommand::SyncTokenAccount {
+            native_account_address,
+            ref tx_info
+        } => process_token_sync_native_command(&rpc_client, config, *native_account_address, tx_info),
     }
 }
 

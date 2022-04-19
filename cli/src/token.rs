@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use mundis_clap_utils::{ArgConstant, offline};
 use mundis_clap_utils::fee_payer::{fee_payer_arg, FEE_PAYER_ARG};
-use mundis_clap_utils::input_parsers::{pubkey_of, pubkey_of_signer, pubkeys_of_multiple_signers, signer_of, signer_of_or_else, value_of};
+use mundis_clap_utils::input_parsers::{pubkey_of, pubkey_of_signer, pubkeys_of_multiple_signers, signer_of, signer_of_or_else, signer_or_default, value_of};
 use mundis_clap_utils::input_validators::{is_amount, is_amount_or_all, is_parsable, is_valid_pubkey, is_valid_signer};
 use mundis_clap_utils::keypair::{CliSignerInfo, CliSigners, DefaultSigner, pubkey_from_path, signer_from_path, SignerIndex};
 use mundis_clap_utils::memo::{memo_arg, MEMO_ARG};
@@ -35,7 +35,7 @@ use mundis_token_account_program::get_associated_token_address;
 use mundis_token_account_program::token_account_instruction::create_associated_token_account;
 use mundis_token_program::native_mint;
 use mundis_token_program::state::{Mint, Multisig, TokenAccount};
-use mundis_token_program::token_instruction::{AuthorityType, burn, burn_checked, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS, set_authority, transfer, transfer_checked};
+use mundis_token_program::token_instruction::{AuthorityType, burn, burn_checked, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS, mint_to, mint_to_checked, set_authority, transfer, transfer_checked};
 
 use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, create_tx_info, log_instruction_custom_error, ProcessResult, TxInfo};
 use crate::memo::WithMemo;
@@ -1322,14 +1322,9 @@ pub fn parse_authorize_token_command(
         _ => unreachable!(),
     };
 
-    let default_signer_key = default_signer.signer_from_path(matches, wallet_manager)?;
-    let default_signer_pubkey = default_signer_key.pubkey();
-    let (authority_signer, authority) = signer_of(matches, "authority",  wallet_manager)?;
-    if authority.is_some() {
-        bulk_signers.push(authority_signer);
-    } else {
-        bulk_signers.push(Some(default_signer_key));
-    }
+    let (authority_signer, authority)  =
+        signer_or_default(matches, "authority", default_signer, wallet_manager)?;
+    bulk_signers.push(authority_signer);
 
     let new_authority = pubkey_of_signer(matches, "new_authority", wallet_manager)?;
     let force_authorize = matches.is_present("force");
@@ -1344,7 +1339,7 @@ pub fn parse_authorize_token_command(
         command: CliCommand::AuthorizeToken {
             account: address,
             authority_type,
-            authority: authority.or(Some(default_signer_pubkey)).unwrap(),
+            authority: authority.unwrap(),
             new_authority,
             force_authorize,
             multisigner_pubkeys,
@@ -1488,14 +1483,9 @@ pub fn parse_transfer_token_command(
     let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
-    let default_signer_key = default_signer.signer_from_path(matches, wallet_manager)?;
-    let default_signer_pubkey = default_signer_key.pubkey();
-    let (owner_signer, owner) = signer_of(matches, "owner",  wallet_manager)?;
-    if owner.is_some() {
-        bulk_signers.push(owner_signer);
-    } else {
-        bulk_signers.push(Some(default_signer_key));
-    }
+    let (owner_signer, owner) =
+        signer_or_default(matches, "owner", default_signer, wallet_manager)?;
+    bulk_signers.push(owner_signer);
 
     let mint_decimals = value_of::<u8>(matches, MINT_DECIMALS_ARG.name);
     let fund_recipient = matches.is_present("fund_recipient");
@@ -1518,7 +1508,7 @@ pub fn parse_transfer_token_command(
             ui_amount: amount,
             recipient,
             sender,
-            sender_owner: owner.or(Some(default_signer_pubkey)).unwrap(),
+            sender_owner: owner.unwrap(),
             allow_unfunded_recipient,
             fund_recipient,
             mint_decimals,
@@ -1730,14 +1720,9 @@ pub fn parse_burn_token_command(
     let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
-    let default_signer_key = default_signer.signer_from_path(matches, wallet_manager)?;
-    let default_signer_pubkey = default_signer_key.pubkey();
-    let (owner_signer, owner) = signer_of(matches, "owner",  wallet_manager)?;
-    if owner.is_some() {
-        bulk_signers.push(owner_signer);
-    } else {
-        bulk_signers.push(Some(default_signer_key));
-    }
+    let (owner_signer, owner) =
+        signer_or_default(matches, "owner", default_signer, wallet_manager)?;
+    bulk_signers.push(owner_signer);
 
     let amount = value_t_or_exit!(matches, "amount", f64);
     let mint_address = pubkey_of_signer(matches, MINT_ADDRESS_ARG.name, wallet_manager).unwrap();
@@ -1754,7 +1739,7 @@ pub fn parse_burn_token_command(
     Ok(CliCommandInfo {
         command: CliCommand::BurnToken {
             source,
-            source_owner: owner.or(Some(default_signer_pubkey)).unwrap(),
+            source_owner: owner.unwrap(),
             ui_amount: amount,
             mint_address,
             mint_decimals,
@@ -1763,7 +1748,7 @@ pub fn parse_burn_token_command(
             multisigner_pubkeys,
             tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
         },
-        signers: CliSigners::new(),
+        signers: signer_info.signers,
     })
 }
 
@@ -1787,7 +1772,7 @@ pub fn process_burn_token_command(
 
     let (mint_pubkey, decimals) = resolve_mint_info(rpc_client, tx_info.sign_only, &source, mint_address, mint_decimals)?;
     let amount = mundis_token_program::ui_amount_to_amount(ui_amount, decimals);
-    let mut instructions = if use_unchecked_instruction {
+    let instructions = if use_unchecked_instruction {
         vec![burn(
             &mundis_token_program::id(),
             &source,
@@ -1831,17 +1816,110 @@ pub fn parse_mint_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let (mint_authority_signer, mint_authority) =
+        signer_or_default(matches, "mint_authority", default_signer, wallet_manager)?;
+    bulk_signers.push(mint_authority_signer);
+
+
+    let token = pubkey_of_signer(matches, "token", wallet_manager)
+        .unwrap()
+        .unwrap();
+
+    let amount = value_t_or_exit!(matches, "amount", f64);
+    let recipient = associated_token_address_or_override(
+        matches,
+        "recipient",
+        default_signer,
+        wallet_manager,
+    );
+    let mint_decimals = value_of::<u8>(matches, MINT_DECIMALS_ARG.name);
+    let use_unchecked_instruction = matches.is_present("use_unchecked_instruction");
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::MintToken,
-        signers: CliSigners::new(),
+        command: CliCommand::MintToken {
+            token,
+            ui_amount: amount,
+            recipient,
+            mint_decimals,
+            mint_authority: mint_authority.unwrap(),
+            use_unchecked_instruction,
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_mint_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    token: Pubkey,
+    ui_amount: f64,
+    recipient: Pubkey,
+    mint_decimals: Option<u8>,
+    mint_authority: Pubkey,
+    use_unchecked_instruction: bool,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    println_display(
+        config,
+        format!(
+            "Minting {} tokens\n  Token: {}\n  Recipient: {}",
+            ui_amount, token, recipient
+        ),
+    );
+
+    let (_, decimals) = resolve_mint_info(rpc_client, tx_info.sign_only, &recipient, None, mint_decimals)?;
+    let amount = mundis_token_program::ui_amount_to_amount(ui_amount, decimals);
+
+    let instructions = if use_unchecked_instruction {
+        vec![mint_to(
+            &mundis_token_program::id(),
+            &token,
+            &recipient,
+            &mint_authority,
+           multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+            amount,
+        )?]
+    } else {
+        vec![mint_to_checked(
+            &mundis_token_program::id(),
+            &token,
+            &recipient,
+            &mint_authority,
+            multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+            amount,
+            decimals,
+        )?]
+    };
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_freeze_token_command(
@@ -1849,15 +1927,45 @@ pub fn parse_freeze_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let (freeze_authority_signer, freeze_authority) =
+        signer_or_default(matches, "freeze_authority", default_signer, wallet_manager)?;
+    bulk_signers.push(freeze_authority_signer);
+
+    let account = pubkey_of_signer(matches, "account", wallet_manager)
+        .unwrap()
+        .unwrap();
+    let mint_address = pubkey_of_signer(matches, MINT_ADDRESS_ARG.name, wallet_manager).unwrap();
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::FreezeTokenAccount,
-        signers: CliSigners::new(),
+        command: CliCommand::FreezeTokenAccount {
+            account,
+            mint_address,
+            freeze_authority: freeze_authority.unwrap(),
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_freeze_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    account: Pubkey,
+    mint_address: Option<Pubkey>,
+    freeze_authority: Pubkey,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1867,15 +1975,46 @@ pub fn parse_thaw_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let (freeze_authority_signer, freeze_authority) =
+        signer_or_default(matches, "freeze_authority", default_signer, wallet_manager)?;
+    bulk_signers.push(freeze_authority_signer);
+
+    let account = pubkey_of_signer(matches, "account", wallet_manager)
+        .unwrap()
+        .unwrap();
+    let mint_address =
+        pubkey_of_signer(matches, MINT_ADDRESS_ARG.name, wallet_manager).unwrap();
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::ThawTokenAccount,
-        signers: CliSigners::new(),
+        command: CliCommand::ThawTokenAccount {
+            account,
+            mint_address,
+            freeze_authority: freeze_authority.unwrap(),
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_thaw_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    account: Pubkey,
+    mint_address: Option<Pubkey>,
+    freeze_authority: Pubkey,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1885,15 +2024,48 @@ pub fn parse_wrap_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, _) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let amount = value_t_or_exit!(matches, "amount", f64);
+    let account = if matches.is_present("create_aux_account") {
+        let (signer, account) = new_throwaway_signer();
+        bulk_signers.push(signer);
+        account
+    } else {
+        // No need to add a signer when creating an associated token account
+        None
+    };
+
+    let (wallet_signer, wallet_address) =
+        signer_or_default(matches, "wallet_keypair", default_signer, wallet_manager)?;
+    bulk_signers.push(wallet_signer);
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::WrapToken,
-        signers: CliSigners::new(),
+        command: CliCommand::WrapToken {
+            mun: amount,
+            wallet_address: wallet_address.unwrap(),
+            wrapped_sol_account: account,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_wrap_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    mun: f64,
+    wallet_address: Pubkey,
+    wrapped_sol_account: Option<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1903,15 +2075,38 @@ pub fn parse_unwrap_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, _) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let (wallet_signer, wallet_address) =
+        signer_or_default(matches, "wallet_keypair", default_signer, wallet_manager)?;
+    bulk_signers.push(wallet_signer);
+
+    let address = pubkey_of_signer(matches, "address", wallet_manager).unwrap();
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::UnwrapToken,
-        signers: CliSigners::new(),
+        command: CliCommand::UnwrapToken {
+            wallet_address: wallet_address.unwrap(),
+            address,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_unwrap_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    wallet_address: Pubkey,
+    address: Option<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1921,15 +2116,60 @@ pub fn parse_approve_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let (owner_signer, owner_address) =
+        signer_or_default(matches, "owner", default_signer, wallet_manager)?;
+    bulk_signers.push(owner_signer);
+
+    let account = pubkey_of_signer(matches, "account", wallet_manager)
+        .unwrap()
+        .unwrap();
+    let amount = value_t_or_exit!(matches, "amount", f64);
+    let delegate = pubkey_of_signer(matches, "delegate", wallet_manager)
+        .unwrap()
+        .unwrap();
+    let mint_address =
+        pubkey_of_signer(matches, MINT_ADDRESS_ARG.name, wallet_manager).unwrap();
+    let mint_decimals = value_of::<u8>(matches, MINT_DECIMALS_ARG.name);
+    let use_unchecked_instruction = matches.is_present("use_unchecked_instruction");
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::ApproveToken,
-        signers: CliSigners::new(),
+        command: CliCommand::ApproveToken {
+            account,
+            owner: owner_address.unwrap(),
+            ui_amount: amount,
+            delegate,
+            mint_address,
+            mint_decimals,
+            use_unchecked_instruction,
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_approve_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    account: Pubkey,
+    owner: Pubkey,
+    ui_amount: f64,
+    delegate: Pubkey,
+    mint_address: Option<Pubkey>,
+    mint_decimals: Option<u8>,
+    use_unchecked_instruction: bool,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1939,15 +2179,47 @@ pub fn parse_revoke_token_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let (owner_signer, owner_address) =
+        signer_or_default(matches, "owner", default_signer, wallet_manager)?;
+    bulk_signers.push(owner_signer);
+
+    let account = pubkey_of_signer(matches, "account", wallet_manager)
+        .unwrap()
+        .unwrap();
+    let delegate_address =
+        pubkey_of_signer(matches, DELEGATE_ADDRESS_ARG.name, wallet_manager)
+            .unwrap();
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::RevokeToken,
-        signers: CliSigners::new(),
+        command: CliCommand::RevokeToken {
+            account,
+            owner: owner_address.unwrap(),
+            delegate: delegate_address,
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_revoke_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    account: Pubkey,
+    owner: Pubkey,
+    delegate: Option<Pubkey>,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1957,15 +2229,48 @@ pub fn parse_close_token_account_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let (close_authority_signer, close_authority) =
+        signer_or_default(matches, "close_authority", default_signer, wallet_manager)?;
+    bulk_signers.push(close_authority_signer);
+
+    let address = associated_token_address_or_override(
+        matches,
+        "address",
+        default_signer,
+        wallet_manager,
+    );
+    let recipient = pubkey_or_default(matches, "recipient", default_signer, wallet_manager);
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::CloseTokenAccount,
-        signers: CliSigners::new(),
+        command: CliCommand::CloseTokenAccount {
+            account: address,
+            close_authority: close_authority.unwrap(),
+            recipient,
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_close_token_account_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    account: Pubkey,
+    close_authority: Pubkey,
+    recipient: Pubkey,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1975,15 +2280,25 @@ pub fn parse_token_balance_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let address = associated_token_address_or_override(
+        matches,
+        "address",
+        default_signer,
+        wallet_manager,
+    );
+
     Ok(CliCommandInfo {
-        command: CliCommand::GetTokenAccountBalance,
-        signers: CliSigners::new(),
+        command: CliCommand::GetTokenAccountBalance {
+            address
+        },
+        signers: vec![],
     })
 }
 
 pub fn process_token_balance_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    address: Pubkey
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -1993,15 +2308,22 @@ pub fn parse_token_supply_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let address = pubkey_of_signer(matches, "address", wallet_manager)
+        .unwrap()
+        .unwrap();
+
     Ok(CliCommandInfo {
-        command: CliCommand::GetTokenSupply,
-        signers: CliSigners::new(),
+        command: CliCommand::GetTokenSupply {
+            address
+        },
+        signers: vec![],
     })
 }
 
 pub fn process_token_supply_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    address: Pubkey,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -2011,15 +2333,23 @@ pub fn parse_token_list_accounts_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let token = pubkey_of_signer(matches, "token", wallet_manager).unwrap();
+    let owner = pubkey_or_default(matches, "owner", default_signer, wallet_manager);
+
     Ok(CliCommandInfo {
-        command: CliCommand::ListTokenAccounts,
-        signers: CliSigners::new(),
+        command: CliCommand::ListTokenAccounts {
+            token,
+            owner
+        },
+        signers: vec![],
     })
 }
 
 pub fn process_token_list_accounts_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    token: Option<Pubkey>,
+    owner: Pubkey
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -2029,8 +2359,14 @@ pub fn parse_token_wallet_address_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let token = pubkey_of_signer(matches, "token", wallet_manager).unwrap();
+    let owner = pubkey_or_default(matches, "owner", default_signer, wallet_manager);
+
     Ok(CliCommandInfo {
-        command: CliCommand::GetTokenWalletAddress,
+        command: CliCommand::GetTokenWalletAddress {
+            token,
+            owner
+        },
         signers: CliSigners::new(),
     })
 }
@@ -2038,6 +2374,8 @@ pub fn parse_token_wallet_address_command(
 pub fn process_token_wallet_address_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    token: Option<Pubkey>,
+    owner: Pubkey
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -2047,16 +2385,27 @@ pub fn parse_token_account_info_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let address = associated_token_address_or_override(
+        matches,
+        "address",
+        default_signer,
+        wallet_manager,
+    );
+
     Ok(CliCommandInfo {
-        command: CliCommand::GetTokenAccountByAddress,
-        signers: CliSigners::new(),
+        command: CliCommand::GetTokenAccountByAddress {
+            address
+        },
+        signers: vec![],
     })
 }
 
 pub fn process_token_account_info_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    address: Pubkey
 ) -> ProcessResult {
+
     Ok("ok".to_string())
 }
 
@@ -2065,15 +2414,22 @@ pub fn parse_token_multisig_info_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let address = pubkey_of_signer(matches, "address", wallet_manager)
+        .unwrap()
+        .unwrap();
+
     Ok(CliCommandInfo {
-        command: CliCommand::GetTokenMultisigAccountByAddress,
-        signers: CliSigners::new(),
+        command: CliCommand::GetTokenMultisigAccountByAddress {
+            address
+        },
+        signers: vec![],
     })
 }
 
 pub fn process_token_multisig_info_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    address: Pubkey
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -2083,15 +2439,41 @@ pub fn parse_token_cleanup_accounts_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let close_empty_associated_accounts =
+        matches.is_present("close_empty_associated_accounts");
+
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let (owner_signer, owner_address) =
+        signer_or_default(matches, "owner", default_signer, wallet_manager)?;
+    bulk_signers.push(owner_signer);
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::CleanupTokenAccounts,
-        signers: CliSigners::new(),
+        command: CliCommand::CleanupTokenAccounts {
+            owner: owner_address.unwrap(),
+            close_empty_associated_accounts,
+            multisigner_pubkeys,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
+        signers: signer_info.signers,
     })
 }
 
 pub fn process_token_cleanup_accounts_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    owner: Pubkey,
+    close_empty_associated_accounts: bool,
+    multisigner_pubkeys: &Vec<Pubkey>,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -2101,8 +2483,29 @@ pub fn parse_token_sync_native_command(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
+    let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+        add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
+
+    let address = associated_token_address_for_token_or_override(
+        matches,
+        "address",
+        default_signer,
+        wallet_manager,
+        Some(native_mint::id()),
+    );
+
+    let signer_info = default_signer.generate_unique_signers(
+        bulk_signers,
+        matches,
+        wallet_manager,
+    )?;
+
     Ok(CliCommandInfo {
-        command: CliCommand::SyncTokenAccount,
+        command: CliCommand::SyncTokenAccount {
+            native_account_address: address,
+            tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
+        },
         signers: CliSigners::new(),
     })
 }
@@ -2110,6 +2513,8 @@ pub fn parse_token_sync_native_command(
 pub fn process_token_sync_native_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
+    native_account_address: Pubkey,
+    tx_info: &TxInfo,
 ) -> ProcessResult {
     Ok("ok".to_string())
 }
@@ -2282,4 +2687,41 @@ pub(crate) fn resolve_mint_info(
             mint_decimals.unwrap_or_default(),
         ))
     }
+}
+
+// Check if an explicit token account address was provided, otherwise
+// return the associated token address for the default address.
+pub(crate) fn associated_token_address_or_override(
+    arg_matches: &ArgMatches,
+    override_name: &str,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Pubkey {
+    let token = pubkey_of_signer(arg_matches, "token", wallet_manager).unwrap();
+    associated_token_address_for_token_or_override(
+        arg_matches,
+        override_name,
+        default_signer,
+        wallet_manager,
+        token,
+    )
+}
+
+// Check if an explicit token account address was provided, otherwise
+// return the associated token address for the default address.
+pub(crate) fn associated_token_address_for_token_or_override(
+    arg_matches: &ArgMatches,
+    override_name: &str,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+    token: Option<Pubkey>,
+) -> Pubkey {
+    if let Some(address) = pubkey_of_signer(arg_matches, override_name, wallet_manager).unwrap()
+    {
+        return address;
+    }
+
+    let token = token.unwrap();
+    let owner = default_signer.signer_from_path(arg_matches, wallet_manager).unwrap().pubkey();
+    get_associated_token_address(&owner, &token)
 }

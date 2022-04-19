@@ -16,6 +16,7 @@ use {
     },
     std::{str::FromStr, sync::Arc},
 };
+use crate::keypair::DefaultSigner;
 
 // Sentinel value used to indicate to write to screen instead of file
 pub const STDOUT_OUTFILE_TOKEN: &str = "-";
@@ -143,11 +144,28 @@ pub fn signer_of_or_else<F>(
 where F: FnOnce() -> (Option<Box<dyn Signer>>, Option<Pubkey>) + Copy
 {
     let result = signer_of(matches, name, wallet_manager)
-        .unwrap_or_else(|e| func());
+        .unwrap_or_else(|_| func());
 
     match result {
         (None, None) => Ok(func()),
         _ => Ok(result)
+    }
+}
+
+pub fn signer_or_default(
+    matches: &ArgMatches<'_>,
+    name: &str,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<(Option<Box<dyn Signer>>, Option<Pubkey>), Box<dyn std::error::Error>> {
+    let default_signer_key = default_signer.signer_from_path(matches, wallet_manager)?;
+    let default_signer_pubkey = default_signer_key.pubkey();
+
+    let (arg_signer, arg_address) = signer_of(matches, name,  wallet_manager)?;
+    if arg_signer.is_some() {
+        Ok((arg_signer, arg_address))
+    } else {
+        Ok((Some(default_signer_key), Some(default_signer_pubkey)))
     }
 }
 
