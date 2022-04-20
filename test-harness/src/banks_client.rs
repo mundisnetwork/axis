@@ -12,7 +12,7 @@ use {
     futures::{future::join_all, Future, FutureExt, TryFutureExt},
     crate::{BanksRequest, BanksResponse, BanksTransactionResultWithSimulation},
     mundis_program::{
-        clock::Slot, fee_calculator::FeeCalculator, hash::Hash, program_pack::Pack, pubkey::Pubkey,
+        clock::Slot, hash::Hash, program_pack::Pack, pubkey::Pubkey,
         rent::Rent, sysvar::Sysvar,
     },
     mundis_sdk::{

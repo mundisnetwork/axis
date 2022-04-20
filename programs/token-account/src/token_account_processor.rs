@@ -1,3 +1,4 @@
+use mundis_program_runtime::ic_msg;
 use mundis_program_runtime::invoke_context::InvokeContext;
 use mundis_sdk::instruction::InstructionError;
 use mundis_sdk::keyed_account::{keyed_account_at_index, next_keyed_account};
@@ -49,6 +50,7 @@ impl Processor {
         );
 
         if associated_token_address != *associated_token_account_info.unsigned_key() {
+            ic_msg!(invoke_context, "Error: Associated address does not match seed derivation");
             return Err(InstructionError::InvalidSeeds);
         }
 
