@@ -3201,8 +3201,8 @@ impl AccountsDb {
     {
         let key = match &index_key {
             IndexKey::ProgramId(key) => key,
-            IndexKey::SplTokenMint(key) => key,
-            IndexKey::SplTokenOwner(key) => key,
+            IndexKey::TokenMint(key) => key,
+            IndexKey::TokenOwner(key) => key,
         };
         if !self.account_indexes.include_key(key) {
             // the requested key was not indexed in the secondary index, so do a normal scan
@@ -7448,7 +7448,7 @@ pub mod tests {
             accounts_hash::MERKLE_FANOUT,
             accounts_index::{tests::*, AccountSecondaryIndexesIncludeExclude, RefCount},
             append_vec::{test_utils::TempFile, AccountMeta},
-            inline_anima_token,
+            inline_mundis_token,
         },
         assert_matches::assert_matches,
         rand::{thread_rng, Rng},
@@ -8992,14 +8992,14 @@ pub mod tests {
 
         // Set up account to be added to secondary index
         let mint_key = Pubkey::new_unique();
-        let mut account_data_with_mint = vec![0; inline_anima_token::Account::get_packed_len()];
+        let mut account_data_with_mint = vec![0; inline_mundis_token::Account::get_packed_len()];
         account_data_with_mint[..PUBKEY_BYTES].clone_from_slice(&(mint_key.to_bytes()));
 
         let mut normal_account = AccountSharedData::new(1, 0, AccountSharedData::default().owner());
-        normal_account.set_owner(inline_anima_token::id());
+        normal_account.set_owner(inline_mundis_token::id());
         normal_account.set_data(account_data_with_mint.clone());
         let mut zero_account = AccountSharedData::new(0, 0, AccountSharedData::default().owner());
-        zero_account.set_owner(inline_anima_token::id());
+        zero_account.set_owner(inline_mundis_token::id());
         zero_account.set_data(account_data_with_mint);
 
         //store an account
@@ -9024,7 +9024,7 @@ pub mod tests {
 
         // Secondary index should still find both pubkeys
         let mut found_accounts = HashSet::new();
-        let index_key = IndexKey::SplTokenMint(mint_key);
+        let index_key = IndexKey::TokenMint(mint_key);
         let bank_id = 0;
         accounts
             .accounts_index
@@ -9107,7 +9107,7 @@ pub mod tests {
             .index_scan_accounts(
                 &Ancestors::default(),
                 bank_id,
-                IndexKey::SplTokenMint(mint_key),
+                IndexKey::TokenMint(mint_key),
                 |key, _| found_accounts.push(*key),
                 &ScanConfig::default(),
             )

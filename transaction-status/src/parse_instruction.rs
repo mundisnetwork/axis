@@ -9,7 +9,7 @@ use {
     },
     inflector::Inflector,
     serde_json::Value,
-    mundis_account_decoder::parse_token::anima_token_ids,
+    mundis_account_decoder::parse_token::mundis_token_ids,
     mundis_sdk::{instruction::CompiledInstruction, pubkey::Pubkey, stake, system_program},
     std::{
         collections::HashMap,
@@ -31,7 +31,7 @@ lazy_static! {
             ParsableProgram::AnimaTokenAccount,
         );
         m.insert(*MEMO_PROGRAM_ID, ParsableProgram::AnimaMemo);
-        for anima_token_id in anima_token_ids() {
+        for anima_token_id in mundis_token_ids() {
             m.insert(anima_token_id, ParsableProgram::AnimaToken);
         }
         m.insert(*STAKE_PROGRAM_ID, ParsableProgram::Stake);

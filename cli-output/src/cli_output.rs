@@ -1,4 +1,5 @@
 use std::fmt::Formatter;
+use serde::Serializer;
 use {
     crate::{
         display::{
@@ -46,6 +47,7 @@ use {
         time::Duration,
     },
 };
+use mundis_account_decoder::parse_token::{UiAccountState, UiTokenAmount};
 
 static CHECK_MARK: Emoji = Emoji("✅ ", "");
 static CROSS_MARK: Emoji = Emoji("❌ ", "");
@@ -1807,8 +1809,9 @@ impl CliFees {
 #[serde(rename_all = "camelCase")]
 pub struct CliTokenAccount {
     pub address: String,
+    pub is_associated: bool,
     #[serde(flatten)]
-    pub token_account: UiTokenAccount,
+    pub account: UiTokenAccount,
 }
 
 impl QuietDisplay for CliTokenAccount {}
@@ -1817,187 +1820,257 @@ impl VerboseDisplay for CliTokenAccount {}
 impl fmt::Display for CliTokenAccount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f)?;
-        writeln_name_value(f, "Address:", &self.address)?;
-        let account = &self.token_account;
+        if self.is_associated {
+            writeln_name_value(f, "Address:", &self.address)?;
+        } else {
+            writeln_name_value(f, "Address:", &format!("{}  (Aux*)", self.address))?;
+        }
         writeln_name_value(
             f,
             "Balance:",
-            &account.token_amount.real_number_string_trimmed(),
+            &self.account.token_amount.real_number_string_trimmed(),
         )?;
         let mint = format!(
             "{}{}",
-            account.mint,
-            if account.is_native { " (native)" } else { "" }
+            self.account.mint,
+            if self.account.is_native {
+                " (native)"
+            } else {
+                ""
+            }
         );
         writeln_name_value(f, "Mint:", &mint)?;
-        writeln_name_value(f, "Owner:", &account.owner)?;
-        writeln_name_value(f, "State:", &format!("{:?}", account.state))?;
-        if let Some(delegate) = &account.delegate {
+        writeln_name_value(f, "Owner:", &self.account.owner)?;
+        writeln_name_value(f, "State:", &format!("{:?}", self.account.state))?;
+        if let Some(delegate) = &self.account.delegate {
             writeln!(f, "Delegation:")?;
             writeln_name_value(f, "  Delegate:", delegate)?;
-            let allowance = account.delegated_amount.as_ref().unwrap();
+            let allowance = self.account.delegated_amount.as_ref().unwrap();
             writeln_name_value(f, "  Allowance:", &allowance.real_number_string_trimmed())?;
+        } else {
+            writeln_name_value(f, "Delegation:", "")?;
         }
         writeln_name_value(
             f,
             "Close authority:",
-            account.close_authority.as_ref().unwrap_or(&String::new()),
+            self.account
+                .close_authority
+                .as_ref()
+                .unwrap_or(&String::new()),
         )?;
+        if !self.is_associated {
+            writeln!(f)?;
+            writeln!(f, "* Please run `spl-token gc` to clean up Aux accounts")?;
+        }
         Ok(())
     }
 }
 
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CliProgramId {
-    pub program_id: String,
+pub struct CliTokenAmount {
+    #[serde(flatten)]
+    pub amount: UiTokenAmount,
 }
 
-impl QuietDisplay for CliProgramId {}
-impl VerboseDisplay for CliProgramId {}
+impl QuietDisplay for CliTokenAmount {}
+impl VerboseDisplay for CliTokenAmount {
+    fn write_str(&self, w: &mut dyn fmt::Write) -> fmt::Result {
+        writeln!(w, "ui amount: {}", self.amount.real_number_string_trimmed())?;
+        writeln!(w, "decimals: {}", self.amount.decimals)?;
+        writeln!(w, "amount: {}", self.amount.amount)
+    }
+}
 
-impl fmt::Display for CliProgramId {
+impl fmt::Display for CliTokenAmount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln_name_value(f, "Program Id:", &self.program_id)
+        writeln!(f, "{}", self.amount.real_number_string_trimmed())
     }
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CliProgramBuffer {
-    pub buffer: String,
-}
-
-impl QuietDisplay for CliProgramBuffer {}
-impl VerboseDisplay for CliProgramBuffer {}
-
-impl fmt::Display for CliProgramBuffer {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln_name_value(f, "Buffer:", &self.buffer)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum CliProgramAccountType {
-    Buffer,
-    Program,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliProgramAuthority {
-    pub authority: String,
-    pub account_type: CliProgramAccountType,
-}
-
-impl QuietDisplay for CliProgramAuthority {}
-impl VerboseDisplay for CliProgramAuthority {}
-
-impl fmt::Display for CliProgramAuthority {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln_name_value(f, "Account Type:", &format!("{:?}", self.account_type))?;
-        writeln_name_value(f, "Authority:", &self.authority)
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliProgram {
-    pub program_id: String,
-    pub owner: String,
-    pub data_len: usize,
-}
-impl QuietDisplay for CliProgram {}
-impl VerboseDisplay for CliProgram {}
-impl fmt::Display for CliProgram {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f)?;
-        writeln_name_value(f, "Program Id:", &self.program_id)?;
-        writeln_name_value(f, "Owner:", &self.owner)?;
-        writeln_name_value(
-            f,
-            "Data Length:",
-            &format!("{:?} ({:#x?}) bytes", self.data_len, self.data_len),
-        )?;
-        Ok(())
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliUpgradeableProgram {
-    pub program_id: String,
-    pub owner: String,
-    pub programdata_address: String,
-    pub authority: String,
-    pub last_deploy_slot: u64,
-    pub data_len: usize,
-    pub lamports: u64,
+pub struct CliTokenAccounts {
+    #[serde(serialize_with = "flattened")]
+    pub accounts: Vec<Vec<CliTokenAccount>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub unsupported_accounts: Vec<UnsupportedAccount>,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub max_len_balance: usize,
+    #[serde(skip_serializing)]
+    pub aux_len: usize,
+    #[serde(skip_serializing)]
+    pub token_is_some: bool,
 }
-impl QuietDisplay for CliUpgradeableProgram {}
-impl VerboseDisplay for CliUpgradeableProgram {}
-impl fmt::Display for CliUpgradeableProgram {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f)?;
-        writeln_name_value(f, "Program Id:", &self.program_id)?;
-        writeln_name_value(f, "Owner:", &self.owner)?;
-        writeln_name_value(f, "ProgramData Address:", &self.programdata_address)?;
-        writeln_name_value(f, "Authority:", &self.authority)?;
-        writeln_name_value(
-            f,
-            "Last Deployed In Slot:",
-            &self.last_deploy_slot.to_string(),
-        )?;
-        writeln_name_value(
-            f,
-            "Data Length:",
-            &format!("{:?} ({:#x?}) bytes", self.data_len, self.data_len),
-        )?;
-        writeln_name_value(
-            f,
-            "Balance:",
-            &build_balance_message(self.lamports, self.use_lamports_unit, true),
-        )?;
+
+impl QuietDisplay for CliTokenAccounts {}
+impl VerboseDisplay for CliTokenAccounts {
+    fn write_str(&self, w: &mut dyn fmt::Write) -> fmt::Result {
+        let mut gc_alert = false;
+        if self.token_is_some {
+            writeln!(
+                w,
+                "{:<44}  {:<2$}",
+                "Account", "Balance", self.max_len_balance
+            )?;
+            writeln!(
+                w,
+                "-------------------------------------------------------------"
+            )?;
+        } else {
+            writeln!(
+                w,
+                "{:<44}  {:<44}  {:<3$}",
+                "Token", "Account", "Balance", self.max_len_balance
+            )?;
+            writeln!(w, "----------------------------------------------------------------------------------------------------------")?;
+        }
+        for accounts_list in self.accounts.iter() {
+            let mut aux_counter = 1;
+            for account in accounts_list {
+                let maybe_aux = if !account.is_associated {
+                    gc_alert = true;
+                    let message = format!("  (Aux-{}*)", aux_counter);
+                    aux_counter += 1;
+                    message
+                } else {
+                    "".to_string()
+                };
+                let maybe_frozen = if let UiAccountState::Frozen = account.account.state {
+                    format!(" {}  Frozen", WARNING)
+                } else {
+                    "".to_string()
+                };
+                if self.token_is_some {
+                    writeln!(
+                        w,
+                        "{:<44}  {:<4$}{:<5$}{}",
+                        account.address,
+                        account.account.token_amount.real_number_string_trimmed(),
+                        maybe_aux,
+                        maybe_frozen,
+                        self.max_len_balance,
+                        self.aux_len,
+                    )?;
+                } else {
+                    writeln!(
+                        w,
+                        "{:<44}  {:<44}  {:<5$}{:<6$}{}",
+                        account.account.mint,
+                        account.address,
+                        account.account.token_amount.real_number_string_trimmed(),
+                        maybe_aux,
+                        maybe_frozen,
+                        self.max_len_balance,
+                        self.aux_len,
+                    )?;
+                }
+            }
+        }
+        for unsupported_account in &self.unsupported_accounts {
+            writeln!(
+                w,
+                "{:<44}  {}",
+                unsupported_account.address, unsupported_account.err
+            )?;
+        }
+        if gc_alert {
+            writeln!(w)?;
+            writeln!(w, "* Please run `token gc` to clean up Aux accounts")?;
+        }
         Ok(())
     }
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliUpgradeablePrograms {
-    pub programs: Vec<CliUpgradeableProgram>,
-    #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
-}
-impl QuietDisplay for CliUpgradeablePrograms {}
-impl VerboseDisplay for CliUpgradeablePrograms {}
-impl fmt::Display for CliUpgradeablePrograms {
+impl fmt::Display for CliTokenAccounts {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f)?;
-        writeln!(
-            f,
-            "{}",
-            style(format!(
-                "{:<44} | {:<9} | {:<44} | {}",
-                "Program Id", "Slot", "Authority", "Balance"
-            ))
-            .bold()
-        )?;
-        for program in self.programs.iter() {
+        let mut gc_alert = false;
+        if self.token_is_some {
+            writeln!(f, "{:<1$}", "Balance", self.max_len_balance)?;
+            writeln!(f, "-------------")?;
+        } else {
             writeln!(
                 f,
-                "{}",
-                &format!(
-                    "{:<44} | {:<9} | {:<44} | {}",
-                    program.program_id,
-                    program.last_deploy_slot,
-                    program.authority,
-                    build_balance_message(program.lamports, self.use_lamports_unit, true)
-                )
+                "{:<44}  {:<2$}",
+                "Token", "Balance", self.max_len_balance
             )?;
+            writeln!(
+                f,
+                "---------------------------------------------------------------"
+            )?;
+        }
+        for accounts_list in self.accounts.iter() {
+            let mut aux_counter = 1;
+            for account in accounts_list {
+                let maybe_aux = if !account.is_associated {
+                    gc_alert = true;
+                    let message = format!("  (Aux-{}*)", aux_counter);
+                    aux_counter += 1;
+                    message
+                } else {
+                    "".to_string()
+                };
+                let maybe_frozen = if let UiAccountState::Frozen = account.account.state {
+                    format!(" {}  Frozen", WARNING)
+                } else {
+                    "".to_string()
+                };
+                if self.token_is_some {
+                    writeln!(
+                        f,
+                        "{:<3$}{:<4$}{}",
+                        account.account.token_amount.real_number_string_trimmed(),
+                        maybe_aux,
+                        maybe_frozen,
+                        self.max_len_balance,
+                        self.aux_len,
+                    )?;
+                } else {
+                    writeln!(
+                        f,
+                        "{:<44}  {:<4$}{:<5$}{}",
+                        account.account.mint,
+                        account.account.token_amount.real_number_string_trimmed(),
+                        maybe_aux,
+                        maybe_frozen,
+                        self.max_len_balance,
+                        self.aux_len,
+                    )?;
+                }
+            }
+        }
+        for unsupported_account in &self.unsupported_accounts {
+            writeln!(
+                f,
+                "{:<44}  {}",
+                unsupported_account.address, unsupported_account.err
+            )?;
+        }
+        if gc_alert {
+            writeln!(f)?;
+            writeln!(f, "* Please run `spl-token gc` to clean up Aux accounts")?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliWalletAddress {
+    pub wallet_address: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub associated_token_address: Option<String>,
+}
+
+impl QuietDisplay for CliWalletAddress {}
+impl VerboseDisplay for CliWalletAddress {}
+
+impl fmt::Display for CliWalletAddress {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "Wallet address: {}", self.wallet_address)?;
+        if let Some(associated_token_address) = &self.associated_token_address {
+            writeln!(f, "Associated token address: {}", associated_token_address)?;
         }
         Ok(())
     }
@@ -2005,91 +2078,27 @@ impl fmt::Display for CliUpgradeablePrograms {
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CliUpgradeableProgramClosed {
-    pub program_id: String,
-    pub lamports: u64,
-    #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
-}
-impl QuietDisplay for CliUpgradeableProgramClosed {}
-impl VerboseDisplay for CliUpgradeableProgramClosed {}
-impl fmt::Display for CliUpgradeableProgramClosed {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f)?;
-        writeln!(
-            f,
-            "Closed Program Id {}, {} reclaimed",
-            &self.program_id,
-            &build_balance_message(self.lamports, self.use_lamports_unit, true)
-        )?;
-        Ok(())
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliUpgradeableBuffer {
+pub struct CliMultisig {
     pub address: String,
-    pub authority: String,
-    pub data_len: usize,
-    pub lamports: u64,
-    #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
-}
-impl QuietDisplay for CliUpgradeableBuffer {}
-impl VerboseDisplay for CliUpgradeableBuffer {}
-impl fmt::Display for CliUpgradeableBuffer {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f)?;
-        writeln_name_value(f, "Buffer Address:", &self.address)?;
-        writeln_name_value(f, "Authority:", &self.authority)?;
-        writeln_name_value(
-            f,
-            "Balance:",
-            &build_balance_message(self.lamports, self.use_lamports_unit, true),
-        )?;
-        writeln_name_value(
-            f,
-            "Data Length:",
-            &format!("{:?} ({:#x?}) bytes", self.data_len, self.data_len),
-        )?;
-
-        Ok(())
-    }
+    pub m: u8,
+    pub n: u8,
+    pub signers: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliUpgradeableBuffers {
-    pub buffers: Vec<CliUpgradeableBuffer>,
-    #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
-}
-impl QuietDisplay for CliUpgradeableBuffers {}
-impl VerboseDisplay for CliUpgradeableBuffers {}
-impl fmt::Display for CliUpgradeableBuffers {
+impl QuietDisplay for CliMultisig {}
+impl VerboseDisplay for CliMultisig {}
+
+impl fmt::Display for CliMultisig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f)?;
-        writeln!(
-            f,
-            "{}",
-            style(format!(
-                "{:<44} | {:<44} | {}",
-                "Buffer Address", "Authority", "Balance"
-            ))
-            .bold()
-        )?;
-        for buffer in self.buffers.iter() {
-            writeln!(
-                f,
-                "{}",
-                &format!(
-                    "{:<44} | {:<44} | {}",
-                    buffer.address,
-                    buffer.authority,
-                    build_balance_message(buffer.lamports, self.use_lamports_unit, true)
-                )
-            )?;
+        writeln_name_value(f, "Address:", &self.address)?;
+        writeln_name_value(f, "M/N:", &format!("{}/{}", self.m, self.n))?;
+        writeln_name_value(f, "Signers:", " ")?;
+        let width = if self.n >= 9 { 4 } else { 3 };
+        for i in 0..self.n as usize {
+            let title = format!("{1:>0$}:", width, i + 1);
+            let pubkey = &self.signers[i];
+            writeln_name_value(f, &title, pubkey)?;
         }
         Ok(())
     }
@@ -2717,6 +2726,20 @@ impl<T> QuietDisplay for CliMint<T>
     where T: Serialize + fmt::Display + QuietDisplay + VerboseDisplay, {}
 impl<T> VerboseDisplay for CliMint<T>
     where T: Serialize + fmt::Display + QuietDisplay + VerboseDisplay, {}
+
+#[derive(Serialize, Deserialize)]
+pub struct UnsupportedAccount {
+    pub address: String,
+    pub err: String,
+}
+
+fn flattened<S: Serializer>(
+    vec: &[Vec<CliTokenAccount>],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let flattened: Vec<_> = vec.iter().flatten().collect();
+    flattened.serialize(serializer)
+}
 
 #[cfg(test)]
 mod tests {

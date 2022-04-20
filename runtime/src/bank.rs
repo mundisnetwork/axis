@@ -52,7 +52,7 @@ use {
         builtins::{self, BuiltinAction, BuiltinFeatureTransition, Builtins},
         cost_tracker::CostTracker,
         epoch_stakes::{EpochStakes, NodeVoteAccounts},
-        inline_anima_token_account, inline_anima_token,
+        inline_mundis_token,
         message_processor::{InstructionTrace, MessageProcessor},
         rent_collector::{CollectedInfo, RentCollector},
         stake_weighted_timestamp::{
@@ -458,6 +458,7 @@ impl CachedExecutors {
         }
     }
 
+    #[allow(dead_code)]
     fn remove(&mut self, pubkey: &Pubkey) {
         let _ = self.executors.remove(pubkey);
     }
@@ -3856,6 +3857,7 @@ impl Bank {
     }
 
     /// Remove an executor from the bank's cache
+    ///  #[allow(dead_code)]
     fn remove_executor(&self, pubkey: &Pubkey) {
         let mut cache = self.cached_executors.write().unwrap();
         Arc::make_mut(&mut cache).remove(pubkey);
@@ -6378,14 +6380,6 @@ impl Bank {
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }
 
-        if new_feature_activations.contains(&feature_set::spl_associated_token_account_v1_0_4::id())
-        {
-            self.replace_program_account(
-                &inline_anima_token_account::id(),
-                &inline_anima_token_account::program_v1_0_4::id(),
-                "bank-apply_spl_associated_token_account_v1_4_0",
-            );
-        }
         if new_feature_activations.contains(&feature_set::rent_for_sysvars::id()) {
             // when this feature is activated, immediately all of existing sysvars are susceptible
             // to rent collection and account data removal due to insufficient balance due to only
@@ -6527,6 +6521,7 @@ impl Bank {
         }
     }
 
+    #[allow(dead_code)]
     fn replace_program_account(
         &mut self,
         old_address: &Pubkey,
@@ -6562,8 +6557,8 @@ impl Bank {
 
         if reconfigure_token2_native_mint {
             let mut native_mint_account = mundis_sdk::account::AccountSharedData::from(Account {
-                owner: inline_anima_token::id(),
-                data: inline_anima_token::native_mint::ACCOUNT_DATA.to_vec(),
+                owner: inline_mundis_token::id(),
+                data: inline_mundis_token::native_mint::ACCOUNT_DATA.to_vec(),
                 lamports: mun_to_lamports(1.),
                 executable: false,
                 rent_epoch: self.epoch() + 1,
@@ -6573,7 +6568,7 @@ impl Bank {
             // https://github.com/solana-labs/solana-program-library/issues/374, ensure that the
             // spl-token 2 native mint account is owned by the spl-token 2 program.
             let store = if let Some(existing_native_mint_account) =
-                self.get_account_with_fixed_root(&inline_anima_token::native_mint::id())
+                self.get_account_with_fixed_root(&inline_mundis_token::native_mint::id())
             {
                 if existing_native_mint_account.owner() == &mundis_sdk::system_program::id() {
                     native_mint_account.set_lamports(existing_native_mint_account.lamports());
@@ -6588,7 +6583,7 @@ impl Bank {
             };
 
             if store {
-                self.store_account(&inline_anima_token::native_mint::id(), &native_mint_account);
+                self.store_account(&inline_mundis_token::native_mint::id(), &native_mint_account);
             }
         }
     }
@@ -13643,15 +13638,15 @@ pub(crate) mod tests {
         assert_eq!(genesis_config.cluster_type, ClusterType::Development);
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
         assert_eq!(
-            bank.get_balance(&inline_anima_token::native_mint::id()),
+            bank.get_balance(&inline_mundis_token::native_mint::id()),
             1000000000
         );
 
         // Testnet - Native mint blinks into existence at epoch 93
         genesis_config.cluster_type = ClusterType::Testnet;
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
-        assert_eq!(bank.get_balance(&inline_anima_token::native_mint::id()), 0);
-        bank.deposit(&inline_anima_token::native_mint::id(), 4200000000)
+        assert_eq!(bank.get_balance(&inline_mundis_token::native_mint::id()), 0);
+        bank.deposit(&inline_mundis_token::native_mint::id(), 4200000000)
             .unwrap();
 
         let bank = Bank::new_from_parent(
@@ -13661,20 +13656,20 @@ pub(crate) mod tests {
         );
 
         let native_mint_account = bank
-            .get_account(&inline_anima_token::native_mint::id())
+            .get_account(&inline_mundis_token::native_mint::id())
             .unwrap();
         assert_eq!(native_mint_account.data().len(), 82);
         assert_eq!(
-            bank.get_balance(&inline_anima_token::native_mint::id()),
+            bank.get_balance(&inline_mundis_token::native_mint::id()),
             4200000000
         );
-        assert_eq!(native_mint_account.owner(), &inline_anima_token::id());
+        assert_eq!(native_mint_account.owner(), &inline_mundis_token::id());
 
         // MainnetBeta - Native mint blinks into existence at epoch 75
         genesis_config.cluster_type = ClusterType::MainnetBeta;
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
-        assert_eq!(bank.get_balance(&inline_anima_token::native_mint::id()), 0);
-        bank.deposit(&inline_anima_token::native_mint::id(), 4200000000)
+        assert_eq!(bank.get_balance(&inline_mundis_token::native_mint::id()), 0);
+        bank.deposit(&inline_mundis_token::native_mint::id(), 4200000000)
             .unwrap();
 
         let bank = Bank::new_from_parent(
@@ -13684,14 +13679,14 @@ pub(crate) mod tests {
         );
 
         let native_mint_account = bank
-            .get_account(&inline_anima_token::native_mint::id())
+            .get_account(&inline_mundis_token::native_mint::id())
             .unwrap();
         assert_eq!(native_mint_account.data().len(), 82);
         assert_eq!(
-            bank.get_balance(&inline_anima_token::native_mint::id()),
+            bank.get_balance(&inline_mundis_token::native_mint::id()),
             4200000000
         );
-        assert_eq!(native_mint_account.owner(), &inline_anima_token::id());
+        assert_eq!(native_mint_account.owner(), &inline_mundis_token::id());
     }
 
     #[test]

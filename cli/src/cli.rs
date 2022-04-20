@@ -371,6 +371,7 @@ pub enum CliCommand {
     UnwrapToken {
         wallet_address: Pubkey,
         address: Option<Pubkey>,
+        multisigner_pubkeys: Vec<Pubkey>,
         tx_info: TxInfo,
     },
     ApproveToken {
@@ -942,18 +943,18 @@ pub fn parse_command(
             ("burn", Some(matches)) => parse_burn_token_command(matches, default_signer, wallet_manager),
             ("mint", Some(matches)) => parse_mint_token_command(matches, default_signer, wallet_manager),
             ("freeze", Some(matches)) => parse_freeze_token_command(matches, default_signer, wallet_manager),
-            ("thaw", Some(matches)) => parse_thaw_token_command(matches, default_signer, wallet_manager),
+            ("unfreeze", Some(matches)) => parse_unfreeze_token_command(matches, default_signer, wallet_manager),
             ("wrap", Some(matches)) => parse_wrap_token_command(matches, default_signer, wallet_manager),
             ("unwrap", Some(matches)) => parse_unwrap_token_command(matches, default_signer, wallet_manager),
             ("approve", Some(matches)) => parse_approve_token_command(matches, default_signer, wallet_manager),
             ("revoke", Some(matches)) => parse_revoke_token_command(matches, default_signer, wallet_manager),
             ("close-account", Some(matches)) => parse_close_token_account_command(matches, default_signer, wallet_manager),
             ("balance", Some(matches)) => parse_token_balance_command(matches, default_signer, wallet_manager),
-            ("supply", Some(matches)) => parse_token_supply_command(matches, default_signer, wallet_manager),
+            ("supply", Some(matches)) => parse_token_supply_command(matches, wallet_manager),
             ("accounts", Some(matches)) => parse_token_list_accounts_command(matches, default_signer, wallet_manager),
             ("address", Some(matches)) => parse_token_wallet_address_command(matches, default_signer, wallet_manager),
             ("account-info", Some(matches)) => parse_token_account_info_command(matches, default_signer, wallet_manager),
-            ("multisig-info", Some(matches)) => parse_token_multisig_info_command(matches, default_signer, wallet_manager),
+            ("multisig-info", Some(matches)) => parse_token_multisig_info_command(matches, wallet_manager),
             ("cleanup", Some(matches)) => parse_token_cleanup_accounts_command(matches, default_signer, wallet_manager),
             ("sync-native", Some(matches)) => parse_token_sync_native_command(matches, default_signer, wallet_manager),
             _ => unreachable!(),
@@ -1912,7 +1913,7 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             freeze_authority,
             ref multisigner_pubkeys,
             ref tx_info
-        } => process_thaw_token_command(&rpc_client, config, *account, *mint_address, *freeze_authority, multisigner_pubkeys, tx_info),
+        } => process_unfreeze_token_command(&rpc_client, config, *account, *mint_address, *freeze_authority, multisigner_pubkeys, tx_info),
 
         CliCommand::WrapToken {
             mun,
@@ -1924,8 +1925,9 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
         CliCommand::UnwrapToken {
             wallet_address,
             address,
+            ref multisigner_pubkeys,
             ref tx_info
-        } => process_unwrap_token_command(&rpc_client, config, *wallet_address, *address, tx_info),
+        } => process_unwrap_token_command(&rpc_client, config, *wallet_address, *address, multisigner_pubkeys, tx_info),
 
         CliCommand::ApproveToken {
             account,

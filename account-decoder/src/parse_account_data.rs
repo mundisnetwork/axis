@@ -4,7 +4,7 @@ use {
         parse_nonce::parse_nonce,
         parse_stake::parse_stake,
         parse_sysvar::parse_sysvar,
-        parse_token::{parse_token, anima_token_ids},
+        parse_token::{parse_token, mundis_token_ids},
         parse_vote::parse_vote,
     },
     inflector::Inflector,
@@ -24,8 +24,8 @@ lazy_static! {
         let mut m = HashMap::new();
         m.insert(*CONFIG_PROGRAM_ID, ParsableAccount::Config);
         m.insert(*SYSTEM_PROGRAM_ID, ParsableAccount::Nonce);
-        for anima_token_id in anima_token_ids() {
-            m.insert(anima_token_id, ParsableAccount::AnimaToken);
+        for token_id in mundis_token_ids() {
+            m.insert(token_id, ParsableAccount::Token);
         }
         m.insert(*STAKE_PROGRAM_ID, ParsableAccount::Stake);
         m.insert(*SYSVAR_PROGRAM_ID, ParsableAccount::Sysvar);
@@ -65,7 +65,7 @@ pub struct ParsedAccount {
 pub enum ParsableAccount {
     Config,
     Nonce,
-    AnimaToken,
+    Token,
     Stake,
     Sysvar,
     Vote,
@@ -73,7 +73,7 @@ pub enum ParsableAccount {
 
 #[derive(Default)]
 pub struct AccountAdditionalData {
-    pub anima_token_decimals: Option<u8>,
+    pub token_decimals: Option<u8>,
 }
 
 pub fn parse_account_data(
@@ -89,8 +89,8 @@ pub fn parse_account_data(
     let parsed_json = match program_name {
         ParsableAccount::Config => serde_json::to_value(parse_config(data, pubkey)?)?,
         ParsableAccount::Nonce => serde_json::to_value(parse_nonce(data)?)?,
-        ParsableAccount::AnimaToken => {
-            serde_json::to_value(parse_token(data, additional_data.anima_token_decimals)?)?
+        ParsableAccount::Token => {
+            serde_json::to_value(parse_token(data, additional_data.token_decimals)?)?
         }
         ParsableAccount::Stake => serde_json::to_value(parse_stake(data)?)?,
         ParsableAccount::Sysvar => serde_json::to_value(parse_sysvar(data, pubkey)?)?,

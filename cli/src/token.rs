@@ -1,45 +1,42 @@
-use std::fmt::Display;
+use std::collections::{BTreeMap, HashMap};
+use std::collections::btree_map::Entry;
 use std::process::exit;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, value_t, value_t_or_exit};
-use serde::Serialize;
-use thiserror::Error;
+use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, value_t_or_exit};
 
+use mundis_account_decoder::parse_token::{TokenAccountType, UiAccountState};
+use mundis_account_decoder::UiAccountData;
 use mundis_clap_utils::{ArgConstant, offline};
 use mundis_clap_utils::fee_payer::{fee_payer_arg, FEE_PAYER_ARG};
 use mundis_clap_utils::input_parsers::{pubkey_of, pubkey_of_signer, pubkeys_of_multiple_signers, signer_of, signer_of_or_else, signer_or_default, value_of};
 use mundis_clap_utils::input_validators::{is_amount, is_amount_or_all, is_parsable, is_valid_pubkey, is_valid_signer};
-use mundis_clap_utils::keypair::{CliSignerInfo, CliSigners, DefaultSigner, pubkey_from_path, signer_from_path, SignerIndex};
+use mundis_clap_utils::keypair::{CliSigners, DefaultSigner, pubkey_from_path, signer_from_path};
 use mundis_clap_utils::memo::{memo_arg, MEMO_ARG};
 use mundis_clap_utils::nonce::{NONCE_ARG, NONCE_AUTHORITY_ARG, NonceArgs};
-use mundis_clap_utils::offline::{BLOCKHASH_ARG, DUMP_TRANSACTION_MESSAGE, OfflineArgs, SIGN_ONLY_ARG};
-use mundis_cli_config::Config;
-use mundis_cli_output::{CliMint, CliSignature, CliSignOnlyData, OutputFormat, QuietDisplay, return_signers_data, return_signers_with_config, ReturnSignersConfig, VerboseDisplay};
-use mundis_client::blockhash_query::BlockhashQuery;
-use mundis_client::nonce_utils;
+use mundis_clap_utils::offline::{BLOCKHASH_ARG, OfflineArgs, SIGN_ONLY_ARG};
+use mundis_cli_output::{CliMint, CliMultisig, CliSignature, CliSignOnlyData, CliTokenAccount, CliTokenAccounts, CliTokenAmount, CliWalletAddress, OutputFormat, return_signers_data, ReturnSignersConfig, UnsupportedAccount};
 use mundis_client::rpc_client::RpcClient;
-use mundis_memo_program::memo_instruction;
+use mundis_client::rpc_request::TokenAccountsFilter;
+use mundis_client::rpc_response::RpcKeyedAccount;
 use mundis_remote_wallet::remote_wallet::RemoteWalletManager;
+use mundis_sdk::{system_instruction, system_program};
 use mundis_sdk::instruction::Instruction;
 use mundis_sdk::message::Message;
-use mundis_sdk::native_token::lamports_to_mun;
+use mundis_sdk::native_token::{lamports_to_mun, mun_to_lamports};
 use mundis_sdk::pubkey::Pubkey;
 use mundis_sdk::signature::Keypair;
 use mundis_sdk::signer::Signer;
-use mundis_sdk::{system_instruction, system_program};
-use mundis_sdk::system_instruction::SystemError;
 use mundis_sdk::transaction::Transaction;
 use mundis_token_account_program::get_associated_token_address;
 use mundis_token_account_program::token_account_instruction::create_associated_token_account;
 use mundis_token_program::native_mint;
 use mundis_token_program::state::{Mint, Multisig, TokenAccount};
-use mundis_token_program::token_instruction::{AuthorityType, burn, burn_checked, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS, mint_to, mint_to_checked, set_authority, transfer, transfer_checked};
+use mundis_token_program::token_instruction::{approve, approve_checked, AuthorityType, burn, burn_checked, close_account, freeze_account, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS, mint_to, mint_to_checked, revoke, set_authority, sync_native, thaw_account, transfer, transfer_checked};
 
-use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, create_tx_info, log_instruction_custom_error, ProcessResult, TxInfo};
+use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, create_tx_info, ProcessResult, TxInfo};
 use crate::memo::WithMemo;
-use crate::nonce::check_nonce_account;
 
 pub const OWNER_ADDRESS_ARG: ArgConstant<'static> = ArgConstant {
     name: "owner",
@@ -522,8 +519,8 @@ impl TokenSubCommands for App<'_, '_> {
                         .offline_args_config(&SignOnlyNeedsMintAddress {}),
                 )
                 .subcommand(
-                    SubCommand::with_name("thaw")
-                        .about("Thaw a token account")
+                    SubCommand::with_name("unfreeze")
+                        .about("Unfreeze a token account")
                         .arg(
                             Arg::with_name("account")
                                 .validator(is_valid_pubkey)
@@ -531,7 +528,7 @@ impl TokenSubCommands for App<'_, '_> {
                                 .takes_value(true)
                                 .index(1)
                                 .required(true)
-                                .help("The address of the token account to thaw"),
+                                .help("The address of the token account to unfreeze"),
                         )
                         .arg(
                             Arg::with_name("freeze_authority")
@@ -1967,10 +1964,40 @@ pub fn process_freeze_token_command(
     multisigner_pubkeys: &Vec<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let (token, _) = resolve_mint_info(rpc_client, tx_info.sign_only, &account, mint_address, None)?;
+
+    println_display(
+        config,
+        format!("Freezing account: {}\n  Token: {}", account, token),
+    );
+
+    let instructions = vec![freeze_account(
+        &mundis_token_program::id(),
+        &account,
+        &token,
+        &freeze_authority,
+        multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+    )?];
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
-pub fn parse_thaw_token_command(
+pub fn parse_unfreeze_token_command(
     matches: &ArgMatches<'_>,
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
@@ -2007,7 +2034,7 @@ pub fn parse_thaw_token_command(
     })
 }
 
-pub fn process_thaw_token_command(
+pub fn process_unfreeze_token_command(
     rpc_client: &RpcClient,
     config: &CliConfig,
     account: Pubkey,
@@ -2016,7 +2043,37 @@ pub fn process_thaw_token_command(
     multisigner_pubkeys: &Vec<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let (token, _) = resolve_mint_info(rpc_client, tx_info.sign_only, &account, mint_address, None)?;
+
+    println_display(
+        config,
+        format!("Unfreezing account: {}\n  Token: {}", account, token),
+    );
+
+    let instructions = vec![thaw_account(
+        &mundis_token_program::id(),
+        &account,
+        &token,
+        &freeze_authority,
+        multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+    )?];
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_wrap_token_command(
@@ -2067,7 +2124,68 @@ pub fn process_wrap_token_command(
     wrapped_sol_account: Option<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let lamports = mun_to_lamports(mun);
+    let instructions = if let Some(wrapped_sol_account) = wrapped_sol_account {
+        println_display(
+            config,
+            format!("Wrapping {} MUN into {}", mun, wrapped_sol_account),
+        );
+        vec![
+            system_instruction::create_account(
+                &wallet_address,
+                &wrapped_sol_account,
+                lamports,
+                TokenAccount::packed_len() as u64,
+                &mundis_token_program::id(),
+            ),
+            initialize_account(
+                &mundis_token_program::id(),
+                &wrapped_sol_account,
+                &native_mint::id(),
+                &wallet_address,
+            )?,
+        ]
+    }  else {
+        let account = get_associated_token_address(&wallet_address, &native_mint::id());
+
+        if !tx_info.sign_only {
+            if let Some(account_data) = rpc_client
+                .get_account_with_commitment(&account, config.commitment)?
+                .value
+            {
+                if account_data.owner != system_program::id() {
+                    return Err(format!("Error: Account already exists: {}", account).into());
+                }
+            }
+        }
+
+        println_display(config, format!("Wrapping {} MUN into {}", mun, account));
+        vec![
+            system_instruction::transfer(&wallet_address, &account, lamports),
+            create_associated_token_account(&config.signers[tx_info.fee_payer].pubkey(), &wallet_address, &native_mint::id()),
+        ]
+    };
+
+    if !tx_info.sign_only {
+        check_wallet_balance(rpc_client, &wallet_address, lamports)?;
+    }
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_unwrap_token_command(
@@ -2076,7 +2194,7 @@ pub fn parse_unwrap_token_command(
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
     let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
-    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, _) =
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
     let (wallet_signer, wallet_address) =
@@ -2095,6 +2213,7 @@ pub fn parse_unwrap_token_command(
         command: CliCommand::UnwrapToken {
             wallet_address: wallet_address.unwrap(),
             address,
+            multisigner_pubkeys,
             tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
         },
         signers: signer_info.signers,
@@ -2106,9 +2225,54 @@ pub fn process_unwrap_token_command(
     config: &CliConfig,
     wallet_address: Pubkey,
     address: Option<Pubkey>,
+    multisigner_pubkeys: &Vec<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let use_associated_account = address.is_none();
+    let address = address
+        .unwrap_or_else(|| get_associated_token_address(&wallet_address, &native_mint::id()));
+    println_display(config, format!("Unwrapping {}", address));
+
+    if !tx_info.sign_only {
+        let lamports = rpc_client.get_balance(&address)?;
+        if lamports == 0 {
+            if use_associated_account {
+                return Err("No wrapped MUN in associated account; did you mean to specify an auxiliary address?".to_string().into());
+            } else {
+                return Err(format!("No wrapped MUN in {}", address).into());
+            }
+        }
+        println_display(
+            config,
+            format!("  Amount: {} MUN", lamports_to_mun(lamports)),
+        );
+    }
+    println_display(config, format!("  Recipient: {}", &wallet_address));
+
+    let instructions = vec![close_account(
+        &mundis_token_program::id(),
+        &address,
+        &wallet_address,
+        &wallet_address,
+        &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+    )?];
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_approve_token_command(
@@ -2171,7 +2335,55 @@ pub fn process_approve_token_command(
     multisigner_pubkeys: &Vec<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    println_display(
+        config,
+        format!(
+            "Approve {} tokens\n  Account: {}\n  Delegate: {}",
+            ui_amount, account, delegate
+        ),
+    );
+
+    let (mint_pubkey, decimals) = resolve_mint_info(rpc_client, tx_info.sign_only, &account, mint_address, mint_decimals)?;
+    let amount = mundis_token_program::ui_amount_to_amount(ui_amount, decimals);
+
+    let instructions = if use_unchecked_instruction {
+        vec![approve(
+            &mundis_token_program::id(),
+            &account,
+            &delegate,
+            &owner,
+            &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+            amount,
+        )?]
+    } else {
+        vec![approve_checked(
+            &mundis_token_program::id(),
+            &account,
+            &mint_pubkey,
+            &delegate,
+            &owner,
+            &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+            amount,
+            decimals,
+        )?]
+    };
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_revoke_token_command(
@@ -2221,7 +2433,55 @@ pub fn process_revoke_token_command(
     multisigner_pubkeys: &Vec<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let delegate = if !tx_info.sign_only {
+        let source_account = rpc_client
+            .get_token_account(&account)?
+            .ok_or_else(|| format!("Could not find token account {}", account))?;
+
+        if let Some(string) = source_account.delegate {
+            Some(Pubkey::from_str(&string)?)
+        } else {
+            None
+        }
+    } else {
+        delegate
+    };
+
+    if let Some(delegate) = delegate {
+        println_display(
+            config,
+            format!(
+                "Revoking approval\n  Account: {}\n  Delegate: {}",
+                account, delegate
+            ),
+        );
+    } else {
+        return Err(format!("No delegate on account {}", account).into());
+    }
+
+    let instructions = vec![revoke(
+        &mundis_token_program::id(),
+        &account,
+        &owner,
+        &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+    )?];
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_close_token_account_command(
@@ -2272,7 +2532,55 @@ pub fn process_close_token_account_command(
     multisigner_pubkeys: &Vec<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    if !tx_info.sign_only {
+        let source_account = rpc_client
+            .get_token_account(&account)?
+            .ok_or_else(|| format!("Could not find token account {}", account))?;
+        let source_amount = source_account
+            .token_amount
+            .amount
+            .parse::<u64>()
+            .map_err(|err| {
+                format!(
+                    "Token account {} balance could not be parsed: {}",
+                    account, err
+                )
+            })?;
+
+        if !source_account.is_native && source_amount > 0 {
+            return Err(format!(
+                "Account {} still has {} tokens; empty the account in order to close it.",
+                account,
+                source_account.token_amount.real_number_string_trimmed()
+            )
+                .into());
+        }
+    }
+
+    let instructions = vec![close_account(
+        &mundis_token_program::id(),
+        &account,
+        &recipient,
+        &close_authority,
+        &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+    )?];
+
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        instructions,
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 pub fn parse_token_balance_command(
@@ -2300,12 +2608,15 @@ pub fn process_token_balance_command(
     config: &CliConfig,
     address: Pubkey
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let balance = rpc_client
+        .get_token_account_balance(&address)
+        .map_err(|_| format!("Could not find token account {}", address))?;
+    let cli_token_amount = CliTokenAmount { amount: balance };
+    Ok(config.output_format.formatted_string(&cli_token_amount))
 }
 
 pub fn parse_token_supply_command(
     matches: &ArgMatches<'_>,
-    default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
     let address = pubkey_of_signer(matches, "address", wallet_manager)
@@ -2325,7 +2636,9 @@ pub fn process_token_supply_command(
     config: &CliConfig,
     address: Pubkey,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let supply = rpc_client.get_token_supply(&address)?;
+    let cli_token_amount = CliTokenAmount { amount: supply };
+    Ok(config.output_format.formatted_string(&cli_token_amount))
 }
 
 pub fn parse_token_list_accounts_command(
@@ -2351,7 +2664,37 @@ pub fn process_token_list_accounts_command(
     token: Option<Pubkey>,
     owner: Pubkey
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    if let Some(token) = token {
+        validate_mint(rpc_client, token)?;
+    }
+
+    let accounts = rpc_client.get_token_accounts_by_owner(
+        &owner,
+        match token {
+            Some(token) => TokenAccountsFilter::Mint(token),
+            None => TokenAccountsFilter::ProgramId(mundis_token_program::id()),
+        },
+    )?;
+    if accounts.is_empty() {
+        println!("None");
+        return Ok("".to_string());
+    }
+
+    let (mint_accounts, unsupported_accounts, max_len_balance, includes_aux) =
+        sort_and_parse_token_accounts(&owner, accounts);
+    let aux_len = if includes_aux { 10 } else { 0 };
+
+    let cli_token_accounts = CliTokenAccounts {
+        accounts: mint_accounts
+            .into_iter()
+            .map(|(_mint, accounts_list)| accounts_list)
+            .collect(),
+        unsupported_accounts,
+        max_len_balance,
+        aux_len,
+        token_is_some: token.is_some(),
+    };
+    Ok(config.output_format.formatted_string(&cli_token_accounts))
 }
 
 pub fn parse_token_wallet_address_command(
@@ -2377,7 +2720,16 @@ pub fn process_token_wallet_address_command(
     token: Option<Pubkey>,
     owner: Pubkey
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let mut cli_address = CliWalletAddress {
+        wallet_address: owner.to_string(),
+        ..CliWalletAddress::default()
+    };
+    if let Some(token) = token {
+        validate_mint(rpc_client, token)?;
+        let associated_token_address = get_associated_token_address(&owner, &token);
+        cli_address.associated_token_address = Some(associated_token_address.to_string());
+    }
+    Ok(config.output_format.formatted_string(&cli_address))
 }
 
 pub fn parse_token_account_info_command(
@@ -2405,13 +2757,23 @@ pub fn process_token_account_info_command(
     config: &CliConfig,
     address: Pubkey
 ) -> ProcessResult {
-
-    Ok("ok".to_string())
+    let account = rpc_client
+        .get_token_account(&address)
+        .map_err(|_| format!("Could not find token account {}", address))?
+        .unwrap();
+    let mint = Pubkey::from_str(&account.mint).unwrap();
+    let owner = Pubkey::from_str(&account.owner).unwrap();
+    let is_associated = get_associated_token_address(&owner, &mint) == address;
+    let cli_token_account = CliTokenAccount {
+        address: address.to_string(),
+        is_associated,
+        account,
+    };
+    Ok(config.output_format.formatted_string(&cli_token_account))
 }
 
 pub fn parse_token_multisig_info_command(
     matches: &ArgMatches<'_>,
-    default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
     let address = pubkey_of_signer(matches, "address", wallet_manager)
@@ -2431,7 +2793,31 @@ pub fn process_token_multisig_info_command(
     config: &CliConfig,
     address: Pubkey
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let account = rpc_client.get_account(&address)?;
+    let multisig = Multisig::unpack(&account.data)
+        .map_err(|_| format!("Not a multisig token account"))?;
+
+    let n = multisig.n as usize;
+    assert!(n <= multisig.signers.len());
+
+    let cli_multisig = CliMultisig {
+        address: address.to_string(),
+        m: multisig.m,
+        n: multisig.n,
+        signers: multisig
+            .signers
+            .iter()
+            .enumerate()
+            .filter_map(|(i, signer)| {
+                if i < n {
+                    Some(signer.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect(),
+    };
+    Ok(config.output_format.formatted_string(&cli_multisig))
 }
 
 pub fn parse_token_cleanup_accounts_command(
@@ -2475,7 +2861,157 @@ pub fn process_token_cleanup_accounts_command(
     multisigner_pubkeys: &Vec<Pubkey>,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    println_display(config, "Fetching token accounts".to_string());
+    let accounts = rpc_client
+        .get_token_accounts_by_owner(&owner, TokenAccountsFilter::ProgramId(mundis_token_program::id()))?;
+    if accounts.is_empty() {
+        println_display(config, "Nothing to do".to_string());
+        return Ok("".to_string());
+    }
+
+    let minimum_balance_for_rent_exemption = if !tx_info.sign_only {
+        rpc_client.get_minimum_balance_for_rent_exemption(TokenAccount::LEN)?
+    } else {
+        0
+    };
+
+    let mut accounts_by_token = HashMap::new();
+    for keyed_account in accounts {
+        if let UiAccountData::Json(parsed_account) = keyed_account.account.data {
+            if parsed_account.program == "token" {
+                if let Ok(TokenAccountType::Account(ui_token_account)) =
+                serde_json::from_value(parsed_account.parsed)
+                {
+                    let frozen = ui_token_account.state == UiAccountState::Frozen;
+
+                    let token = ui_token_account
+                        .mint
+                        .parse::<Pubkey>()
+                        .unwrap_or_else(|err| panic!("Invalid mint: {:?}", err));
+                    let token_account = keyed_account
+                        .pubkey
+                        .parse::<Pubkey>()
+                        .unwrap_or_else(|err| panic!("Invalid token account: {}", err));
+                    let token_amount = ui_token_account
+                        .token_amount
+                        .amount
+                        .parse::<u64>()
+                        .unwrap_or_else(|err| panic!("Invalid token amount: {}", err));
+
+                    let close_authority = ui_token_account.close_authority.map_or(owner, |s| {
+                        s.parse::<Pubkey>()
+                            .unwrap_or_else(|err| panic!("Invalid close authority: {}", err))
+                    });
+
+                    let entry = accounts_by_token.entry(token).or_insert_with(HashMap::new);
+                    entry.insert(
+                        token_account,
+                        (
+                            token_amount,
+                            ui_token_account.token_amount.decimals,
+                            frozen,
+                            close_authority,
+                        ),
+                    );
+                }
+            }
+        }
+    }
+
+    let mut instructions = vec![];
+    let mut lamports_needed = 0;
+
+    for (token, accounts) in accounts_by_token.into_iter() {
+        println_display(config, format!("Processing token: {}", token));
+        let associated_token_account = get_associated_token_address(&owner, &token);
+        let total_balance: u64 = accounts.values().map(|account| account.0).sum();
+
+        if total_balance > 0 && !accounts.contains_key(&associated_token_account) {
+            // Create the associated token account
+            instructions.push(vec![create_associated_token_account(
+                &config.signers[tx_info.fee_payer].pubkey(),
+                &owner,
+                &token,
+            )]);
+            lamports_needed += minimum_balance_for_rent_exemption;
+        }
+
+        for (address, (amount, decimals, frozen, close_authority)) in accounts {
+            match (
+                address == associated_token_account,
+                close_empty_associated_accounts,
+                total_balance > 0,
+            ) {
+                (true, _, true) => continue, // don't ever close associated token account with amount
+                (true, false, _) => continue, // don't close associated token account if close_empty_associated_accounts isn't set
+                (true, true, false) => println_display(
+                    config,
+                    format!("Closing Account {}", associated_token_account),
+                ),
+                _ => {}
+            }
+
+            if frozen {
+                // leave frozen accounts alone
+                continue;
+            }
+
+            let mut account_instructions = vec![];
+
+            // Sanity check!
+            // we shouldn't ever be here, but if we are here, abort!
+            assert!(amount == 0 || address != associated_token_account);
+
+            if amount > 0 {
+                // Transfer the account balance into the associated token account
+                account_instructions.push(transfer_checked(
+                    &mundis_token_program::id(),
+                    &address,
+                    &token,
+                    &associated_token_account,
+                    &owner,
+                    &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+                    amount,
+                    decimals,
+                )?);
+            }
+            // Close the account if config.owner is able to
+            if close_authority == owner {
+                account_instructions.push(close_account(
+                    &mundis_token_program::id(),
+                    &address,
+                    &owner,
+                    &owner,
+                    &multisigner_pubkeys.iter().collect::<Vec<_>>().as_slice(),
+                )?);
+            }
+
+            if !account_instructions.is_empty() {
+                instructions.push(account_instructions);
+            }
+        }
+    }
+
+    let mut result = String::from("");
+    for tx_instructions in instructions {
+        let tx_return = handle_tx(
+            rpc_client,
+            config,
+            lamports_needed,
+            tx_instructions,
+            tx_info
+        )?;
+        result += &match tx_return {
+            TransactionReturnData::CliSignature(signature) => {
+                config.output_format.formatted_string(&signature)
+            }
+            TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+                config.output_format.formatted_string(&sign_only_data)
+            }
+        };
+        result += "\n";
+    }
+    Ok(result)
 }
 
 pub fn parse_token_sync_native_command(
@@ -2484,7 +3020,7 @@ pub fn parse_token_sync_native_command(
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
     let mut bulk_signers: Vec<Option<Box<dyn Signer>>> = vec![];
-    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, multisigner_pubkeys) =
+    let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, _) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
     let address = associated_token_address_for_token_or_override(
@@ -2506,7 +3042,7 @@ pub fn parse_token_sync_native_command(
             native_account_address: address,
             tx_info: create_tx_info(matches, &signer_info, fee_payer_pubkey, nonce_account, nonce_authority_pubkey),
         },
-        signers: CliSigners::new(),
+        signers: signer_info.signers,
     })
 }
 
@@ -2516,7 +3052,22 @@ pub fn process_token_sync_native_command(
     native_account_address: Pubkey,
     tx_info: &TxInfo,
 ) -> ProcessResult {
-    Ok("ok".to_string())
+    let tx_return = handle_tx(
+        rpc_client,
+        config,
+        0,
+        vec![sync_native(&mundis_token_program::id(), &native_account_address)?],
+        tx_info
+    )?;
+
+    Ok(match tx_return {
+        TransactionReturnData::CliSignature(signature) => {
+            config.output_format.formatted_string(&signature)
+        }
+        TransactionReturnData::CliSignOnlyData(sign_only_data) => {
+            config.output_format.formatted_string(&sign_only_data)
+        }
+    })
 }
 
 // Checks if an explicit address was provided, otherwise return the default address.
@@ -2724,4 +3275,106 @@ pub(crate) fn associated_token_address_for_token_or_override(
     let token = token.unwrap();
     let owner = default_signer.signer_from_path(arg_matches, wallet_manager).unwrap().pubkey();
     get_associated_token_address(&owner, &token)
+}
+
+fn check_wallet_balance(
+    rpc_client: &RpcClient,
+    wallet: &Pubkey,
+    required_balance: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let balance = rpc_client.get_balance(wallet)?;
+    if balance < required_balance {
+        Err(format!(
+            "Wallet {}, has insufficient balance: {} required, {} available",
+            wallet,
+            lamports_to_mun(required_balance),
+            lamports_to_mun(balance)
+        )
+            .into())
+    } else {
+        Ok(())
+    }
+}
+
+fn validate_mint(rpc_client: &RpcClient, token: Pubkey) -> Result<(), Box<dyn std::error::Error>> {
+    let mint = rpc_client.get_account(&token);
+    if mint.is_err() || Mint::unpack(&mint.unwrap().data).is_err() {
+        return Err(format!("Invalid mint account {:?}", token).into());
+    }
+    Ok(())
+}
+
+fn sort_and_parse_token_accounts(
+    owner: &Pubkey,
+    accounts: Vec<RpcKeyedAccount>,
+) -> (BTreeMap<String, Vec<CliTokenAccount>>, Vec<UnsupportedAccount>, usize, bool) {
+    let mut mint_accounts: BTreeMap<String, Vec<CliTokenAccount>> = BTreeMap::new();
+    let mut unsupported_accounts = vec![];
+    let mut max_len_balance = 0;
+    let mut includes_aux = false;
+    for keyed_account in accounts {
+        let address = keyed_account.pubkey;
+
+        if let UiAccountData::Json(parsed_account) = keyed_account.account.data {
+            if parsed_account.program != "token" {
+                unsupported_accounts.push(UnsupportedAccount {
+                    address,
+                    err: format!("Unsupported account program: {}", parsed_account.program),
+                });
+            } else {
+                match serde_json::from_value(parsed_account.parsed) {
+                    Ok(TokenAccountType::Account(ui_token_account)) => {
+                        let mint = ui_token_account.mint.clone();
+                        let is_associated = if let Ok(mint) = Pubkey::from_str(&mint) {
+                            get_associated_token_address(owner, &mint).to_string() == address
+                        } else {
+                            includes_aux = true;
+                            false
+                        };
+                        let len_balance = ui_token_account
+                            .token_amount
+                            .real_number_string_trimmed()
+                            .len();
+                        max_len_balance = max_len_balance.max(len_balance);
+                        let parsed_account = CliTokenAccount {
+                            address,
+                            account: ui_token_account,
+                            is_associated,
+                        };
+                        let entry = mint_accounts.entry(mint);
+                        match entry {
+                            Entry::Occupied(_) => {
+                                entry.and_modify(|e| e.push(parsed_account));
+                            }
+                            Entry::Vacant(_) => {
+                                entry.or_insert_with(|| vec![parsed_account]);
+                            }
+                        }
+                    }
+                    Ok(_) => unsupported_accounts.push(UnsupportedAccount {
+                        address,
+                        err: "Not a token account".to_string(),
+                    }),
+                    Err(err) => unsupported_accounts.push(UnsupportedAccount {
+                        address,
+                        err: format!("Account parse failure: {}", err),
+                    }),
+                }
+            }
+        } else {
+            unsupported_accounts.push(UnsupportedAccount {
+                address,
+                err: "Unsupported account data format".to_string(),
+            });
+        }
+    }
+    for (_, array) in mint_accounts.iter_mut() {
+        array.sort_by(|a, b| b.is_associated.cmp(&a.is_associated));
+    }
+    (
+        mint_accounts,
+        unsupported_accounts,
+        max_len_balance,
+        includes_aux,
+    )
 }

@@ -14,7 +14,7 @@ use {
     crossbeam_channel::{Receiver, RecvTimeoutError, SendError, Sender},
     rayon::prelude::*,
     serde::Serialize,
-    mundis_account_decoder::{parse_token::is_known_anima_token_id, UiAccount, UiAccountEncoding},
+    mundis_account_decoder::{parse_token::is_known_mundis_token_id, UiAccount, UiAccountEncoding},
     mundis_client::{
         rpc_filter::RpcFilterType,
         rpc_response::{
@@ -326,7 +326,7 @@ fn filter_account_result(
     // If last_modified_slot < last_notified_slot this means that we last notified for a fork
     // and should notify that the account state has been reverted.
     let results: Box<dyn Iterator<Item = UiAccount>> = if last_modified_slot != last_notified_slot {
-        if is_known_anima_token_id(account.owner())
+        if is_known_mundis_token_id(account.owner())
             && params.encoding == UiAccountEncoding::JsonParsed
         {
             Box::new(iter::once(get_parsed_token_account(
@@ -380,7 +380,7 @@ fn filter_program_results(
         })
     });
     let accounts: Box<dyn Iterator<Item = RpcKeyedAccount>> =
-        if is_known_anima_token_id(&params.pubkey)
+        if is_known_mundis_token_id(&params.pubkey)
             && params.encoding == UiAccountEncoding::JsonParsed
             && !accounts_is_empty
         {

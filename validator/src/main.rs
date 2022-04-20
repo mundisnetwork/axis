@@ -1482,7 +1482,7 @@ pub fn main() {
                 .long("account-index")
                 .takes_value(true)
                 .multiple(true)
-                .possible_values(&["program-id", "spl-token-owner", "spl-token-mint"])
+                .possible_values(&["program-id", "token-owner", "token-mint"])
                 .value_name("INDEX")
                 .help("Enable an accounts index, indexed by the selected account field"),
         )
@@ -2722,8 +2722,8 @@ fn process_account_indexes(matches: &ArgMatches) -> AccountSecondaryIndexes {
         .unwrap_or_default()
         .map(|value| match value {
             "program-id" => AccountIndex::ProgramId,
-            "anima-token-mint" => AccountIndex::AnimaTokenMint,
-            "anima-token-owner" => AccountIndex::AnimaTokenOwner,
+            "token-mint" => AccountIndex::TokenMint,
+            "token-owner" => AccountIndex::TokenOwner,
             _ => unreachable!(),
         })
         .collect();

@@ -9,28 +9,28 @@ use {
 use mundis_token_program::state::{TokenAccount, AccountState, Mint, Multisig};
 
 // A helper function to convert anima_token::id() to mundis_sdk::pubkey::Pubkey
-fn anima_token_id() -> Pubkey {
+fn mundis_token_id() -> Pubkey {
     Pubkey::new_from_array(mundis_sdk::token::program::id().to_bytes())
 }
 
-// Returns all known SPL Token program ids
-pub fn anima_token_ids() -> Vec<Pubkey> {
-    vec![anima_token_id()]
+// Returns all known Token program ids
+pub fn mundis_token_ids() -> Vec<Pubkey> {
+    vec![mundis_token_id()]
 }
 
 // Check if the provided program id as a known Anima Token program id
-pub fn is_known_anima_token_id(program_id: &Pubkey) -> bool {
-    *program_id == anima_token_id()
+pub fn is_known_mundis_token_id(program_id: &Pubkey) -> bool {
+    *program_id == mundis_token_id()
 }
 
 // A helper function to convert anima_token::native_mint::id() to mundis_sdk::pubkey::Pubkey
-pub fn anima_token_native_mint() -> Pubkey {
+pub fn mundis_token_native_mint() -> Pubkey {
     Pubkey::new_from_array(mundis_token_program::native_mint::id().to_bytes())
 }
 
 // The program id of the `anima_token_native_mint` account
-pub fn anima_token_native_mint_program_id() -> Pubkey {
-    anima_token_id()
+pub fn mundis_token_native_mint_program_id() -> Pubkey {
+    mundis_token_id()
 }
 
 pub fn parse_token(
@@ -39,10 +39,10 @@ pub fn parse_token(
 ) -> Result<TokenAccountType, ParseAccountError> {
     if data.len() == TokenAccount::packed_len() {
         let account = TokenAccount::unpack(data)
-            .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::AnimaToken))?;
+            .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::Token))?;
         let decimals = mint_decimals.ok_or_else(|| {
             ParseAccountError::AdditionalDataMissing(
-                "no mint_decimals provided to parse anima-token account".to_string(),
+                "no mint_decimals provided to parse token account".to_string(),
             )
         })?;
         Ok(TokenAccountType::Account(UiTokenAccount {
@@ -70,7 +70,7 @@ pub fn parse_token(
         }))
     } else if data.len() == Mint::packed_len() {
         let mint = Mint::unpack(data)
-            .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::AnimaToken))?;
+            .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::Token))?;
         Ok(TokenAccountType::Mint(UiMint {
             mint_authority: match mint.mint_authority {
                 Some(pubkey) => Some(pubkey.to_string()),
@@ -86,7 +86,7 @@ pub fn parse_token(
         }))
     } else if data.len() == Multisig::packed_len() {
         let multisig = Multisig::unpack(data)
-            .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::AnimaToken))?;
+            .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::Token))?;
         Ok(TokenAccountType::Multisig(UiMultisig {
             num_required_signers: multisig.m,
             num_valid_signers: multisig.n,
@@ -105,7 +105,7 @@ pub fn parse_token(
         }))
     } else {
         Err(ParseAccountError::AccountNotParsable(
-            ParsableAccount::AnimaToken,
+            ParsableAccount::Token,
         ))
     }
 }

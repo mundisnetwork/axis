@@ -3,7 +3,7 @@ use {
     mundis_account_decoder::{
         parse_account_data::AccountAdditionalData,
         parse_token::{
-            get_token_account_mint, anima_token_native_mint, anima_token_native_mint_program_id,
+            get_token_account_mint, mundis_token_native_mint, mundis_token_native_mint_program_id,
         },
         UiAccount, UiAccountData, UiAccountEncoding,
     },
@@ -25,7 +25,7 @@ pub fn get_parsed_token_account(
     let additional_data = get_token_account_mint(account.data())
         .and_then(|mint_pubkey| get_mint_owner_and_decimals(&bank, &mint_pubkey).ok())
         .map(|(_, decimals)| AccountAdditionalData {
-            anima_token_decimals: Some(decimals),
+            token_decimals: Some(decimals),
         });
 
     UiAccount::encode(
@@ -52,7 +52,7 @@ where
                 mint_decimals.insert(mint_pubkey, decimals);
                 Some(decimals)
             });
-            AccountAdditionalData { anima_token_decimals }
+            AccountAdditionalData { token_decimals: anima_token_decimals }
         });
 
         let maybe_encoded_account = UiAccount::encode(
@@ -76,9 +76,9 @@ where
 /// Analyze a mint Pubkey that may be the native_mint and get the mint-account owner (token
 /// program_id) and decimals
 pub fn get_mint_owner_and_decimals(bank: &Arc<Bank>, mint: &Pubkey) -> Result<(Pubkey, u8)> {
-    if mint == &anima_token_native_mint() {
+    if mint == &mundis_token_native_mint() {
         Ok((
-            anima_token_native_mint_program_id(),
+            mundis_token_native_mint_program_id(),
             mundis_token_program::native_mint::DECIMALS,
         ))
     } else {

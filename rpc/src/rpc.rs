@@ -10,7 +10,7 @@ use {
     jsonrpc_derive::rpc,
     serde::{Deserialize, Serialize},
     mundis_account_decoder::{
-        parse_token::{is_known_anima_token_id, token_amount_to_ui_amount, UiTokenAmount},
+        parse_token::{is_known_mundis_token_id, token_amount_to_ui_amount, UiTokenAmount},
         UiAccount, UiAccountEncoding, UiDataSliceConfig, MAX_BASE58_BYTES,
     },
     mundis_client::{
@@ -43,7 +43,7 @@ use {
         bank::{Bank, TransactionSimulationResult},
         bank_forks::BankForks,
         commitment::{BlockCommitmentArray, BlockCommitmentCache, CommitmentSlots},
-        inline_anima_token::{ANIMA_TOKEN_ACCOUNT_MINT_OFFSET, ANIMA_TOKEN_ACCOUNT_OWNER_OFFSET},
+        inline_mundis_token::{ANIMA_TOKEN_ACCOUNT_MINT_OFFSET, ANIMA_TOKEN_ACCOUNT_OWNER_OFFSET},
         non_circulating_supply::calculate_non_circulating_supply,
         snapshot_config::SnapshotConfig,
         snapshot_utils,
@@ -392,7 +392,7 @@ impl JsonRpcRequestProcessor {
                 self.get_filtered_program_accounts(&bank, program_id, filters)?
             }
         };
-        let result = if is_known_anima_token_id(program_id)
+        let result = if is_known_mundis_token_id(program_id)
             && encoding == UiAccountEncoding::JsonParsed
         {
             get_parsed_token_accounts(bank.clone(), keyed_accounts.into_iter()).collect()
@@ -1594,7 +1594,7 @@ impl JsonRpcRequestProcessor {
             Error::invalid_params("Invalid param: could not find account".to_string())
         })?;
 
-        if !is_known_anima_token_id(account.owner()) {
+        if !is_known_mundis_token_id(account.owner()) {
             return Err(Error::invalid_params(
                 "Invalid param: not a Token account".to_string(),
             ));
@@ -1617,7 +1617,7 @@ impl JsonRpcRequestProcessor {
         let mint_account = bank.get_account(mint).ok_or_else(|| {
             Error::invalid_params("Invalid param: could not find account".to_string())
         })?;
-        if !is_known_anima_token_id(mint_account.owner()) {
+        if !is_known_mundis_token_id(mint_account.owner()) {
             return Err(Error::invalid_params(
                 "Invalid param: not a Token mint".to_string(),
             ));
@@ -1637,7 +1637,7 @@ impl JsonRpcRequestProcessor {
     ) -> Result<RpcResponse<Vec<RpcTokenAccountBalance>>> {
         let bank = self.bank(commitment);
         let (mint_owner, decimals) = get_mint_owner_and_decimals(&bank, mint)?;
-        if !is_known_anima_token_id(&mint_owner) {
+        if !is_known_mundis_token_id(&mint_owner) {
             return Err(Error::invalid_params(
                 "Invalid param: not a Token mint".to_string(),
             ));
@@ -1825,7 +1825,7 @@ impl JsonRpcRequestProcessor {
         }
     }
 
-    /// Get an iterator of anima-token accounts by owner address
+    /// Get an iterator of token accounts by owner address
     fn get_filtered_anima_token_accounts_by_owner(
         &self,
         bank: &Arc<Bank>,
@@ -1852,7 +1852,7 @@ impl JsonRpcRequestProcessor {
         if self
             .config
             .account_indexes
-            .contains(&AccountIndex::AnimaTokenOwner)
+            .contains(&AccountIndex::TokenOwner)
         {
             if !self.config.account_indexes.include_key(owner_key) {
                 return Err(RpcCustomError::KeyExcludedFromSecondaryIndex {
@@ -1861,7 +1861,7 @@ impl JsonRpcRequestProcessor {
             }
             Ok(bank
                 .get_filtered_indexed_accounts(
-                    &IndexKey::SplTokenOwner(*owner_key),
+                    &IndexKey::TokenOwner(*owner_key),
                     |account| {
                         account.owner() == program_id
                             && filters.iter().all(|filter_type| match filter_type {
@@ -1884,7 +1884,7 @@ impl JsonRpcRequestProcessor {
         }
     }
 
-    /// Get an iterator of anima-token accounts by mint address
+    /// Get an iterator of token accounts by mint address
     fn get_filtered_anima_token_accounts_by_mint(
         &self,
         bank: &Arc<Bank>,
@@ -1910,7 +1910,7 @@ impl JsonRpcRequestProcessor {
         if self
             .config
             .account_indexes
-            .contains(&AccountIndex::AnimaTokenMint)
+            .contains(&AccountIndex::TokenMint)
         {
             if !self.config.account_indexes.include_key(mint_key) {
                 return Err(RpcCustomError::KeyExcludedFromSecondaryIndex {
@@ -1919,7 +1919,7 @@ impl JsonRpcRequestProcessor {
             }
             Ok(bank
                 .get_filtered_indexed_accounts(
-                    &IndexKey::SplTokenMint(*mint_key),
+                    &IndexKey::TokenMint(*mint_key),
                     |account| {
                         account.owner() == program_id
                             && filters.iter().all(|filter_type| match filter_type {
@@ -2120,7 +2120,7 @@ fn get_encoded_account(
 ) -> Result<Option<UiAccount>> {
     match bank.get_account(pubkey) {
         Some(account) => {
-            let response = if is_known_anima_token_id(account.owner())
+            let response = if is_known_mundis_token_id(account.owner())
                 && encoding == UiAccountEncoding::JsonParsed
             {
                 get_parsed_token_account(bank.clone(), pubkey, account)
@@ -2160,7 +2160,7 @@ fn encode_account<T: ReadableAccount>(
 /// NOTE: `optimize_filters()` should almost always be called before using this method because of
 /// the strict match on `MemcmpEncodedBytes::Bytes`.
 fn get_anima_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Option<Pubkey> {
-    if !is_known_anima_token_id(program_id) {
+    if !is_known_mundis_token_id(program_id) {
         return None;
     }
     let mut data_size_filter: Option<u64> = None;
@@ -2202,7 +2202,7 @@ fn get_anima_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) 
 /// NOTE: `optimize_filters()` should almost always be called before using this method because of
 /// the strict match on `MemcmpEncodedBytes::Bytes`.
 fn get_anima_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Option<Pubkey> {
-    if !is_known_anima_token_id(program_id) {
+    if !is_known_mundis_token_id(program_id) {
         return None;
     }
     let mut data_size_filter: Option<u64> = None;
@@ -2248,7 +2248,7 @@ fn get_token_program_id_and_mint(
     match token_account_filter {
         TokenAccountsFilter::Mint(mint) => {
             let (mint_owner, _) = get_mint_owner_and_decimals(bank, &mint)?;
-            if !is_known_anima_token_id(&mint_owner) {
+            if !is_known_mundis_token_id(&mint_owner) {
                 return Err(Error::invalid_params(
                     "Invalid param: not a Token mint".to_string(),
                 ));
@@ -2256,7 +2256,7 @@ fn get_token_program_id_and_mint(
             Ok((mint_owner, Some(mint)))
         }
         TokenAccountsFilter::ProgramId(program_id) => {
-            if is_known_anima_token_id(&program_id) {
+            if is_known_mundis_token_id(&program_id) {
                 Ok((program_id, None))
             } else {
                 Err(Error::invalid_params(
@@ -3943,7 +3943,7 @@ pub mod tests {
     };
 
     fn anima_token_id() -> Pubkey {
-        mundis_account_decoder::parse_token::anima_token_ids()[0]
+        mundis_account_decoder::parse_token::mundis_token_ids()[0]
     }
 
     const TEST_MINT_LAMPORTS: u64 = 1_000_000;

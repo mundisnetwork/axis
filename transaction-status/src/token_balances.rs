@@ -1,7 +1,7 @@
 use {
     crate::TransactionTokenBalance,
     mundis_account_decoder::parse_token::{
-        is_known_anima_token_id, anima_token_native_mint,
+        is_known_mundis_token_id, mundis_token_native_mint,
         token_amount_to_ui_amount, UiTokenAmount,
     },
     mundis_measure::measure::Measure,
@@ -33,12 +33,12 @@ impl TransactionTokenBalancesSet {
 }
 
 fn get_mint_decimals(bank: &Bank, mint: &Pubkey) -> Option<u8> {
-    if mint == &anima_token_native_mint() {
+    if mint == &mundis_token_native_mint() {
         Some(mundis_token_program::native_mint::DECIMALS)
     } else {
         let mint_account = bank.get_account(mint)?;
 
-        if !is_known_anima_token_id(mint_account.owner()) {
+        if !is_known_mundis_token_id(mint_account.owner()) {
             return None;
         }
 
@@ -62,12 +62,12 @@ pub fn collect_token_balances(
         let has_token_program = transaction
             .message()
             .account_keys_iter()
-            .any(is_known_anima_token_id);
+            .any(is_known_mundis_token_id);
 
         let mut transaction_balances: Vec<TransactionTokenBalance> = vec![];
         if has_token_program {
             for (index, account_id) in transaction.message().account_keys_iter().enumerate() {
-                if transaction.message().is_invoked(index) || is_known_anima_token_id(account_id) {
+                if transaction.message().is_invoked(index) || is_known_mundis_token_id(account_id) {
                     continue;
                 }
 
@@ -110,7 +110,7 @@ fn collect_token_balance_from_account(
 ) -> Option<TokenBalanceData> {
     let account = bank.get_account(account_id)?;
 
-    if !is_known_anima_token_id(account.owner()) {
+    if !is_known_mundis_token_id(account.owner()) {
         return None;
     }
 

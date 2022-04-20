@@ -5,7 +5,7 @@ use {
         bucket_map_holder::{Age, BucketMapHolder},
         contains::Contains,
         in_mem_accounts_index::{InMemAccountsIndex, InsertNewEntryResults},
-        inline_anima_token::{self, GenericTokenAccount},
+        inline_mundis_token::{self, GenericTokenAccount},
         pubkey_bins::PubkeyBinCalculator24,
         secondary_index::*,
     },
@@ -123,15 +123,15 @@ enum ScanTypes<R: RangeBounds<Pubkey>> {
 #[derive(Debug, Clone, Copy)]
 pub enum IndexKey {
     ProgramId(Pubkey),
-    SplTokenMint(Pubkey),
-    SplTokenOwner(Pubkey),
+    TokenMint(Pubkey),
+    TokenOwner(Pubkey),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AccountIndex {
     ProgramId,
-    AnimaTokenMint,
-    AnimaTokenOwner,
+    TokenMint,
+    TokenOwner,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -1074,7 +1074,7 @@ impl<T: IndexValue> AccountsIndex<T> {
                     config,
                 );
             }
-            ScanTypes::Indexed(IndexKey::SplTokenMint(mint_key)) => {
+            ScanTypes::Indexed(IndexKey::TokenMint(mint_key)) => {
                 self.do_scan_secondary_index(
                     ancestors,
                     func,
@@ -1084,7 +1084,7 @@ impl<T: IndexValue> AccountsIndex<T> {
                     config,
                 );
             }
-            ScanTypes::Indexed(IndexKey::SplTokenOwner(owner_key)) => {
+            ScanTypes::Indexed(IndexKey::TokenOwner(owner_key)) => {
                 self.do_scan_secondary_index(
                     ancestors,
                     func,
@@ -1560,7 +1560,7 @@ impl<T: IndexValue> AccountsIndex<T> {
         account_indexes: &AccountSecondaryIndexes,
     ) {
         if *account_owner == *token_id {
-            if account_indexes.contains(&AccountIndex::AnimaTokenOwner) {
+            if account_indexes.contains(&AccountIndex::TokenOwner) {
                 if let Some(owner_key) = G::unpack_account_owner(account_data) {
                     if account_indexes.include_key(owner_key) {
                         self.anima_token_owner_index.insert(owner_key, pubkey);
@@ -1568,7 +1568,7 @@ impl<T: IndexValue> AccountsIndex<T> {
                 }
             }
 
-            if account_indexes.contains(&AccountIndex::AnimaTokenMint) {
+            if account_indexes.contains(&AccountIndex::TokenMint) {
                 if let Some(mint_key) = G::unpack_account_mint(account_data) {
                     if account_indexes.include_key(mint_key) {
                         self.anima_token_mint_index.insert(mint_key, pubkey);
@@ -1608,8 +1608,8 @@ impl<T: IndexValue> AccountsIndex<T> {
         // (as persisted tombstone for snapshots). This will then ultimately be
         // filtered out by post-scan filters, like in `get_filtered_anima_token_accounts_by_owner()`.
 
-        self.update_anima_token_secondary_indexes::<inline_anima_token::Account>(
-            &inline_anima_token::id(),
+        self.update_anima_token_secondary_indexes::<inline_mundis_token::Account>(
+            &inline_mundis_token::id(),
             pubkey,
             account_owner,
             account_data,
@@ -1767,11 +1767,11 @@ impl<T: IndexValue> AccountsIndex<T> {
             self.program_id_index.remove_by_inner_key(inner_key);
         }
 
-        if account_indexes.contains(&AccountIndex::AnimaTokenOwner) {
+        if account_indexes.contains(&AccountIndex::TokenOwner) {
             self.anima_token_owner_index.remove_by_inner_key(inner_key);
         }
 
-        if account_indexes.contains(&AccountIndex::AnimaTokenMint) {
+        if account_indexes.contains(&AccountIndex::TokenMint) {
             self.anima_token_mint_index.remove_by_inner_key(inner_key);
         }
     }
@@ -2000,7 +2000,7 @@ impl<T: IndexValue> AccountsIndex<T> {
 pub mod tests {
     use {
         super::*,
-        crate::inline_anima_token::*,
+        crate::inline_mundis_token::*,
         mundis_sdk::{
             pubkey::PUBKEY_BYTES,
             signature::{Keypair, Signer},
@@ -2015,7 +2015,7 @@ pub mod tests {
 
     pub fn anima_token_mint_index_enabled() -> AccountSecondaryIndexes {
         let mut account_indexes = HashSet::new();
-        account_indexes.insert(AccountIndex::AnimaTokenMint);
+        account_indexes.insert(AccountIndex::TokenMint);
         AccountSecondaryIndexes {
             indexes: account_indexes,
             keys: None,
@@ -2024,7 +2024,7 @@ pub mod tests {
 
     pub fn anima_token_owner_index_enabled() -> AccountSecondaryIndexes {
         let mut account_indexes = HashSet::new();
-        account_indexes.insert(AccountIndex::AnimaTokenOwner);
+        account_indexes.insert(AccountIndex::TokenOwner);
         AccountSecondaryIndexes {
             indexes: account_indexes,
             keys: None,
@@ -3795,7 +3795,7 @@ pub mod tests {
         let index_key = Pubkey::new_unique();
         let account_key = Pubkey::new_unique();
 
-        let mut account_data = vec![0; inline_anima_token::Account::get_packed_len()];
+        let mut account_data = vec![0; inline_mundis_token::Account::get_packed_len()];
         account_data[key_start..key_end].clone_from_slice(&(index_key.to_bytes()));
 
         // Insert slots into secondary index
@@ -3804,7 +3804,7 @@ pub mod tests {
                 *slot,
                 &account_key,
                 // Make sure these accounts are added to secondary index
-                &inline_anima_token::id(),
+                &inline_mundis_token::id(),
                 &account_data,
                 secondary_indexes,
                 true,
@@ -3971,7 +3971,7 @@ pub mod tests {
         let mut secondary_indexes = secondary_indexes.clone();
         let account_key = Pubkey::new_unique();
         let index_key = Pubkey::new_unique();
-        let mut account_data = vec![0; inline_anima_token::Account::get_packed_len()];
+        let mut account_data = vec![0; inline_mundis_token::Account::get_packed_len()];
         account_data[key_start..key_end].clone_from_slice(&(index_key.to_bytes()));
 
         // Wrong program id
@@ -4057,7 +4057,7 @@ pub mod tests {
         let (key_start, key_end, secondary_indexes) = create_dashmap_secondary_index_state();
         let index = AccountsIndex::<bool>::default_for_tests();
         run_test_anima_token_secondary_indexes(
-            &inline_anima_token::id(),
+            &inline_mundis_token::id(),
             &index,
             &index.anima_token_mint_index,
             key_start,
@@ -4071,7 +4071,7 @@ pub mod tests {
         let (key_start, key_end, secondary_indexes) = create_rwlock_secondary_index_state();
         let index = AccountsIndex::<bool>::default_for_tests();
         run_test_anima_token_secondary_indexes(
-            &inline_anima_token::id(),
+            &inline_mundis_token::id(),
             &index,
             &index.anima_token_owner_index,
             key_start,
@@ -4094,10 +4094,10 @@ pub mod tests {
         let secondary_key1 = Pubkey::new_unique();
         let secondary_key2 = Pubkey::new_unique();
         let slot = 1;
-        let mut account_data1 = vec![0; inline_anima_token::Account::get_packed_len()];
+        let mut account_data1 = vec![0; inline_mundis_token::Account::get_packed_len()];
         account_data1[index_key_start..index_key_end]
             .clone_from_slice(&(secondary_key1.to_bytes()));
-        let mut account_data2 = vec![0; inline_anima_token::Account::get_packed_len()];
+        let mut account_data2 = vec![0; inline_mundis_token::Account::get_packed_len()];
         account_data2[index_key_start..index_key_end]
             .clone_from_slice(&(secondary_key2.to_bytes()));
 
@@ -4174,7 +4174,7 @@ pub mod tests {
         let (key_start, key_end, account_index) = create_dashmap_secondary_index_state();
         let index = AccountsIndex::<bool>::default_for_tests();
         run_test_secondary_indexes_same_slot_and_forks(
-            &inline_anima_token::id(),
+            &inline_mundis_token::id(),
             &index,
             &index.anima_token_mint_index,
             key_start,
@@ -4188,7 +4188,7 @@ pub mod tests {
         let (key_start, key_end, account_index) = create_rwlock_secondary_index_state();
         let index = AccountsIndex::<bool>::default_for_tests();
         run_test_secondary_indexes_same_slot_and_forks(
-            &inline_anima_token::id(),
+            &inline_mundis_token::id(),
             &index,
             &index.anima_token_owner_index,
             key_start,

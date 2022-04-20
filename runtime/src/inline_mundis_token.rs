@@ -1,7 +1,7 @@
-/// Partial SPL Token declarations inlined to avoid an external dependency on the anima-token crate
+/// Partial Token declarations inlined to avoid an external dependency on the mundis-token-program crate
 use mundis_sdk::pubkey::{Pubkey, PUBKEY_BYTES};
 
-mundis_sdk::declare_id!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+mundis_sdk::declare_id!("Token11111111111111111111111111111111111111");
 
 /*
     anima_token::state::Account {
