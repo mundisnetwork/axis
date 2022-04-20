@@ -1,5 +1,5 @@
 [package]
-name = "mundis-token-program"
+name = "mundis-sidechain-registry-program"
 version = "1.9.14"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
@@ -8,13 +8,14 @@ homepage = "https://mundis.io/"
 edition = "2021"
 
 [dependencies]
-arrayref = "0.3.6"
-bincode = "1.3.1"
+bincode = "1.3.3"
+log = "0.4.14"
 num-derive = "0.3"
 num-traits = "0.2"
-num_enum = "0.5.1"
-mundis-program-runtime = { path = "../../program-runtime", version = "=1.9.14" }
-mundis-sdk = { path = "../../sdk", version = "=1.9.14" }
 serde = "1.0.130"
 serde_derive = "1.0.103"
+mundis-program-runtime = { path = "../../program-runtime", version = "=1.9.14" }
+mundis-sdk = { path = "../../sdk", version = "=1.9.14" }
+mundis-token-program = { path = "../token", version = "=1.9.14" }
 thiserror = "1.0"
+

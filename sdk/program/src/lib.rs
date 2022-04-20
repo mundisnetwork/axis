@@ -74,6 +74,12 @@ pub mod memo {
     }
 }
 
+pub mod sidechain_registry {
+    pub mod program {
+        crate::declare_id!("ScReg11111111111111111111111111111111111111");
+    }
+}
+
 pub mod token {
     pub mod program {
         crate::declare_id!("Token11111111111111111111111111111111111111");
@@ -85,6 +91,7 @@ pub mod token_account {
         crate::declare_id!("TokenAccount1111111111111111111111111111111");
     }
 }
+
 
 /// Same as `declare_id` except report that this id has been deprecated
 pub use mundis_sdk_macro::program_declare_deprecated_id as declare_deprecated_id;

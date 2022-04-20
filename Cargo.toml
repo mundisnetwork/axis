@@ -34,6 +34,7 @@ members = [
     "programs/vote",
     "programs/memo",
     "programs/token",
+    "programs/sidechain-registry",
     "programs/token-account",
     "remote-wallet",
     "rpc",

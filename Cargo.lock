@@ -3308,6 +3308,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "mundis-sidechain-registry-program"
+version = "1.9.14"
+dependencies = [
+ "bincode",
+ "log 0.4.14",
+ "mundis-program-runtime",
+ "mundis-sdk",
+ "mundis-token-program",
+ "num-derive",
+ "num-traits",
+ "serde",
+ "serde_derive",
+ "thiserror",
+]
+
+[[package]]
 name = "mundis-stake-program"
 version = "1.9.14"
 dependencies = [
