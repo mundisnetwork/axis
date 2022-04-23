@@ -121,17 +121,7 @@ macro_rules! impl_sysvar_get {
         fn get() -> Result<Self, ProgramError> {
             let mut var = Self::default();
             let var_addr = &mut var as *mut _ as *mut u8;
-
-            #[cfg(target_arch = "bpf")]
-            let result = unsafe {
-                extern "C" {
-                    fn $syscall_name(var_addr: *mut u8) -> u64;
-                }
-                $syscall_name(var_addr)
-            };
-            #[cfg(not(target_arch = "bpf"))]
             let result = crate::program_stubs::$syscall_name(var_addr);
-
             match result {
                 crate::entrypoint::SUCCESS => Ok(var),
                 e => Err(e.into()),

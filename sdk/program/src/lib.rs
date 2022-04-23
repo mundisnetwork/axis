@@ -74,9 +74,9 @@ pub mod memo {
     }
 }
 
-pub mod sidechain_registry {
+pub mod sidechain {
     pub mod program {
-        crate::declare_id!("ScReg11111111111111111111111111111111111111");
+        crate::declare_id!("SideChain1111111111111111111111111111111111");
     }
 }
 

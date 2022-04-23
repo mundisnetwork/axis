@@ -3210,6 +3210,7 @@ dependencies = [
  "mundis-program-runtime",
  "mundis-rayon-threadlimit",
  "mundis-sdk",
+ "mundis-sidechain-program",
  "mundis-stake-program",
  "mundis-token-account-program",
  "mundis-token-program",
@@ -3308,16 +3309,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "mundis-sidechain-registry-program"
+name = "mundis-sidechain-program"
 version = "1.9.14"
 dependencies = [
+ "arrayref",
  "bincode",
+ "borsh",
  "log 0.4.14",
+ "mundis-logger",
  "mundis-program-runtime",
  "mundis-sdk",
  "mundis-token-program",
  "num-derive",
  "num-traits",
+ "num_enum",
  "serde",
  "serde_derive",
  "thiserror",
@@ -3430,6 +3435,7 @@ dependencies = [
  "mundis-runtime",
  "mundis-sdk",
  "mundis-send-transaction-service",
+ "mundis-sidechain-program",
  "mundis-token-account-program",
  "mundis-token-program",
  "mundis-vote-program",

@@ -218,6 +218,11 @@ fn genesis_builtins() -> Vec<Builtin> {
             "token_account_program",
             mundis_token_account_program::id(),
             with_program_logging!(mundis_token_account_program::token_account_processor::process_instruction),
+        ),
+        Builtin::new(
+            "sidechain_program",
+            mundis_sidechain_program::id(),
+            with_program_logging!(mundis_sidechain_program::sc_processor::process_instruction),
         )
     ]
 }

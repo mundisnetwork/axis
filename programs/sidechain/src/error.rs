@@ -9,18 +9,21 @@ use mundis_sdk::instruction::InstructionError;
 
 /// Errors that may be returned by the program.
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
-pub enum ScRegistryError {
+pub enum SidechainError {
     // 0
-    /// Insufficient funds for the operation requested.
-    #[error("Insufficient funds")]
-    InsufficientFunds,
+    /// The account cannot be initialized because it is already being used.
+    #[error("Chain already registered")]
+    AlreadyRegistered,
+    /// State is invalid for requested operation.
+    #[error("State is invalid for requested operation")]
+    InvalidState,
 }
-impl From<ScRegistryError> for InstructionError {
-    fn from(e: ScRegistryError) -> Self {
+impl From<SidechainError> for InstructionError {
+    fn from(e: SidechainError) -> Self {
         InstructionError::Custom(e as u32)
     }
 }
-impl<T> DecodeError<T> for ScRegistryError {
+impl<T> DecodeError<T> for SidechainError {
     fn type_of() -> &'static str {
         "ScRegistryError"
     }

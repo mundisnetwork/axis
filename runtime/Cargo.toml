@@ -51,6 +51,7 @@ mundis-vote-program = { path = "../programs/vote", version = "=1.9.14" }
 mundis-memo-program = { path = "../programs/memo", version = "=1.9.14" }
 mundis-token-program = { path = "../programs/token", version = "=1.9.14" }
 mundis-token-account-program = { path = "../programs/token-account", version = "=1.9.14" }
+mundis-sidechain-program = { path = "../programs/sidechain", version = "=1.9.14" }
 symlink = "0.1.0"
 tar = "0.4.37"
 fs_extra = "1.2.0"
