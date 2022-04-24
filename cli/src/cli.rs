@@ -284,6 +284,8 @@ pub enum CliCommand {
 
     // Token Commands
     CreateToken {
+        name: String,
+        symbol: String,
         decimals: u8,
         token: Pubkey,
         authority: Pubkey,
@@ -1764,6 +1766,8 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
 
         // Token Commands
         CliCommand::CreateToken {
+            name,
+            symbol,
             token,
             authority,
             decimals,
@@ -1776,6 +1780,8 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             token,
             *authority,
             *decimals,
+            name,
+            symbol,
             *enable_freeze,
             memo.as_ref(),
             tx_info

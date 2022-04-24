@@ -78,6 +78,8 @@ pub fn parse_token(
             },
             supply: mint.supply.to_string(),
             decimals: mint.decimals,
+            name: mint.name,
+            symbol: mint.symbol,
             is_initialized: mint.is_initialized,
             freeze_authority: match mint.freeze_authority {
                 Some(pubkey) => Some(pubkey.to_string()),
@@ -221,6 +223,8 @@ pub fn token_amount_to_ui_amount(amount: u64, decimals: u8) -> UiTokenAmount {
 pub struct UiMint {
     pub mint_authority: Option<String>,
     pub supply: StringAmount,
+    pub name: String,
+    pub symbol: String,
     pub decimals: u8,
     pub is_initialized: bool,
     pub freeze_authority: Option<String>,
@@ -286,6 +290,8 @@ mod test {
         mint.mint_authority = Some(owner_pubkey);
         mint.supply = 42;
         mint.decimals = 3;
+        mint.name = "Test Token".to_string();
+        mint.symbol = "TST".to_string();
         mint.is_initialized = true;
         mint.freeze_authority = Some(owner_pubkey);
         mint.pack(&mut mint_data).unwrap();
@@ -296,6 +302,8 @@ mod test {
                 mint_authority: Some(owner_pubkey.to_string()),
                 supply: 42.to_string(),
                 decimals: 3,
+                name: "Test Token".to_string(),
+                symbol: "TST".to_string(),
                 is_initialized: true,
                 freeze_authority: Some(owner_pubkey.to_string()),
             }),

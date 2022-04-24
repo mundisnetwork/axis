@@ -32,7 +32,7 @@ use mundis_sdk::transaction::Transaction;
 use mundis_token_account_program::get_associated_token_address;
 use mundis_token_account_program::token_account_instruction::create_associated_token_account;
 use mundis_token_program::native_mint;
-use mundis_token_program::state::{Mint, Multisig, TokenAccount};
+use mundis_token_program::state::{MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH, Mint, Multisig, TokenAccount};
 use mundis_token_program::token_instruction::{approve, approve_checked, AuthorityType, burn, burn_checked, close_account, freeze_account, initialize_account, initialize_mint, initialize_multisig, MAX_SIGNERS, MIN_SIGNERS, mint_to, mint_to_checked, revoke, set_authority, sync_native, thaw_account, transfer, transfer_checked};
 
 use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, create_tx_info, ProcessResult, TxInfo};
@@ -148,18 +148,6 @@ impl TokenSubCommands for App<'_, '_> {
                         .arg(memo_arg())
                         .offline_args()
                         .arg(
-                            Arg::with_name("token_keypair")
-                                .value_name("TOKEN_KEYPAIR")
-                                .validator(is_valid_signer)
-                                .takes_value(true)
-                                .index(1)
-                                .help(
-                                    "Specify the token keypair. \
-                             This may be a keypair file or the ASK keyword. \
-                             [default: randomly generated keypair]"
-                                ),
-                        )
-                        .arg(
                             Arg::with_name("mint_authority")
                                 .long("mint-authority")
                                 .alias("owner")
@@ -179,6 +167,36 @@ impl TokenSubCommands for App<'_, '_> {
                                 .takes_value(true)
                                 .default_value(&formatcp!("{}", native_mint::DECIMALS))
                                 .help("Number of base 10 digits to the right of the decimal place"),
+                        )
+                        .arg(
+                            Arg::with_name("name")
+                                .long("name")
+                                .validator(is_token_name_field)
+                                .value_name("TOKEN_NAME")
+                                .takes_value(true)
+                                .index(1)
+                                .help(&formatcp!("Name of the token (max. {} chars)", MAX_NAME_LENGTH)),
+                        )
+                        .arg(
+                            Arg::with_name("symbol")
+                                .long("symbol")
+                                .validator(is_token_symbol_field)
+                                .value_name("TOKEN_SYMBOL")
+                                .takes_value(true)
+                                .index(2)
+                                .help(&formatcp!("Symbol of the token (max. {} chars)", MAX_SYMBOL_LENGTH)),
+                        )
+                        .arg(
+                            Arg::with_name("token_keypair")
+                                .value_name("TOKEN_KEYPAIR")
+                                .validator(is_valid_signer)
+                                .takes_value(true)
+                                .index(3)
+                                .help(
+                                    "Specify the token keypair. \
+                             This may be a keypair file or the ASK keyword. \
+                             [default: randomly generated keypair]"
+                                ),
                         )
                         .arg(
                             Arg::with_name("enable_freeze")
@@ -995,6 +1013,8 @@ pub fn parse_create_token_command(
     let (fee_payer_pubkey, nonce_account, nonce_authority_pubkey, _) =
         add_default_signers(matches, wallet_manager, &mut bulk_signers)?;
 
+    let name = value_t_or_exit!(matches, "name", String);
+    let symbol = value_t_or_exit!(matches, "symbol", String);
     let decimals = value_t_or_exit!(matches, "decimals", u8);
     let mint_authority = pubkey_or_default(matches, "mint_authority", default_signer, wallet_manager);
     let (token_signer, token) = signer_of_or_else(matches, "token_keypair", wallet_manager, new_throwaway_signer)?;
@@ -1009,6 +1029,8 @@ pub fn parse_create_token_command(
 
     Ok(CliCommandInfo {
         command: CliCommand::CreateToken {
+            name,
+            symbol,
             token: token.unwrap(),
             authority: mint_authority,
             decimals,
@@ -1026,6 +1048,8 @@ pub fn process_create_token_command(
     token: &Pubkey,
     authority: Pubkey,
     decimals: u8,
+    name: &String,
+    symbol: &String,
     enable_freeze: bool,
     memo: Option<&String>,
     tx_info: &TxInfo
@@ -1053,6 +1077,8 @@ pub fn process_create_token_command(
             &token,
             &authority,
             freeze_authority_pubkey.as_ref(),
+            name,
+            symbol,
             decimals,
         )?,
     ].with_memo(memo);
@@ -3377,4 +3403,26 @@ fn sort_and_parse_token_accounts(
         max_len_balance,
         includes_aux,
     )
+}
+
+pub fn is_token_name_field(string: String) -> Result<(), String> {
+    if string.len() > MAX_NAME_LENGTH {
+        Err(format!(
+            "token name field longer than {:?}-byte limit",
+            MAX_NAME_LENGTH
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+pub fn is_token_symbol_field(string: String) -> Result<(), String> {
+    if string.len() > MAX_SYMBOL_LENGTH {
+        Err(format!(
+            "token symbol field longer than {:?}-byte limit",
+            MAX_SYMBOL_LENGTH
+        ))
+    } else {
+        Ok(())
+    }
 }

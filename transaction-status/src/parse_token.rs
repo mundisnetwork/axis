@@ -30,6 +30,8 @@ pub fn parse_token(
     }
     match token_instruction {
         TokenInstruction::InitializeMint {
+            name,
+            symbol,
             decimals,
             mint_authority,
             freeze_authority,
@@ -38,6 +40,8 @@ pub fn parse_token(
             let mut value = json!({
                 "mint": account_keys[instruction.accounts[0] as usize].to_string(),
                 "decimals": decimals,
+                "name": name,
+                "symbol": symbol,
                 "mintAuthority": mint_authority.to_string(),
             });
             let map = value.as_object_mut().unwrap();

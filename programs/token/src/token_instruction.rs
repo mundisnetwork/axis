@@ -28,6 +28,8 @@ pub enum TokenInstruction {
     ///   0. `[writable]` The mint to initialize.
     ///
     InitializeMint {
+        name: String,
+        symbol: String,
         /// Number of base 10 digits to the right of the decimal place.
         decimals: u8,
         /// The authority/multisignature to mint tokens.
@@ -384,6 +386,8 @@ pub fn initialize_mint(
     mint_pubkey: &Pubkey,
     mint_authority_pubkey: &Pubkey,
     freeze_authority_pubkey: Option<&Pubkey>,
+    name: &String,
+    symbol: &String,
     decimals: u8,
 ) -> Result<Instruction, InstructionError> {
     check_program_account(token_program_id)?;
@@ -394,6 +398,8 @@ pub fn initialize_mint(
         &TokenInstruction::InitializeMint {
             mint_authority: *mint_authority_pubkey,
             freeze_authority,
+            name: name.clone(),
+            symbol: symbol.clone(),
             decimals,
         },
         vec![

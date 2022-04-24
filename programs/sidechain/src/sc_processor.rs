@@ -112,8 +112,6 @@ impl Processor {
             total_stake: 0,
             is_initialized: true
         };
-        record.pack(chain_account.try_account_ref_mut()?.data_mut());
-
-        Ok(())
+        record.pack(chain_account.try_account_ref_mut()?.data_mut())
     }
 }

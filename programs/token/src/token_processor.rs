@@ -42,12 +42,14 @@ impl Processor {
 
         match limited_deserialize(data)? {
             TokenInstruction::InitializeMint {
+                name,
+                symbol,
                 decimals,
                 mint_authority,
                 freeze_authority,
             } => {
                 ic_msg!(invoke_context, "Instruction: InitializeMint");
-                Self::process_initialize_mint(accounts, decimals, mint_authority, freeze_authority)
+                Self::process_initialize_mint(accounts, name, symbol, decimals, mint_authority, freeze_authority)
             }
             TokenInstruction::InitializeAccount => {
                 ic_msg!(invoke_context, "Instruction: InitializeAccount");
@@ -125,6 +127,8 @@ impl Processor {
 
     pub fn process_initialize_mint(
         accounts: &[KeyedAccount],
+        name: String,
+        symbol: String,
         decimals: u8,
         mint_authority: Pubkey,
         freeze_authority: Option<Pubkey>,
@@ -140,6 +144,8 @@ impl Processor {
 
         mint.mint_authority = Some(mint_authority);
         mint.decimals = decimals;
+        mint.name = name;
+        mint.symbol = symbol;
         mint.is_initialized = true;
         mint.freeze_authority = freeze_authority;
 
@@ -919,10 +925,12 @@ mod tests {
         let owner_key = Pubkey::new_unique();
         let mint_key = Pubkey::new_unique();
         let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
+        let name = String::from("Test Token");
+        let symbol = String::from("TST");
 
         // create new mint
         process_token_instruction(
-            &initialize_mint(&program_id, &mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id, &mint_key, &owner_key, None, name.clone(), symbol.clone(), 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ]).unwrap();
@@ -931,7 +939,7 @@ mod tests {
         assert_eq!(
             Err(TokenError::AlreadyInUse.into()),
             process_token_instruction(
-                &initialize_mint(&program_id, &mint_key, &owner_key, None, 2).unwrap(),
+                &initialize_mint(&program_id, &mint_key, &owner_key, None, name.clone(), symbol.clone(), 2).unwrap(),
                 &[
                     (true, true, mint_key, mint_account.clone()),
                 ])
@@ -947,6 +955,8 @@ mod tests {
         let owner_account = AccountSharedData::new_ref(0, 0, &owner_key);
         let mint_key = Pubkey::new_unique();
         let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
+        let name = String::from("Test Token");
+        let symbol = String::from("TST");
 
         // mint is not valid (not initialized)
         assert_eq!(
@@ -962,7 +972,7 @@ mod tests {
 
         // create mint
         process_token_instruction(
-            &initialize_mint(&program_id, &mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id, &mint_key, &owner_key, None, name.clone(), symbol.clone(), 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ]).unwrap();
@@ -1009,7 +1019,7 @@ mod tests {
 
         // create mint
         process_token_instruction(
-            &initialize_mint(&program_id,&mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id,&mint_key, &owner_key, None, "Test Token".to_string(), "TST".to_string(), 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ],
@@ -1218,7 +1228,7 @@ mod tests {
 
         // create mint
         process_token_instruction(
-            &initialize_mint(&program_id,&mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id,&mint_key, &owner_key, None, "Test Token".to_string(), "TST".to_string(), 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ],
@@ -1524,7 +1534,7 @@ mod tests {
 
         // create mint
         process_token_instruction(
-            &initialize_mint(&program_id,&mint_key, &owner_key, None, 2).unwrap(),
+            &initialize_mint(&program_id,&mint_key, &owner_key, None, "Test Token".to_string(), "TST".to_string(), 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ]).unwrap();
@@ -1596,7 +1606,7 @@ mod tests {
 
         // create new mint with multisig owner
         process_token_instruction(
-            &initialize_mint(&program_id,&mint_key, &multisig_key, None, 2).unwrap(),
+            &initialize_mint(&program_id,&mint_key, &multisig_key, None, "Test Token".to_string(), "TST".to_string(), 2).unwrap(),
             &[
                 (true, true, mint_key, mint_account.clone()),
             ],
@@ -1729,7 +1739,7 @@ mod tests {
         let mint2_key = Pubkey::new_unique();
         let mint2_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
         process_token_instruction(
-            &initialize_mint(&program_id,&mint2_key, &multisig_key, Some(&multisig_key), 2).unwrap(),
+            &initialize_mint(&program_id,&mint2_key, &multisig_key, Some(&multisig_key), "Test Token".to_string(), "TST".to_string(), 2).unwrap(),
             &[
                 (true, true, mint2_key, mint2_account.clone()),
             ],

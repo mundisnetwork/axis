@@ -9,14 +9,21 @@ use mundis_sdk::pubkey::Pubkey;
 use crate::error::TokenError;
 use crate::token_instruction::MAX_SIGNERS;
 
+pub const MAX_NAME_LENGTH: usize = 32;
+pub const MAX_SYMBOL_LENGTH: usize = 10;
+
 /// Mint data.
 #[repr(C)]
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct Mint {
     /// Optional authority used to mint new tokens. The mint authority may only be provided during
     /// mint creation. If no mint authority is present then the mint has a fixed supply and no
     /// further tokens may be minted.
     pub mint_authority: Option<Pubkey>,
+    /// The name of the asset
+    pub name: String,
+    /// The symbol for the asset
+    pub symbol: String,
     /// Total supply of tokens.
     pub supply: u64,
     /// Number of base 10 digits to the right of the decimal place.
@@ -28,7 +35,7 @@ pub struct Mint {
 }
 impl Mint {
     /// The length, in bytes, of the packed representation
-    pub const LEN: usize = 82;
+    pub const LEN: usize = 134;
 
     pub fn packed_len() -> usize {
         return Self::LEN;
@@ -62,7 +69,7 @@ impl IsInitialized for Mint {
 }
 
 /// Account data.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct TokenAccount {
     /// The mint associated with this account
     pub mint: Pubkey,
@@ -86,7 +93,7 @@ pub struct TokenAccount {
 }
 impl TokenAccount {
     /// The length, in bytes, of the packed representation
-    pub const LEN: usize = 165;
+    pub const LEN: usize = 151;
 
     /// Checks if account is frozen
     pub fn is_frozen(&self) -> bool {
@@ -198,14 +205,20 @@ impl IsInitialized for Multisig {
 
 #[cfg(test)]
 mod tests {
+    use std::str::from_utf8;
     use mundis_sdk::pubkey::Pubkey;
-    use crate::state::{TokenAccount, AccountState, Mint, Multisig};
+    use crate::state::{TokenAccount, AccountState, Mint, Multisig, MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH};
     use crate::token_instruction::MAX_SIGNERS;
 
     #[test]
     fn test_pack_unpack() {
+        let max_name_str = from_utf8(&['a' as u8;MAX_NAME_LENGTH]).unwrap();
+        let max_symbol_str = from_utf8(&['a' as u8;MAX_SYMBOL_LENGTH]).unwrap();
+
         // Mint
         let check = Mint {
+            name: String::from(max_name_str),
+            symbol: String::from(max_symbol_str),
             mint_authority: Some(Pubkey::new(&[1; 32])),
             supply: 42,
             decimals: 7,
