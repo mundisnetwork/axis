@@ -6,7 +6,7 @@
   />
 </p>
 <h1>MUNDIS</h1>
-<h3>Layer 1 Axis Node</h3>
+<h3>Layer 0 Blockchain Node</h3>
 </div>
 
 # TL;DR
