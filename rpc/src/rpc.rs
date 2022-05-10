@@ -386,7 +386,7 @@ impl JsonRpcRequestProcessor {
         let keyed_accounts = {
             if let Some(owner) = get_anima_token_owner_filter(program_id, &filters) {
                 self.get_filtered_anima_token_accounts_by_owner(&bank, program_id, &owner, filters)?
-            } else if let Some(mint) = get_anima_token_mint_filter(program_id, &filters) {
+            } else if let Some(mint) = get_token_mint_filter(program_id, &filters) {
                 self.get_filtered_anima_token_accounts_by_mint(&bank, program_id, &mint, filters)?
             } else {
                 self.get_filtered_program_accounts(&bank, program_id, filters)?
@@ -2155,7 +2155,7 @@ fn encode_account<T: ReadableAccount>(
     }
 }
 
-/// Analyze custom filters to determine if the result will be a subset of spl-token accounts by
+/// Analyze custom filters to determine if the result will be a subset of mundis-token-program accounts by
 /// owner.
 /// NOTE: `optimize_filters()` should almost always be called before using this method because of
 /// the strict match on `MemcmpEncodedBytes::Bytes`.
@@ -2197,11 +2197,11 @@ fn get_anima_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) 
     }
 }
 
-/// Analyze custom filters to determine if the result will be a subset of spl-token accounts by
+/// Analyze custom filters to determine if the result will be a subset of mundis-token-program accounts by
 /// mint.
 /// NOTE: `optimize_filters()` should almost always be called before using this method because of
 /// the strict match on `MemcmpEncodedBytes::Bytes`.
-fn get_anima_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Option<Pubkey> {
+fn get_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Option<Pubkey> {
     if !is_known_mundis_token_id(program_id) {
         return None;
     }
@@ -3892,7 +3892,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 pub mod tests {
     use {
         super::{
-            rpc_accounts::*, rpc_bank::*, rpc_deprecated_v1_9::*, rpc_full::*, rpc_minimal::*, *,
+            rpc_accounts::*, rpc_bank::*, rpc_full::*, rpc_minimal::*, *,
         },
         crate::{
             optimistically_confirmed_bank_tracker::{
@@ -3935,12 +3935,12 @@ pub mod tests {
             vote_instruction,
             vote_state::{BlockTimestamp, Vote, VoteInit, VoteStateVersions, MAX_LOCKOUT_HISTORY},
         },
-        anima_token::{
-            mundis_program::{program_option::COption, pubkey::Pubkey as SplTokenPubkey},
+        mundis_token_program::{
             state::{AccountState as TokenAccountState, Mint},
         },
         std::collections::HashMap,
     };
+    use mundis_sdk::fee_calculator::FeeCalculator;
 
     fn anima_token_id() -> Pubkey {
         mundis_account_decoder::parse_token::mundis_token_ids()[0]
@@ -4144,7 +4144,6 @@ pub mod tests {
         io.extend_with(rpc_bank::BankDataImpl.to_delegate());
         io.extend_with(rpc_accounts::AccountsDataImpl.to_delegate());
         io.extend_with(rpc_full::FullImpl.to_delegate());
-        io.extend_with(rpc_deprecated_v1_9::DeprecatedV1_9Impl.to_delegate());
         RpcHandler {
             io,
             meta,
@@ -6839,21 +6838,21 @@ pub mod tests {
         let RpcHandler { io, meta, bank, .. } =
             start_rpc_handler_with_tx(&mundis_sdk::pubkey::new_rand());
 
-        let mut account_data = vec![0; TokenAccount::get_packed_len()];
-        let mint = SplTokenPubkey::new(&[2; 32]);
-        let owner = SplTokenPubkey::new(&[3; 32]);
-        let delegate = SplTokenPubkey::new(&[4; 32]);
+        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let mint = Pubkey::new(&[2; 32]);
+        let owner = Pubkey::new(&[3; 32]);
+        let delegate = Pubkey::new(&[4; 32]);
         let token_account = TokenAccount {
             mint,
             owner,
-            delegate: COption::Some(delegate),
+            delegate: Some(delegate),
             amount: 420,
             state: TokenAccountState::Initialized,
-            is_native: COption::None,
+            is_native: false,
             delegated_amount: 30,
-            close_authority: COption::Some(owner),
+            close_authority: Some(owner),
         };
-        TokenAccount::pack(token_account, &mut account_data).unwrap();
+        TokenAccount::pack(&token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
@@ -6864,15 +6863,17 @@ pub mod tests {
         bank.store_account(&token_account_pubkey, &token_account);
 
         // Add the mint
-        let mut mint_data = vec![0; Mint::get_packed_len()];
+        let mut mint_data = vec![0; Mint::packed_len()];
         let mint_state = Mint {
-            mint_authority: COption::Some(owner),
+            mint_authority: Some(owner),
+            name: "Token1".to_string(),
+            symbol: "TOK1".to_string(),
             supply: 500,
             decimals: 2,
             is_initialized: true,
-            freeze_authority: COption::Some(owner),
+            freeze_authority: Some(owner),
         };
-        Mint::pack(mint_state, &mut mint_data).unwrap();
+        Mint::pack(&mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
@@ -6937,19 +6938,19 @@ pub mod tests {
         bank.store_account(&other_token_account_pubkey, &token_account);
 
         // Add another token account with the same owner and delegate but different mint
-        let mut account_data = vec![0; TokenAccount::get_packed_len()];
-        let new_mint = SplTokenPubkey::new(&[5; 32]);
+        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let new_mint = Pubkey::new(&[5; 32]);
         let token_account = TokenAccount {
             mint: new_mint,
             owner,
-            delegate: COption::Some(delegate),
+            delegate: Some(delegate),
             amount: 42,
             state: TokenAccountState::Initialized,
-            is_native: COption::None,
+            is_native: false,
             delegated_amount: 30,
-            close_authority: COption::Some(owner),
+            close_authority: Some(owner),
         };
-        TokenAccount::pack(token_account, &mut account_data).unwrap();
+        TokenAccount::pack(&token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
@@ -7160,15 +7161,17 @@ pub mod tests {
         assert!(accounts.is_empty());
 
         // Add new_mint, and another token account on new_mint with different balance
-        let mut mint_data = vec![0; Mint::get_packed_len()];
+        let mut mint_data = vec![0; Mint::packed_len()];
         let mint_state = Mint {
-            mint_authority: COption::Some(owner),
+            mint_authority: Some(owner),
+            name: "Token1".to_string(),
+            symbol: "TOK1".to_string(),
             supply: 500,
             decimals: 2,
             is_initialized: true,
-            freeze_authority: COption::Some(owner),
+            freeze_authority: Some(owner),
         };
-        Mint::pack(mint_state, &mut mint_data).unwrap();
+        Mint::pack(&mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
@@ -7179,18 +7182,18 @@ pub mod tests {
             &Pubkey::from_str(&new_mint.to_string()).unwrap(),
             &mint_account,
         );
-        let mut account_data = vec![0; TokenAccount::get_packed_len()];
+        let mut account_data = vec![0; TokenAccount::packed_len()];
         let token_account = TokenAccount {
             mint: new_mint,
             owner,
-            delegate: COption::Some(delegate),
+            delegate: Some(delegate),
             amount: 10,
             state: TokenAccountState::Initialized,
-            is_native: COption::None,
+            is_native: false,
             delegated_amount: 30,
-            close_authority: COption::Some(owner),
+            close_authority: Some(owner),
         };
-        TokenAccount::pack(token_account, &mut account_data).unwrap();
+        TokenAccount::pack(&token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
@@ -7240,21 +7243,21 @@ pub mod tests {
         let RpcHandler { io, meta, bank, .. } =
             start_rpc_handler_with_tx(&mundis_sdk::pubkey::new_rand());
 
-        let mut account_data = vec![0; TokenAccount::get_packed_len()];
-        let mint = SplTokenPubkey::new(&[2; 32]);
-        let owner = SplTokenPubkey::new(&[3; 32]);
-        let delegate = SplTokenPubkey::new(&[4; 32]);
+        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let mint = Pubkey::new(&[2; 32]);
+        let owner = Pubkey::new(&[3; 32]);
+        let delegate = Pubkey::new(&[4; 32]);
         let token_account = TokenAccount {
             mint,
             owner,
-            delegate: COption::Some(delegate),
+            delegate: Some(delegate),
             amount: 420,
             state: TokenAccountState::Initialized,
-            is_native: COption::Some(10),
+            is_native: true,
             delegated_amount: 30,
-            close_authority: COption::Some(owner),
+            close_authority: Some(owner),
         };
-        TokenAccount::pack(token_account, &mut account_data).unwrap();
+        TokenAccount::pack(&token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
@@ -7265,15 +7268,17 @@ pub mod tests {
         bank.store_account(&token_account_pubkey, &token_account);
 
         // Add the mint
-        let mut mint_data = vec![0; Mint::get_packed_len()];
+        let mut mint_data = vec![0; Mint::packed_len()];
         let mint_state = Mint {
-            mint_authority: COption::Some(owner),
+            mint_authority: Some(owner),
+            name: "Token1".to_string(),
+            symbol: "TOK1".to_string(),
             supply: 500,
             decimals: 2,
             is_initialized: true,
-            freeze_authority: COption::Some(owner),
+            freeze_authority: Some(owner),
         };
-        Mint::pack(mint_state, &mut mint_data).unwrap();
+        Mint::pack(&mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
@@ -7292,8 +7297,8 @@ pub mod tests {
         assert_eq!(
             result["result"]["value"]["data"],
             json!({
-                "program": "spl-token",
-                "space": TokenAccount::get_packed_len(),
+                "program": "mundis-token-program",
+                "space": TokenAccount::packed_len(),
                 "parsed": {
                     "type": "account",
                     "info": {
@@ -7337,8 +7342,8 @@ pub mod tests {
         assert_eq!(
             result["result"]["value"]["data"],
             json!({
-                "program": "spl-token",
-                "space": Mint::get_packed_len(),
+                "program": "mundis-token-program",
+                "space": Mint::packed_len(),
                 "parsed": {
                     "type": "mint",
                     "info": {
