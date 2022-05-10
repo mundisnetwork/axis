@@ -41,7 +41,7 @@ pub fn main() {
 
     let matches = App::new(crate_name!())
         .about(crate_description!())
-        .version(solana_version::version!())
+        .version(mundis_version::version!())
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::InferSubcommands)
         .arg(
@@ -123,7 +123,7 @@ pub fn main() {
                 .value_name("HOST:PORT")
                 .takes_value(true)
                 .multiple(true)
-                .validator(solana_net_utils::is_host_port)
+                .validator(mundis_net_utils::is_host_port)
                 .help("Rendezvous with the cluster at this gossip entrypoint"),
         )
         .arg(
@@ -131,7 +131,7 @@ pub fn main() {
                 .long("bind-address")
                 .value_name("HOST")
                 .takes_value(true)
-                .validator(solana_net_utils::is_host)
+                .validator(mundis_net_utils::is_host)
                 .default_value("0.0.0.0")
                 .help("IP address to bind the replica ports"),
         )
@@ -140,7 +140,7 @@ pub fn main() {
                 .long("rpc-bind-address")
                 .value_name("HOST")
                 .takes_value(true)
-                .validator(solana_net_utils::is_host)
+                .validator(mundis_net_utils::is_host)
                 .help("IP address to bind the Json RPC port [default: use --bind-address]"),
         )
         .arg(
@@ -148,7 +148,7 @@ pub fn main() {
                 .long("rpc-port")
                 .value_name("PORT")
                 .takes_value(true)
-                .validator(solana_validator::port_validator)
+                .validator(mundis_validator::port_validator)
                 .help("Enable JSON RPC on this port, and the next port for the RPC websocket"),
         )
         .arg(
@@ -189,11 +189,11 @@ pub fn main() {
         )
         .get_matches();
 
-    let bind_address = solana_net_utils::parse_host(matches.value_of("bind_address").unwrap())
+    let bind_address = mundis_net_utils::parse_host(matches.value_of("bind_address").unwrap())
         .expect("invalid bind_address");
 
     let rpc_bind_address = if let Some(rpc_bind_address) = matches.value_of("rpc_bind_address") {
-        solana_net_utils::parse_host(rpc_bind_address).expect("invalid rpc_bind_address")
+        mundis_net_utils::parse_host(rpc_bind_address).expect("invalid rpc_bind_address")
     } else {
         bind_address
     };
@@ -212,7 +212,7 @@ pub fn main() {
         .unwrap_or_default()
         .into_iter()
         .map(|entrypoint| {
-            solana_net_utils::parse_host_port(&entrypoint).unwrap_or_else(|e| {
+            mundis_net_utils::parse_host_port(&entrypoint).unwrap_or_else(|e| {
                 eprintln!("failed to parse entrypoint address: {}", e);
                 exit(1);
             })
@@ -228,7 +228,7 @@ pub fn main() {
     let gossip_host: IpAddr = matches
         .value_of("gossip_host")
         .map(|gossip_host| {
-            solana_net_utils::parse_host(gossip_host).unwrap_or_else(|err| {
+            mundis_net_utils::parse_host(gossip_host).unwrap_or_else(|err| {
                 eprintln!("Failed to parse --gossip-host: {}", err);
                 exit(1);
             })
@@ -244,7 +244,7 @@ pub fn main() {
                         "Contacting {} to determine the validator's public IP address",
                         entrypoint_addr
                     );
-                    solana_net_utils::get_public_ip_addr(entrypoint_addr).map_or_else(
+                    mundis_net_utils::get_public_ip_addr(entrypoint_addr).map_or_else(
                         |err| {
                             eprintln!(
                                 "Failed to contact cluster entrypoint {}: {}",
@@ -268,7 +268,7 @@ pub fn main() {
     let gossip_addr = SocketAddr::new(
         gossip_host,
         value_t!(matches, "gossip_port", u16).unwrap_or_else(|_| {
-            solana_net_utils::find_available_port_in_range(bind_address, (0, 1)).unwrap_or_else(
+            mundis_net_utils::find_available_port_in_range(bind_address, (0, 1)).unwrap_or_else(
                 |err| {
                     eprintln!("Unable to find an available gossip port: {}", err);
                     exit(1);
@@ -278,7 +278,7 @@ pub fn main() {
     );
 
     let dynamic_port_range =
-        solana_net_utils::parse_port_range(matches.value_of("dynamic_port_range").unwrap())
+        mundis_net_utils::parse_port_range(matches.value_of("dynamic_port_range").unwrap())
             .expect("invalid dynamic_port_range");
 
     let cluster_entrypoints = entrypoint_addrs
@@ -312,7 +312,7 @@ pub fn main() {
             vec![ledger_path.join("accounts")]
         };
 
-    let peer_address = solana_net_utils::parse_host(matches.value_of("peer_address").unwrap())
+    let peer_address = mundis_net_utils::parse_host(matches.value_of("peer_address").unwrap())
         .expect("invalid peer_address");
 
     let peer_rpc_port = value_t!(matches, "peer_rpc_port", u16).unwrap_or_else(|_| {
@@ -366,7 +366,7 @@ pub fn main() {
     };
     let socket_addr_space = SocketAddrSpace::new(matches.is_present("allow_private_addr"));
 
-    let _logger_thread = solana_validator::redirect_stderr_to_file(logfile);
+    let _logger_thread = mundis_validator::redirect_stderr_to_file(logfile);
 
     let (cluster_info, rpc_contact_info, snapshot_info) = replica_util::get_rpc_peer_info(
         identity_keypair,

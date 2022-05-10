@@ -11,4 +11,4 @@ version = "1.9.14"
 [workspace]
 
 [dependencies]
-tonic-build = "0.6.0"
+tonic-build = "0.7.0"

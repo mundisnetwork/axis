@@ -3,7 +3,7 @@ use {
     crossbeam_channel::unbounded,
     log::*,
     mundis_download_utils::download_snapshot_archive,
-    mundis_genesis_utils::download_then_check_genesis_hash,
+    mundis_validator::genesis_utils::download_then_check_genesis_hash,
     mundis_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
     mundis_ledger::{
         blockstore::Blockstore, blockstore_db::AccessType, blockstore_processor,
