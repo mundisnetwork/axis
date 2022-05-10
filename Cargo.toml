@@ -46,6 +46,7 @@ members = [
     "cli",
     "rayon-threadlimit",
     "replica-lib",
+    "replica-node",
     "test-validator",
     "test-harness",
 ]
