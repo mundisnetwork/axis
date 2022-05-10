@@ -4,13 +4,13 @@
 //!
 use {
     crate::banking_stage::BatchedTransactionCostDetails,
-    solana_measure::measure::Measure,
-    solana_runtime::{
+    mundis_measure::measure::Measure,
+    mundis_runtime::{
         bank::Bank,
         cost_model::{CostModel, TransactionCost},
         cost_tracker::CostTrackerError,
     },
-    solana_sdk::{
+    mundis_sdk::{
         timing::AtomicInterval,
         transaction::{self, SanitizedTransaction, TransactionError},
     },
@@ -118,7 +118,7 @@ impl QosService {
         let mut num_included = 0;
         let select_results = transactions
             .zip(transactions_costs)
-            .map(|(tx, cost)| match cost_tracker.try_add(tx, cost) {
+            .map(|(tx, cost)| match cost_tracker.try_add(cost) {
                 Ok(current_block_cost) => {
                     debug!("slot {:?}, transaction {:?}, cost {:?}, fit into current block, current block cost {}", bank.slot(), tx, cost, current_block_cost);
                     self.metrics.selected_txs_count.fetch_add(1, Ordering::Relaxed);
@@ -151,33 +151,35 @@ impl QosService {
         (select_results, num_included)
     }
 
-    <<<<<<< HEAD
-    =======
-    pub fn commit_transaction_cost(
-        &self,
+    /// Update the transaction cost in the cost_tracker with the real cost for
+    /// transactions that were executed successfully;
+    /// Otherwise remove the cost from the cost tracker, therefore preventing cost_tracker
+    /// being inflated with unsuccessfully executed transactions.
+    pub fn update_or_remove_transaction_costs<'a>(
+        transaction_costs: impl Iterator<Item = &'a TransactionCost>,
+        transaction_qos_results: impl Iterator<Item = &'a transaction::Result<()>>,
+        retryable_transaction_indexes: &[usize],
         bank: &Arc<Bank>,
-        transaction: &SanitizedTransaction,
-        actual_units: Option<u64>,
     ) {
-        bank.write_cost_tracker()
-            .unwrap()
-            .commit_transaction(transaction, actual_units);
+        let mut cost_tracker = bank.write_cost_tracker().unwrap();
+        transaction_costs
+            .zip(transaction_qos_results)
+            .enumerate()
+            .for_each(|(index, (tx_cost, qos_inclusion_result))| {
+                // Only transactions that the qos service incuded have been added to the
+                // cost tracker.
+                if qos_inclusion_result.is_ok() && retryable_transaction_indexes.contains(&index) {
+                    cost_tracker.remove(tx_cost);
+                } else {
+                    // TODO: Update the cost tracker with the actual execution compute units.
+                    // Will have to plumb it in next; For now, keep estimated costs.
+                    //
+                    // let actual_execution_cost = 0;
+                    // cost_tracker.update_execution_cost(tx_cost, actual_execution_cost);
+                }
+            });
     }
 
-    pub fn cancel_transaction_cost(&self, bank: &Arc<Bank>, transaction: &SanitizedTransaction) {
-        bank.write_cost_tracker()
-            .unwrap()
-            .cancel_transaction(transaction);
-    }
-
-    // metrics are reported by bank slot
-    pub fn report_metrics(&self, bank: Arc<Bank>) {
-        self.report_sender
-            .send(QosMetrics::BlockBatchUpdate { bank })
-            .unwrap_or_else(|err| warn!("qos service report metrics failed: {:?}", err));
-    }
-
-    >>>>>>> 9e07272af (- Only commit successfully executed transactions' cost to cost_tracker;)
     pub fn accumulate_estimated_transaction_costs(
         &self,
         cost_details: &BatchedTransactionCostDetails,
@@ -333,21 +335,21 @@ mod tests {
     use {
         super::*,
         itertools::Itertools,
-        solana_runtime::{
+        mundis_runtime::{
             bank::Bank,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
         },
-        solana_sdk::{
+        mundis_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},
             system_transaction,
         },
-        solana_vote_program::vote_transaction,
+        mundis_vote_program::vote_transaction,
     };
 
     #[test]
     fn test_compute_transaction_costs() {
-        solana_logger::setup();
+        mundis_logger::setup();
 
         // make a vec of txs
         let keypair = Keypair::new();
@@ -387,7 +389,7 @@ mod tests {
 
     #[test]
     fn test_select_transactions_per_cost() {
-        solana_logger::setup();
+        mundis_logger::setup();
         let GenesisConfigInfo { genesis_config, .. } = create_genesis_config(10);
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
         let cost_model = Arc::new(RwLock::new(CostModel::default()));
@@ -439,8 +441,8 @@ mod tests {
 
     #[test]
     fn test_async_report_metrics() {
-        solana_logger::setup();
-        //solana_logger::setup_with_default("solana=info");
+        mundis_logger::setup();
+        //mundis_logger::setup_with_default("solana=info");
 
         // make a vec of txs
         let txs_count = 128usize;

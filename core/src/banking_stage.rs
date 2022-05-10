@@ -1330,31 +1330,22 @@ impl BankingStage {
         gossip_vote_sender: &ReplayVoteSender,
         qos_service: &Arc<QosService>,
     ) -> ProcessTransactionBatchOutput {
-        let ((transactions_qos_results, cost_model_throttled_transactions_count), cost_model_time) =
-            Measure::this(
-                |_| {
-                    let tx_costs = qos_service.compute_transaction_costs(txs.iter());
+        let mut cost_model_time = Measure::start("cost_model");
 
-                    let (transactions_qos_results, num_included) =
-                        qos_service.select_transactions_per_cost(txs.iter(), tx_costs.iter(), bank);
+        let transaction_costs = qos_service.compute_transaction_costs(txs.iter());
 
-                    let cost_model_throttled_transactions_count =
-                        txs.len().saturating_sub(num_included);
+        let (transactions_qos_results, num_included) =
+            qos_service.select_transactions_per_cost(txs.iter(), transaction_costs.iter(), bank);
 
-                    qos_service.accumulate_estimated_transaction_costs(
-                        &Self::accumulate_batched_transaction_costs(
-                            tx_costs.iter(),
-                            transactions_qos_results.iter(),
-                        ),
-                    );
-                    (
-                        transactions_qos_results,
-                        cost_model_throttled_transactions_count,
-                    )
-                },
-                (),
-                "cost_model",
-            );
+        let cost_model_throttled_transactions_count = txs.len().saturating_sub(num_included);
+
+        qos_service.accumulate_estimated_transaction_costs(
+            &Self::accumulate_batched_transaction_costs(
+                transaction_costs.iter(),
+                transactions_qos_results.iter(),
+            ),
+        );
+        cost_model_time.stop();
 
         // Only lock accounts for those transactions are selected for the block;
         // Once accounts are locked, other threads cannot encode transactions that will modify the
@@ -1386,11 +1377,13 @@ impl BankingStage {
             ..
         } = execute_and_commit_transactions_output;
 
-        Self::commit_or_cancel_transaction_cost(
-            txs.iter(),
+        // TODO: This does not revert the cost tracker changes from all unexecuted transactions
+        // yet: For example tx that are too old will not be included in the block, but are not
+        // retryable.
+        QosService::update_or_remove_transaction_costs(
+            transaction_costs.iter(),
             transactions_qos_results.iter(),
             retryable_transaction_indexes,
-            qos_service,
             bank,
         );
 
@@ -1416,30 +1409,6 @@ impl BankingStage {
             cost_model_us: cost_model_time.as_us(),
             execute_and_commit_transactions_output,
         }
-    }
-
-    /// To commit transaction cost to cost_tracker if it was executed successfully;
-    /// Otherwise cancel it from being committed, therefore prevents cost_tracker
-    /// being inflated with unsuccessfully executed transactions.
-    fn commit_or_cancel_transaction_cost<'a>(
-        transactions: impl Iterator<Item = &'a SanitizedTransaction>,
-        transaction_results: impl Iterator<Item = &'a transaction::Result<()>>,
-        retryable_transaction_indexes: &[usize],
-        qos_service: &QosService,
-        bank: &Arc<Bank>,
-    ) {
-        transactions
-            .zip(transaction_results)
-            .enumerate()
-            .for_each(|(index, (tx, result))| {
-                if result.is_ok() && retryable_transaction_indexes.contains(&index) {
-                    qos_service.cancel_transaction_cost(bank, tx);
-                } else {
-                    // TODO the 3rd param is for transaction's actual units. Will have
-                    // to plumb it in next; For now, it simply commit estimated units.
-                    qos_service.commit_transaction_cost(bank, tx, None);
-                }
-            });
     }
 
     // rollup transaction cost details, eg signature_cost, write_lock_cost, data_bytes_cost and
@@ -2852,6 +2821,132 @@ mod tests {
             let _ = poh_simulator.join();
 
             assert_eq!(bank.get_balance(&pubkey), 1);
+        }
+        Blockstore::destroy(ledger_path.path()).unwrap();
+    }
+
+    #[test]
+    fn test_bank_process_and_record_transactions_cost_tracker() {
+        mundis_logger::setup();
+        let GenesisConfigInfo {
+            genesis_config,
+            mint_keypair,
+            ..
+        } = create_slow_genesis_config(10_000);
+        let bank = Arc::new(Bank::new_no_wallclock_throttle_for_tests(&genesis_config));
+        let pubkey = mundis_sdk::pubkey::new_rand();
+
+        let ledger_path = get_tmp_ledger_path_auto_delete!();
+        {
+            let blockstore = Blockstore::open(ledger_path.path())
+                .expect("Expected to be able to open database ledger");
+            let (poh_recorder, _entry_receiver, record_receiver) = PohRecorder::new(
+                bank.tick_height(),
+                bank.last_blockhash(),
+                bank.clone(),
+                Some((4, 4)),
+                bank.ticks_per_slot(),
+                &pubkey,
+                &Arc::new(blockstore),
+                &Arc::new(LeaderScheduleCache::new_from_bank(&bank)),
+                &Arc::new(PohConfig::default()),
+                Arc::new(AtomicBool::default()),
+            );
+            let recorder = poh_recorder.recorder();
+            let poh_recorder = Arc::new(Mutex::new(poh_recorder));
+
+            let poh_simulator = simulate_poh(record_receiver, &poh_recorder);
+
+            poh_recorder.lock().unwrap().set_bank(&bank);
+            let (gossip_vote_sender, _gossip_vote_receiver) = unbounded();
+
+            let qos_service =
+                Arc::new(QosService::new(Arc::new(RwLock::new(CostModel::default()))));
+
+            let get_block_cost = || bank.read_cost_tracker().unwrap().block_cost();
+            let get_tx_count = || bank.read_cost_tracker().unwrap().transaction_count();
+            assert_eq!(get_block_cost(), 0);
+            assert_eq!(get_tx_count(), 0);
+
+            //
+            // TEST: cost tracker's block cost increases when successfully processing a tx
+            //
+
+            let transactions = sanitize_transactions(vec![system_transaction::transfer(
+                &mint_keypair,
+                &pubkey,
+                1,
+                genesis_config.hash(),
+            )]);
+
+            let process_transactions_batch_output = BankingStage::process_and_record_transactions(
+                &bank,
+                &transactions,
+                &recorder,
+                0,
+                None,
+                &gossip_vote_sender,
+                &qos_service,
+            );
+
+            let ExecuteAndCommitTransactionsOutput {
+                executed_with_successful_result_count,
+                commit_transactions_result,
+                ..
+            } = process_transactions_batch_output.execute_and_commit_transactions_output;
+            assert_eq!(executed_with_successful_result_count, 1);
+            assert!(commit_transactions_result.is_ok());
+
+            let single_transfer_cost = get_block_cost();
+            assert_ne!(single_transfer_cost, 0);
+            assert_eq!(get_tx_count(), 1);
+
+            //
+            // TEST: When a tx in a batch can't be executed (here because of account
+            // locks), then its cost does not affect the cost tracker.
+            //
+
+            let allocate_keypair = Keypair::new();
+            let transactions = sanitize_transactions(vec![
+                system_transaction::transfer(&mint_keypair, &pubkey, 2, genesis_config.hash()),
+                // intentionally use a tx that has a different cost
+                system_transaction::allocate(
+                    &mint_keypair,
+                    &allocate_keypair,
+                    genesis_config.hash(),
+                    1,
+                ),
+            ]);
+
+            let process_transactions_batch_output = BankingStage::process_and_record_transactions(
+                &bank,
+                &transactions,
+                &recorder,
+                0,
+                None,
+                &gossip_vote_sender,
+                &qos_service,
+            );
+
+            let ExecuteAndCommitTransactionsOutput {
+                executed_with_successful_result_count,
+                commit_transactions_result,
+                retryable_transaction_indexes,
+                ..
+            } = process_transactions_batch_output.execute_and_commit_transactions_output;
+            assert_eq!(executed_with_successful_result_count, 1);
+            assert!(commit_transactions_result.is_ok());
+            assert_eq!(retryable_transaction_indexes, vec![1]);
+
+            assert_eq!(get_block_cost(), 2 * single_transfer_cost);
+            assert_eq!(get_tx_count(), 2);
+
+            poh_recorder
+                .lock()
+                .unwrap()
+                .is_exited
+                .store(true, Ordering::Relaxed);
+            let _ = poh_simulator.join();
         }
         Blockstore::destroy(ledger_path.path()).unwrap();
     }
