@@ -464,9 +464,12 @@ mod test {
 
         // Test InitializeMint variations
         let initialize_mint_ix = initialize_mint(
+            &mundis_token_program::id(),
             &keys[0],
             &keys[2],
             Some(&keys[3]),
+            &"Test Token".to_string(),
+            &"TST".to_string(),
             2,
         )
         .unwrap();
@@ -481,14 +484,19 @@ mod test {
                     "decimals": 2,
                     "mintAuthority": keys[2].to_string(),
                     "freezeAuthority": keys[3].to_string(),
+                    "name": "Test Token",
+                    "symbol": "TST"
                 })
             }
         );
 
         let initialize_mint_ix = initialize_mint(
+            &mundis_token_program::id(),
             &keys[0],
             &keys[2],
             None,
+            &"Test Token".to_string(),
+            &"TST".to_string(),
             2,
         )
         .unwrap();
@@ -502,12 +510,15 @@ mod test {
                    "mint": keys[0].to_string(),
                    "decimals": 2,
                    "mintAuthority": keys[2].to_string(),
+                    "name": "Test Token",
+                    "symbol": "TST"
                 })
             }
         );
 
         // Test InitializeAccount
         let initialize_account_ix = initialize_account(
+            &mundis_token_program::id(),
             &keys[0],
             &keys[1],
             &keys[2],
@@ -529,6 +540,7 @@ mod test {
 
         // Test InitializeMultisig
         let initialize_multisig_ix = initialize_multisig(
+            &mundis_token_program::id(),
             &keys[0],
             &[
                 &keys[2],
@@ -554,6 +566,7 @@ mod test {
 
         // Test Transfer, incl multisig
         let transfer_ix = transfer(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -577,6 +590,7 @@ mod test {
         );
 
         let transfer_ix = transfer(
+            &mundis_token_program::id(),
             &keys[2],
             &keys[3],
             &keys[4],
@@ -602,6 +616,7 @@ mod test {
 
         // Test Approve, incl multisig
         let approve_ix = approve(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -625,6 +640,7 @@ mod test {
         );
 
         let approve_ix = approve(
+            &mundis_token_program::id(),
             &keys[2],
             &keys[3],
             &keys[4],
@@ -650,6 +666,7 @@ mod test {
 
         // Test Revoke
         let revoke_ix = revoke(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[0],
             &[],
@@ -670,6 +687,7 @@ mod test {
 
         // Test SetOwner
         let set_authority_ix = set_authority(
+            &mundis_token_program::id(),
             &keys[0],
             Some(&keys[2]),
             AuthorityType::FreezeAccount,
@@ -693,6 +711,7 @@ mod test {
         );
 
         let set_authority_ix = set_authority(
+            &mundis_token_program::id(),
             &keys[1],
             None,
             AuthorityType::CloseAccount,
@@ -718,6 +737,7 @@ mod test {
 
         // Test MintTo
         let mint_to_ix = mint_to(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -742,6 +762,7 @@ mod test {
 
         // Test Burn
         let burn_ix = burn(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -766,6 +787,7 @@ mod test {
 
         // Test CloseAccount
         let close_account_ix = close_account(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -788,6 +810,7 @@ mod test {
 
         // Test FreezeAccount
         let freeze_account_ix = freeze_account(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -810,6 +833,7 @@ mod test {
 
         // Test ThawAccount
         let thaw_account_ix = thaw_account(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -832,6 +856,7 @@ mod test {
 
         // Test TransferChecked, incl multisig
         let transfer_ix = transfer_checked(
+            &mundis_token_program::id(),
             &keys[0],
             &keys[1],
             &keys[2],
@@ -863,6 +888,7 @@ mod test {
         );
 
         let transfer_ix = transfer_checked(
+            &mundis_token_program::id(),
             &keys[2],
             &keys[3],
             &keys[4],
@@ -896,6 +922,7 @@ mod test {
 
         // Test ApproveChecked, incl multisig
         let approve_ix = approve_checked(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[3],
@@ -927,6 +954,7 @@ mod test {
         );
 
         let approve_ix = approve_checked(
+            &mundis_token_program::id(),
             &keys[2],
             &keys[3],
             &keys[4],
@@ -960,6 +988,7 @@ mod test {
 
         // Test MintToChecked
         let mint_to_ix = mint_to_checked(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -990,6 +1019,7 @@ mod test {
 
         // Test BurnChecked
         let burn_ix = burn_checked(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1019,7 +1049,7 @@ mod test {
         );
 
         // Test SyncNative
-        let sync_native_ix = sync_native(&keys[0]).unwrap();
+        let sync_native_ix = sync_native(&mundis_token_program::id(),&keys[0]).unwrap();
         let message = Message::new(&[sync_native_ix], None);
         let compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
         assert_eq!(
@@ -1043,9 +1073,12 @@ mod test {
 
         // Test InitializeMint variations
         let initialize_mint_ix = initialize_mint(
+            &mundis_token_program::id(),
             &keys[0],
             &keys[1],
             Some(&keys[2]),
+            &"Test Token".to_string(),
+            &"TST".to_string(),
             2,
         )
         .unwrap();
@@ -1057,9 +1090,12 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let initialize_mint_ix = initialize_mint(
+            &mundis_token_program::id(),
             &keys[0],
             &keys[1],
             None,
+            &"Test Token".to_string(),
+            &"TST".to_string(),
             2,
         )
         .unwrap();
@@ -1072,6 +1108,7 @@ mod test {
 
         // Test InitializeAccount
         let initialize_account_ix = initialize_account(
+            &mundis_token_program::id(),
             &keys[0],
             &keys[1],
             &keys[2],
@@ -1086,6 +1123,7 @@ mod test {
 
         // Test InitializeMultisig
         let initialize_multisig_ix = initialize_multisig(
+            &mundis_token_program::id(),
             &keys[0],
             &[
                 &keys[1],
@@ -1104,6 +1142,7 @@ mod test {
 
         // Test Transfer, incl multisig
         let transfer_ix = transfer(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1119,6 +1158,7 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let transfer_ix = transfer(
+            &mundis_token_program::id(),
             &keys[2],
             &keys[3],
             &keys[4],
@@ -1135,6 +1175,7 @@ mod test {
 
         // Test Approve, incl multisig
         let approve_ix = approve(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1150,6 +1191,7 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let approve_ix = approve(
+            &mundis_token_program::id(),
             &keys[2],
             &keys[3],
             &keys[4],
@@ -1166,6 +1208,7 @@ mod test {
 
         // Test Revoke
         let revoke_ix = revoke(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[0],
             &[],
@@ -1180,6 +1223,7 @@ mod test {
 
         // Test SetAuthority
         let set_authority_ix = set_authority(
+            &mundis_token_program::id(),
             &keys[1],
             Some(&keys[2]),
             AuthorityType::FreezeAccount,
@@ -1196,6 +1240,7 @@ mod test {
 
         // Test MintTo
         let mint_to_ix = mint_to(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1212,6 +1257,7 @@ mod test {
 
         // Test Burn
         let burn_ix = burn(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1228,6 +1274,7 @@ mod test {
 
         // Test CloseAccount
         let close_account_ix = close_account(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1243,6 +1290,7 @@ mod test {
 
         // Test FreezeAccount
         let freeze_account_ix = freeze_account(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1258,6 +1306,7 @@ mod test {
 
         // Test ThawAccount
         let thaw_account_ix = thaw_account(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1273,6 +1322,7 @@ mod test {
 
         // Test TransferChecked, incl multisig
         let transfer_ix = transfer_checked(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[3],
@@ -1290,6 +1340,7 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let transfer_ix = transfer_checked(
+            &mundis_token_program::id(),
             &keys[2],
             &keys[3],
             &keys[4],
@@ -1308,6 +1359,7 @@ mod test {
 
         // Test ApproveChecked, incl multisig
         let approve_ix = approve_checked(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[3],
@@ -1325,6 +1377,7 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         let approve_ix = approve_checked(
+            &mundis_token_program::id(),
             &keys[2],
             &keys[3],
             &keys[4],
@@ -1343,6 +1396,7 @@ mod test {
 
         // Test MintToChecked
         let mint_to_ix = mint_to_checked(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1360,6 +1414,7 @@ mod test {
 
         // Test BurnChecked
         let burn_ix = burn_checked(
+            &mundis_token_program::id(),
             &keys[1],
             &keys[2],
             &keys[0],
@@ -1376,7 +1431,7 @@ mod test {
         assert!(parse_token(&compiled_instruction, &keys).is_err());
 
         // Test SyncNative
-        let sync_native_ix = sync_native(&keys[0]).unwrap();
+        let sync_native_ix = sync_native(&mundis_token_program::id(),&keys[0]).unwrap();
         let message = Message::new(&[sync_native_ix], None);
         let mut compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
         assert!(parse_token(&compiled_instruction, &[]).is_err());

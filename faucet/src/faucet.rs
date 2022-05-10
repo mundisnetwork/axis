@@ -633,7 +633,7 @@ mod tests {
             assert_eq!(tx.signatures.len(), 1);
             assert_eq!(
                 message.account_keys,
-                vec![mint_pubkey, Pubkey::new(&anima_memo::id().to_bytes())]
+                vec![mint_pubkey, Pubkey::new(&mundis_memo_program::id().to_bytes())]
             );
             assert_eq!(message.recent_blockhash, blockhash);
 

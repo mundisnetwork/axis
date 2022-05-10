@@ -49,23 +49,16 @@ fn check_num_associated_token_accounts(
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*,
-        anima_token_account::{
-            create_associated_token_account,
-            mundis_program::{
-                instruction::CompiledInstruction as AnimaAssociatedTokenCompiledInstruction,
-                message::Message, pubkey::Pubkey as AnimaAssociatedTokenPubkey,
-            },
-        },
-    };
+    use super::*;
+    use mundis_sdk::message::Message;
+    use mundis_token_account_program::token_account_instruction::create_associated_token_account;
 
-    fn convert_pubkey(pubkey: Pubkey) -> AnimaAssociatedTokenPubkey {
-        AnimaAssociatedTokenPubkey::new_from_array(pubkey.to_bytes())
+    fn convert_pubkey(pubkey: Pubkey) -> Pubkey {
+        Pubkey::new_from_array(pubkey.to_bytes())
     }
 
     fn convert_compiled_instruction(
-        instruction: &AnimaAssociatedTokenCompiledInstruction,
+        instruction: &CompiledInstruction,
     ) -> CompiledInstruction {
         CompiledInstruction {
             program_id_index: instruction.program_id_index,

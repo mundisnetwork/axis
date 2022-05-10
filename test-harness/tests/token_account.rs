@@ -1,6 +1,6 @@
 use mundis_program::instruction::{AccountMeta, InstructionError};
 use mundis_program::pubkey::Pubkey;
-use mundis_program::{system_instruction, sysvar};
+use mundis_program::system_instruction;
 use mundis_sdk::account::Account;
 use mundis_sdk::signer::Signer;
 use mundis_sdk::transaction::{Transaction, TransactionError};
@@ -41,6 +41,8 @@ async fn test_associated_token_address() {
                 &token_mint_address,
                 &payer.pubkey(),
                 None,
+                &"Test Token".to_string(),
+                &"TST".to_string(),
                 3,
             ).unwrap(),
             create_associated_token_account(
@@ -93,6 +95,8 @@ async fn test_create_with_fewer_lamports() {
                 &token_mint_address,
                 &payer.pubkey(),
                 None,
+                &"Test Token".to_string(),
+                &"TST".to_string(),
                 3,
             ).unwrap(),
         ],
@@ -169,6 +173,8 @@ async fn test_create_with_excess_lamports() {
                 &token_mint_address,
                 &payer.pubkey(),
                 None,
+                &"Test Token".to_string(),
+                &"TST".to_string(),
                 3,
             ).unwrap(),
             create_associated_token_account(
@@ -210,6 +216,8 @@ async fn test_create_account_mismatch() {
             &token_mint_address,
             &payer.pubkey(),
             None,
+            &"Test Token".to_string(),
+            &"TST".to_string(),
             3,
         ).unwrap(),
         instruction
@@ -234,6 +242,8 @@ async fn test_create_account_mismatch() {
             &token_mint_address,
             &payer.pubkey(),
             None,
+            &"Test Token".to_string(),
+            &"TST".to_string(),
             3,
         ).unwrap(),
         instruction
@@ -258,6 +268,8 @@ async fn test_create_account_mismatch() {
             &token_mint_address,
             &payer.pubkey(),
             None,
+            &"Test Token".to_string(),
+            &"TST".to_string(),
             3,
         ).unwrap(),
         instruction,

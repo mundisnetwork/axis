@@ -120,9 +120,6 @@ mod tests {
                     assert_eq!(crds.get::<&LowestSlot>(key), Some(slot))
                 }
                 CrdsData::Version(version) => assert_eq!(crds.get::<&Version>(key), Some(version)),
-                CrdsData::LegacyVersion(version) => {
-                    assert_eq!(crds.get::<&LegacyVersion>(key), Some(version))
-                }
                 CrdsData::SnapshotHashes(hash) => {
                     assert_eq!(crds.get::<&SnapshotHashes>(key), Some(hash))
                 }

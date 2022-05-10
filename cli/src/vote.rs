@@ -1155,6 +1155,8 @@ fn get_vote_account(
         ))
         .into());
     }
+
+    // TODO: Mundis: Investigate why this fails
     let vote_state = VoteState::deserialize(&vote_account.data).map_err(|_| {
         CliError::RpcRequestError(
             "Account data could not be deserialized to vote state".to_string(),

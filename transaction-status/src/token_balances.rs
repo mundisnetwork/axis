@@ -146,6 +146,8 @@ mod test {
         let account = Account::new(42, 55, &Pubkey::new_unique());
 
         let mint_data = Mint {
+            name: "Test Token".to_string(),
+            symbol: "TST".to_string(),
             mint_authority: None,
             supply: 4242,
             decimals: 2,

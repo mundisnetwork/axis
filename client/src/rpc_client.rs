@@ -3880,6 +3880,74 @@ impl RpcClient {
         })
     }
 
+    #[deprecated(
+    since = "1.9.0",
+    note = "Please use `get_latest_blockhash_with_commitment` instead"
+    )]
+    #[allow(deprecated)]
+    pub fn get_recent_blockhash_with_commitment(
+        &self,
+        commitment_config: CommitmentConfig,
+    ) -> RpcResult<(Hash, FeeCalculator, Slot)> {
+        let (context, blockhash, fee_calculator, last_valid_slot) = if let Ok(Response {
+                                                                                  context,
+                                                                                  value:
+                                                                                  RpcFees {
+                                                                                      blockhash,
+                                                                                      fee_calculator,
+                                                                                      last_valid_slot,
+                                                                                      ..
+                                                                                  },
+                                                                              }) = self
+            .send::<Response<RpcFees>>(
+                RpcRequest::GetFees,
+                json!([commitment_config]),
+            ) {
+            (context, blockhash, fee_calculator, last_valid_slot)
+        } else if let Ok(Response {
+                             context,
+                             value:
+                             DeprecatedRpcFees {
+                                 blockhash,
+                                 fee_calculator,
+                                 last_valid_slot,
+                             },
+                         }) = self.send::<Response<DeprecatedRpcFees>>(
+            RpcRequest::GetFees,
+            json!([commitment_config]),
+        ) {
+            (context, blockhash, fee_calculator, last_valid_slot)
+        } else if let Ok(Response {
+                             context,
+                             value:
+                             RpcBlockhashFeeCalculator {
+                                 blockhash,
+                                 fee_calculator,
+                             },
+                         }) = self.send::<Response<RpcBlockhashFeeCalculator>>(
+            RpcRequest::GetRecentBlockhash,
+            json!([commitment_config]),
+        ) {
+            (context, blockhash, fee_calculator, 0)
+        } else {
+            return Err(ClientError::new_with_request(
+                RpcError::ParseError("RpcBlockhashFeeCalculator or RpcFees".to_string()).into(),
+                RpcRequest::GetRecentBlockhash,
+            ));
+        };
+
+        let blockhash = blockhash.parse().map_err(|_| {
+            ClientError::new_with_request(
+                RpcError::ParseError("Hash".to_string()).into(),
+                RpcRequest::GetRecentBlockhash,
+            )
+        })?;
+        Ok(Response {
+            context,
+            value: (blockhash, fee_calculator, last_valid_slot),
+        })
+    }
+
     pub fn get_fee_calculator_for_blockhash_with_commitment(
         &self,
         blockhash: &Hash,
@@ -4619,7 +4687,8 @@ mod tests {
         let rpc_client = RpcClient::new_mock("fails".to_string());
 
         #[allow(deprecated)]
-            let result = rpc_client.get_recent_blockhash();
+        let result = rpc_client.get_latest_blockhash();
+
         assert!(result.is_err());
     }
 

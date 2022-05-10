@@ -41,6 +41,11 @@ pub enum RpcRequest {
     GetMinimumBalanceForRentExemption,
     GetMultipleAccounts,
     GetProgramAccounts,
+    #[deprecated(
+    since = "1.9.0",
+    note = "Please use RpcRequest::GetLatestBlockhash instead"
+    )]
+    GetRecentBlockhash,
     GetRecentPerformanceSamples,
     GetHighestSnapshotSlot,
     GetSignaturesForAddress,
@@ -106,6 +111,7 @@ impl fmt::Display for RpcRequest {
             RpcRequest::GetMinimumBalanceForRentExemption => "getMinimumBalanceForRentExemption",
             RpcRequest::GetMultipleAccounts => "getMultipleAccounts",
             RpcRequest::GetProgramAccounts => "getProgramAccounts",
+            RpcRequest::GetRecentBlockhash => "getRecentBlockhash",
             RpcRequest::GetRecentPerformanceSamples => "getRecentPerformanceSamples",
             RpcRequest::GetHighestSnapshotSlot => "getHighestSnapshotSlot",
             RpcRequest::GetSignaturesForAddress => "getSignaturesForAddress",
