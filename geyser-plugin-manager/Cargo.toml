@@ -1,6 +1,6 @@
 [package]
 name = "mundis-geyser-plugin-manager"
-version = "1.9.14"
+version = "1.9.15"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -15,14 +15,14 @@ log = "0.4.11"
 serde = "1.0.130"
 serde_derive = "1.0.103"
 serde_json = "1.0.72"
-mundis-geyser-plugin-interface = { path = "../geyser-plugin-interface", version = "=1.9.14" }
-mundis-logger = { path = "../logger", version = "=1.9.14" }
-mundis-measure = { path = "../measure", version = "=1.9.14" }
-mundis-metrics = { path = "../metrics", version = "=1.9.14" }
-mundis-rpc = { path = "../rpc", version = "=1.9.14" }
-mundis-runtime = { path = "../runtime", version = "=1.9.14" }
-mundis-sdk = { path = "../sdk", version = "=1.9.14" }
-mundis-transaction-status = { path = "../transaction-status", version = "=1.9.14" }
+mundis-geyser-plugin-interface = { path = "../geyser-plugin-interface", version = "=1.9.15" }
+mundis-logger = { path = "../logger", version = "=1.9.15" }
+mundis-measure = { path = "../measure", version = "=1.9.15" }
+mundis-metrics = { path = "../metrics", version = "=1.9.15" }
+mundis-rpc = { path = "../rpc", version = "=1.9.15" }
+mundis-runtime = { path = "../runtime", version = "=1.9.15" }
+mundis-sdk = { path = "../sdk", version = "=1.9.15" }
+mundis-transaction-status = { path = "../transaction-status", version = "=1.9.15" }
 thiserror = "1.0.30"
 
 [package.metadata.docs.rs]

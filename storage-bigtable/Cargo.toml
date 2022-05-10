@@ -1,6 +1,6 @@
 [package]
 name = "mundis-storage-bigtable"
-version = "1.9.14"
+version = "1.9.15"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -20,10 +20,10 @@ prost-types = "0.10.0"
 serde = "1.0.130"
 serde_derive = "1.0.103"
 smpl_jwt = "0.6.1"
-mundis-metrics = { path = "../metrics", version = "=1.9.14" }
-mundis-sdk = { path = "../sdk", version = "=1.9.14" }
-mundis-storage-proto = { path = "../storage-proto", version = "=1.9.14" }
-mundis-transaction-status = { path = "../transaction-status", version = "=1.9.14" }
+mundis-metrics = { path = "../metrics", version = "=1.9.15" }
+mundis-sdk = { path = "../sdk", version = "=1.9.15" }
+mundis-storage-proto = { path = "../storage-proto", version = "=1.9.15" }
+mundis-transaction-status = { path = "../transaction-status", version = "=1.9.15" }
 thiserror = "1.0"
 tonic = { version = "0.7.1", features = ["tls", "transport"] }
 zstd = "0.9.0"
