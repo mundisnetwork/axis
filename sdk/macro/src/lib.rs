@@ -197,7 +197,11 @@ impl Parse for RespanInput {
                     to_respan,
                     respan_using: ident.span(),
                 })
-            }
+            },
+            TokenTree::Ident(i) => Ok(RespanInput {
+                to_respan,
+                respan_using: i.span(),
+            }),
             val => Err(syn::Error::new_spanned(
                 val,
                 "expected None-delimited group",
