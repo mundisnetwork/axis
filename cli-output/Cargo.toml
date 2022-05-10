@@ -1,6 +1,6 @@
 [package]
 name = "mundis-cli-output"
-version = "1.9.15"
+version = "1.9.16"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -17,13 +17,13 @@ Inflector = "0.11.4"
 indicatif = "0.16.2"
 serde = "1.0.130"
 serde_json = "1.0.72"
-mundis-account-decoder = { path = "../account-decoder", version = "=1.9.15" }
-mundis-clap-utils = { path = "../clap-utils", version = "=1.9.15" }
-mundis-client = { path = "../client", version = "=1.9.15" }
-mundis-sdk = { path = "../sdk", version = "=1.9.15" }
-mundis-transaction-status = { path = "../transaction-status", version = "=1.9.15" }
-mundis-vote-program = { path = "../programs/vote", version = "=1.9.15" }
-mundis-memo-program = { path = "../programs/memo", version = "=1.9.15" }
+mundis-account-decoder = { path = "../account-decoder", version = "=1.9.16" }
+mundis-clap-utils = { path = "../clap-utils", version = "=1.9.16" }
+mundis-client = { path = "../client", version = "=1.9.16" }
+mundis-sdk = { path = "../sdk", version = "=1.9.16" }
+mundis-transaction-status = { path = "../transaction-status", version = "=1.9.16" }
+mundis-vote-program = { path = "../programs/vote", version = "=1.9.16" }
+mundis-memo-program = { path = "../programs/memo", version = "=1.9.16" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

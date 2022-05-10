@@ -1,6 +1,6 @@
 [package]
 name = "mundis-gossip"
-version = "1.9.15"
+version = "1.9.16"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -24,24 +24,24 @@ rayon = "1.5.1"
 serde = "1.0.130"
 serde_bytes = "0.11"
 serde_derive = "1.0.103"
-mundis-bloom = { path = "../bloom", version = "=1.9.15" }
-mundis-clap-utils = { path = "../clap-utils", version = "=1.9.15" }
-mundis-client = { path = "../client", version = "=1.9.15" }
-mundis-entry = { path = "../entry", version = "=1.9.15" }
-mundis-frozen-abi = { path = "../frozen-abi", version = "=1.9.15" }
-mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.15" }
-mundis-ledger = { path = "../ledger", version = "=1.9.15" }
-mundis-logger = { path = "../logger", version = "=1.9.15" }
-mundis-measure = { path = "../measure", version = "=1.9.15" }
-mundis-metrics = { path = "../metrics", version = "=1.9.15" }
-mundis-net-utils = { path = "../net-utils", version = "=1.9.15" }
-mundis-perf = { path = "../perf", version = "=1.9.15" }
-mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.15" }
-mundis-runtime = { path = "../runtime", version = "=1.9.15" }
-mundis-streamer = { path = "../streamer", version = "=1.9.15" }
-mundis-sdk = { path = "../sdk", version = "=1.9.15" }
-mundis-version = { path = "../version", version = "=1.9.15" }
-mundis-vote-program = { path = "../programs/vote", version = "=1.9.15" }
+mundis-bloom = { path = "../bloom", version = "=1.9.16" }
+mundis-clap-utils = { path = "../clap-utils", version = "=1.9.16" }
+mundis-client = { path = "../client", version = "=1.9.16" }
+mundis-entry = { path = "../entry", version = "=1.9.16" }
+mundis-frozen-abi = { path = "../frozen-abi", version = "=1.9.16" }
+mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.16" }
+mundis-ledger = { path = "../ledger", version = "=1.9.16" }
+mundis-logger = { path = "../logger", version = "=1.9.16" }
+mundis-measure = { path = "../measure", version = "=1.9.16" }
+mundis-metrics = { path = "../metrics", version = "=1.9.16" }
+mundis-net-utils = { path = "../net-utils", version = "=1.9.16" }
+mundis-perf = { path = "../perf", version = "=1.9.16" }
+mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.16" }
+mundis-runtime = { path = "../runtime", version = "=1.9.16" }
+mundis-streamer = { path = "../streamer", version = "=1.9.16" }
+mundis-sdk = { path = "../sdk", version = "=1.9.16" }
+mundis-version = { path = "../version", version = "=1.9.16" }
+mundis-vote-program = { path = "../programs/vote", version = "=1.9.16" }
 thiserror = "1.0"
 
 [dev-dependencies]

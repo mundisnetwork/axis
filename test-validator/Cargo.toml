@@ -1,6 +1,6 @@
 [package]
 name = "mundis-test-validator"
-version = "1.9.15"
+version = "1.9.16"
 homepage = "https://mundis.io/"
 documentation = "https://docs.rs/mundis-test-validator"
 readme = "../README.md"
@@ -14,17 +14,17 @@ base64 = "0.12.3"
 log = "0.4.14"
 serde_derive = "1.0.103"
 serde_json = "1.0.72"
-mundis-cli-output = { path = "../cli-output", version = "=1.9.15" }
-mundis-client = { path = "../client", version = "=1.9.15" }
-mundis-core = { path = "../core", version = "=1.9.15" }
-mundis-gossip = { path = "../gossip", version = "=1.9.15" }
-mundis-ledger = { path = "../ledger", version = "=1.9.15" }
-mundis-logger = { path = "../logger", version = "=1.9.15" }
-mundis-net-utils = { path = "../net-utils", version = "=1.9.15" }
-mundis-rpc = { path = "../rpc", version = "=1.9.15" }
-mundis-runtime = { path = "../runtime", version = "=1.9.15" }
-mundis-sdk = { path = "../sdk", version = "=1.9.15" }
-mundis-streamer = { path = "../streamer", version = "=1.9.15" }
+mundis-cli-output = { path = "../cli-output", version = "=1.9.16" }
+mundis-client = { path = "../client", version = "=1.9.16" }
+mundis-core = { path = "../core", version = "=1.9.16" }
+mundis-gossip = { path = "../gossip", version = "=1.9.16" }
+mundis-ledger = { path = "../ledger", version = "=1.9.16" }
+mundis-logger = { path = "../logger", version = "=1.9.16" }
+mundis-net-utils = { path = "../net-utils", version = "=1.9.16" }
+mundis-rpc = { path = "../rpc", version = "=1.9.16" }
+mundis-runtime = { path = "../runtime", version = "=1.9.16" }
+mundis-sdk = { path = "../sdk", version = "=1.9.16" }
+mundis-streamer = { path = "../streamer", version = "=1.9.16" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
