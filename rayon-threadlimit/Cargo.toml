@@ -1,6 +1,6 @@
 [package]
 name = "mundis-rayon-threadlimit"
-version = "1.9.16"
+version = "1.9.17"
 description = "Reduce  number of threads for rayon"
 homepage = "https://mundis.io/"
 repository = "https://github.com/mundisnetwork/axis"

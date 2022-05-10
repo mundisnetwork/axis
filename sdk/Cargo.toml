@@ -1,6 +1,6 @@
 [package]
 name = "mundis-sdk"
-version = "1.9.16"
+version = "1.9.17"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 homepage = "https://mundis.io/"
@@ -63,11 +63,11 @@ serde_derive = "1.0.103"
 serde_json = { version = "1.0.72", optional = true }
 sha2 = "0.9.8"
 sha3 = { version = "0.9.1", optional = true }
-mundis-logger = { path = "../logger", version = "=1.9.16", optional = true }
-mundis-frozen-abi = { path = "../frozen-abi", version = "=1.9.16" }
-mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.16" }
-mundis-program = { path = "program", version = "=1.9.16" }
-mundis-sdk-macro = { path = "macro", version = "=1.9.16" }
+mundis-logger = { path = "../logger", version = "=1.9.17", optional = true }
+mundis-frozen-abi = { path = "../frozen-abi", version = "=1.9.17" }
+mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.17" }
+mundis-program = { path = "program", version = "=1.9.17" }
+mundis-sdk-macro = { path = "macro", version = "=1.9.17" }
 thiserror = "1.0"
 uriparse = "0.6.3"
 wasm-bindgen = "0.2"

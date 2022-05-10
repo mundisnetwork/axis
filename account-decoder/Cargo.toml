@@ -1,6 +1,6 @@
 [package]
 name = "mundis-account-decoder"
-version = "1.9.16"
+version = "1.9.17"
 description = "Mundis account decoder"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
@@ -18,10 +18,10 @@ lazy_static = "1.4.0"
 serde = "1.0.130"
 serde_derive = "1.0.103"
 serde_json = "1.0.72"
-mundis-config-program = { path = "../programs/config", version = "=1.9.16" }
-mundis-sdk = { path = "../sdk", version = "=1.9.16" }
-mundis-vote-program = { path = "../programs/vote", version = "=1.9.16" }
-mundis-token-program = { path = "../programs/token", version = "=1.9.16" }
+mundis-config-program = { path = "../programs/config", version = "=1.9.17" }
+mundis-sdk = { path = "../sdk", version = "=1.9.17" }
+mundis-vote-program = { path = "../programs/vote", version = "=1.9.17" }
+mundis-token-program = { path = "../programs/token", version = "=1.9.17" }
 thiserror = "1.0"
 zstd = "0.9.0"
 

@@ -2,7 +2,7 @@
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 name = "mundis-replica-node"
 description = "Mundis replication node"
-version = "1.9.16"
+version = "1.9.17"
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
 homepage = "https://mundis.io/"
@@ -13,24 +13,24 @@ clap = "2.33.1"
 crossbeam-channel = "0.5"
 log = "0.4.14"
 rand = "0.7.0"
-mundis-clap-utils = { path = "../clap-utils", version = "=1.9.16" }
-mundis-download-utils = { path = "../download-utils", version = "=1.9.16" }
-mundis-gossip = { path = "../gossip", version = "=1.9.16" }
-mundis-ledger = { path = "../ledger", version = "=1.9.16" }
-mundis-logger = { path = "../logger", version = "=1.9.16" }
-mundis-net-utils = { path = "../net-utils", version = "=1.9.16" }
-mundis-rpc = { path = "../rpc", version = "=1.9.16" }
-mundis-replica-lib = { path = "../replica-lib", version = "=1.9.16" }
-mundis-runtime = { path = "../runtime", version = "=1.9.16" }
-mundis-sdk = { path = "../sdk", version = "=1.9.16" }
-mundis-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.16" }
-mundis-streamer = { path = "../streamer", version = "=1.9.16" }
-mundis-version = { path = "../version", version = "=1.9.16" }
-mundis-validator = { path = "../validator", version = "=1.9.16" }
+mundis-clap-utils = { path = "../clap-utils", version = "=1.9.17" }
+mundis-download-utils = { path = "../download-utils", version = "=1.9.17" }
+mundis-gossip = { path = "../gossip", version = "=1.9.17" }
+mundis-ledger = { path = "../ledger", version = "=1.9.17" }
+mundis-logger = { path = "../logger", version = "=1.9.17" }
+mundis-net-utils = { path = "../net-utils", version = "=1.9.17" }
+mundis-rpc = { path = "../rpc", version = "=1.9.17" }
+mundis-replica-lib = { path = "../replica-lib", version = "=1.9.17" }
+mundis-runtime = { path = "../runtime", version = "=1.9.17" }
+mundis-sdk = { path = "../sdk", version = "=1.9.17" }
+mundis-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.17" }
+mundis-streamer = { path = "../streamer", version = "=1.9.17" }
+mundis-version = { path = "../version", version = "=1.9.17" }
+mundis-validator = { path = "../validator", version = "=1.9.17" }
 
 [dev-dependencies]
 serial_test = "0.5.1"
-mundis-core = { path = "../core", version = "=1.9.16" }
+mundis-core = { path = "../core", version = "=1.9.17" }
 tempfile = "3.2.0"
 
 

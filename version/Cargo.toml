@@ -1,6 +1,6 @@
 [package]
 name = "mundis-version"
-version = "1.9.16"
+version = "1.9.17"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -11,9 +11,9 @@ edition = "2021"
 log = "0.4.14"
 serde = "1.0.130"
 serde_derive = "1.0.103"
-mundis-frozen-abi = { path = "../frozen-abi", version = "=1.9.16" }
-mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.16" }
-mundis-sdk = { path = "../sdk", version = "=1.9.16" }
+mundis-frozen-abi = { path = "../frozen-abi", version = "=1.9.17" }
+mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.17" }
+mundis-sdk = { path = "../sdk", version = "=1.9.17" }
 
 [lib]
 name = "mundis_version"

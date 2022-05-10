@@ -1,6 +1,6 @@
 [package]
 name = "mundis-program-runtime"
-version = "1.9.16"
+version = "1.9.17"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -17,11 +17,11 @@ log = "0.4.14"
 num-derive = { version = "0.3" }
 num-traits = { version = "0.2" }
 serde = { version = "1.0.129", features = ["derive", "rc"] }
-mundis-frozen-abi = { path = "../frozen-abi", version = "=1.9.16" }
-mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.16" }
-mundis-logger = { path = "../logger", version = "=1.9.16" }
-mundis-measure = { path = "../measure", version = "=1.9.16" }
-mundis-sdk = { path = "../sdk", version = "=1.9.16" }
+mundis-frozen-abi = { path = "../frozen-abi", version = "=1.9.17" }
+mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.17" }
+mundis-logger = { path = "../logger", version = "=1.9.17" }
+mundis-measure = { path = "../measure", version = "=1.9.17" }
+mundis-sdk = { path = "../sdk", version = "=1.9.17" }
 thiserror = "1.0"
 
 [lib]
