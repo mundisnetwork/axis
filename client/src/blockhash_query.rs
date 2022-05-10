@@ -122,6 +122,7 @@ mod tests {
         mundis_sdk::{account::Account, hash::hash, nonce, system_program},
         std::collections::HashMap,
     };
+    use mundis_sdk::fee_calculator::FeeCalculator;
 
     #[test]
     fn test_blockhash_query_new_ok() {
@@ -284,7 +285,7 @@ mod tests {
             context: RpcResponseContext { slot: 1 },
             value: json!(RpcFees {
                 blockhash: rpc_blockhash.to_string(),
-                fee_calculator: rpc_fee_calc.clone(),
+                fee_calculator: rpc_fee_calc,
                 last_valid_slot: 42,
                 last_valid_block_height: 42,
             }),
@@ -292,7 +293,7 @@ mod tests {
         let get_fee_calculator_for_blockhash_response = json!(Response {
             context: RpcResponseContext { slot: 1 },
             value: json!(RpcFeeCalculator {
-                fee_calculator: rpc_fee_calc.clone()
+                fee_calculator: rpc_fee_calc
             }),
         });
         let rpc_client = RpcClient::new_mock("fails".to_string());
