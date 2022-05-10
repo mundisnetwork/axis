@@ -25,7 +25,6 @@ mundis-send-transaction-service = { path = "../send-transaction-service", versio
 mundis-vote-program = { path = "../programs/vote", version = "=1.9.14" }
 mundis-token-program = { path = "../programs/token", version = "=1.9.14" }
 mundis-token-account-program = { path = "../programs/token-account", version = "=1.9.14" }
-mundis-sidechain-program = { path = "../programs/sidechain", version = "=1.9.14" }
 tarpc = { version = "0.27.2", features = ["full"] }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }

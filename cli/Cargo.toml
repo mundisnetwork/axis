@@ -33,7 +33,6 @@ mundis-config-program = { path = "../programs/config", version = "=1.9.14" }
 mundis-faucet = { path = "../faucet", version = "=1.9.14" }
 mundis-logger = { path = "../logger", version = "=1.9.14" }
 mundis-program-runtime = { path = "../program-runtime", version = "=1.9.14" }
-solana_rbpf = "=0.2.24"
 mundis-remote-wallet = { path = "../remote-wallet", version = "=1.9.14" }
 mundis-sdk = { path = "../sdk", version = "=1.9.14" }
 mundis-transaction-status = { path = "../transaction-status", version = "=1.9.14" }

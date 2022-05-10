@@ -413,7 +413,7 @@ mod tests {
     #[test]
     fn test_async_report_metrics() {
         mundis_logger::setup();
-        //mundis_logger::setup_with_default("solana=info");
+        //mundis_logger::setup_with_default("mundis=info");
 
         // make a vec of txs
         let txs_count = 128usize;

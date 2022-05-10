@@ -36,7 +36,6 @@ impl Processor {
         invoke_context: &mut InvokeContext,
     ) -> Result<(), InstructionError> {
         let keyed_accounts = invoke_context.get_keyed_accounts()?;
-
         let program_id = keyed_account_at_index(keyed_accounts, 0)?.unsigned_key();
         let accounts = &keyed_accounts[first_instruction_account..];
 

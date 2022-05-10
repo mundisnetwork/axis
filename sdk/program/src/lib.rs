@@ -49,7 +49,6 @@ pub mod stake_history;
 pub mod system_instruction;
 pub mod system_program;
 pub mod sysvar;
-pub mod wasm;
 
 #[cfg(target_arch = "bpf")]
 pub use mundis_sdk_macro::wasm_bindgen_stub as wasm_bindgen;
@@ -71,12 +70,6 @@ pub mod vote {
 pub mod memo {
     pub mod program {
         crate::declare_id!("Memo111111111111111111111111111111111111111");
-    }
-}
-
-pub mod sidechain {
-    pub mod program {
-        crate::declare_id!("SideChain1111111111111111111111111111111111");
     }
 }
 

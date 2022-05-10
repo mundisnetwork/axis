@@ -1,7 +1,7 @@
 //! Loading signers and keypairs from the command line.
 //!
 //! This module contains utilities for loading [Signer]s and [Keypair]s from
-//! standard signing sources, from the command line, as in the Solana CLI.
+//! standard signing sources, from the command line, as in the Mundis CLI.
 //!
 //! The key function here is [`signer_from_path`], which loads a `Signer` from
 //! one of several possible sources by interpreting a "path" command line
