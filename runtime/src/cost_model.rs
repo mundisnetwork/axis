@@ -7,20 +7,25 @@
 use {
     crate::{block_cost_limits::*, execute_cost_table::ExecuteCostTable},
     log::*,
-    mundis_sdk::{pubkey::Pubkey, transaction::SanitizedTransaction},
+    solana_sdk::{pubkey::Pubkey, transaction::SanitizedTransaction},
     std::collections::HashMap,
 };
 
 const MAX_WRITABLE_ACCOUNTS: usize = 256;
 
 // costs are stored in number of 'compute unit's
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TransactionCost {
     pub writable_accounts: Vec<Pubkey>,
     pub signature_cost: u64,
     pub write_lock_cost: u64,
     pub data_bytes_cost: u64,
     pub execution_cost: u64,
+    <<<<<<< HEAD
+    =======
+    pub account_data_size: u64,
+    pub is_simple_vote: bool,
+    >>>>>>> 9e07272af (- Only commit successfully executed transactions' cost to cost_tracker;)
 }
 
 impl Default for TransactionCost {
@@ -31,6 +36,11 @@ impl Default for TransactionCost {
             write_lock_cost: 0u64,
             data_bytes_cost: 0u64,
             execution_cost: 0u64,
+            <<<<<<< HEAD
+            =======
+            account_data_size: 0u64,
+            is_simple_vote: false,
+            >>>>>>> 9e07272af (- Only commit successfully executed transactions' cost to cost_tracker;)
         }
     }
 }
@@ -49,6 +59,7 @@ impl TransactionCost {
         self.write_lock_cost = 0;
         self.data_bytes_cost = 0;
         self.execution_cost = 0;
+        self.is_simple_vote = false;
     }
 
     pub fn sum(&self) -> u64 {
@@ -105,6 +116,11 @@ impl CostModel {
         self.get_write_lock_cost(&mut tx_cost, transaction);
         tx_cost.data_bytes_cost = self.get_data_bytes_cost(transaction);
         tx_cost.execution_cost = self.get_transaction_cost(transaction);
+        <<<<<<< HEAD
+            =======
+            tx_cost.account_data_size = self.calculate_account_data_size(transaction);
+        tx_cost.is_simple_vote = transaction.is_simple_vote_transaction();
+        >>>>>>> 9e07272af (- Only commit successfully executed transactions' cost to cost_tracker;)
 
         debug!("transaction {:?} has cost {:?}", transaction, tx_cost);
         tx_cost
@@ -200,7 +216,8 @@ mod tests {
             bank::Bank,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
         },
-        mundis_sdk::{
+        solana_sdk::{
+            bpf_loader,
             hash::Hash,
             instruction::CompiledInstruction,
             message::Message,
@@ -215,10 +232,9 @@ mod tests {
             thread::{self, JoinHandle},
         },
     };
-    use mundis_sdk::native_loader;
 
     fn test_setup() -> (Keypair, Hash) {
-        mundis_logger::setup();
+        solana_logger::setup();
         let GenesisConfigInfo {
             genesis_config,
             mint_keypair,
@@ -239,9 +255,9 @@ mod tests {
         assert_eq!(100, testee.find_instruction_cost(&known_key));
 
         testee
-            .upsert_instruction_cost(&native_loader::id(), 1999)
+            .upsert_instruction_cost(&bpf_loader::id(), 1999)
             .unwrap();
-        assert_eq!(1999, testee.find_instruction_cost(&native_loader::id()));
+        assert_eq!(1999, testee.find_instruction_cost(&bpf_loader::id()));
 
         // unknown program is assigned with default cost
         assert_eq!(
@@ -254,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_iterating_instruction_cost_by_program_keys() {
-        mundis_logger::setup();
+        solana_logger::setup();
         let mut testee = CostModel::default();
 
         let mut test_key_and_cost = HashMap::<Pubkey, u64>::new();
@@ -311,8 +327,8 @@ mod tests {
     fn test_cost_model_transaction_many_transfer_instructions() {
         let (mint_keypair, start_hash) = test_setup();
 
-        let key1 = mundis_sdk::pubkey::new_rand();
-        let key2 = mundis_sdk::pubkey::new_rand();
+        let key1 = solana_sdk::pubkey::new_rand();
+        let key2 = solana_sdk::pubkey::new_rand();
         let instructions =
             system_instruction::transfer_many(&mint_keypair.pubkey(), &[(key1, 1), (key2, 1)]);
         let message = Message::new(&instructions, Some(&mint_keypair.pubkey()));
@@ -339,10 +355,10 @@ mod tests {
         let (mint_keypair, start_hash) = test_setup();
 
         // construct a transaction with multiple random instructions
-        let key1 = mundis_sdk::pubkey::new_rand();
-        let key2 = mundis_sdk::pubkey::new_rand();
-        let prog1 = mundis_sdk::pubkey::new_rand();
-        let prog2 = mundis_sdk::pubkey::new_rand();
+        let key1 = solana_sdk::pubkey::new_rand();
+        let key2 = solana_sdk::pubkey::new_rand();
+        let prog1 = solana_sdk::pubkey::new_rand();
+        let prog2 = solana_sdk::pubkey::new_rand();
         let instructions = vec![
             CompiledInstruction::new(3, &(), vec![0, 1]),
             CompiledInstruction::new(4, &(), vec![0, 2]),
@@ -462,10 +478,10 @@ mod tests {
     fn test_cost_model_can_be_shared_concurrently_with_rwlock() {
         let (mint_keypair, start_hash) = test_setup();
         // construct a transaction with multiple random instructions
-        let key1 = mundis_sdk::pubkey::new_rand();
-        let key2 = mundis_sdk::pubkey::new_rand();
-        let prog1 = mundis_sdk::pubkey::new_rand();
-        let prog2 = mundis_sdk::pubkey::new_rand();
+        let key1 = solana_sdk::pubkey::new_rand();
+        let key2 = solana_sdk::pubkey::new_rand();
+        let prog1 = solana_sdk::pubkey::new_rand();
+        let prog2 = solana_sdk::pubkey::new_rand();
         let instructions = vec![
             CompiledInstruction::new(3, &(), vec![0, 1]),
             CompiledInstruction::new(4, &(), vec![0, 2]),
@@ -540,7 +556,7 @@ mod tests {
             .is_some());
         assert!(cost_model
             .instruction_execution_cost_table
-            .get_cost(&mundis_vote_program::id())
+            .get_cost(&solana_vote_program::id())
             .is_some());
     }
 }

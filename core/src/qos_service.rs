@@ -4,13 +4,13 @@
 //!
 use {
     crate::banking_stage::BatchedTransactionCostDetails,
-    mundis_measure::measure::Measure,
-    mundis_runtime::{
+    solana_measure::measure::Measure,
+    solana_runtime::{
         bank::Bank,
         cost_model::{CostModel, TransactionCost},
         cost_tracker::CostTrackerError,
     },
-    mundis_sdk::{
+    solana_sdk::{
         timing::AtomicInterval,
         transaction::{self, SanitizedTransaction, TransactionError},
     },
@@ -62,7 +62,7 @@ impl QosService {
         let metrics_clone = metrics.clone();
         let reporting_thread = Some(
             Builder::new()
-                .name("mundis-qos-service-metrics-repoting".to_string())
+                .name("solana-qos-service-metrics-repoting".to_string())
                 .spawn(move || {
                     Self::reporting_loop(running_flag_clone, metrics_clone, reporting_duration_ms);
                 })
@@ -151,6 +151,33 @@ impl QosService {
         (select_results, num_included)
     }
 
+    <<<<<<< HEAD
+    =======
+    pub fn commit_transaction_cost(
+        &self,
+        bank: &Arc<Bank>,
+        transaction: &SanitizedTransaction,
+        actual_units: Option<u64>,
+    ) {
+        bank.write_cost_tracker()
+            .unwrap()
+            .commit_transaction(transaction, actual_units);
+    }
+
+    pub fn cancel_transaction_cost(&self, bank: &Arc<Bank>, transaction: &SanitizedTransaction) {
+        bank.write_cost_tracker()
+            .unwrap()
+            .cancel_transaction(transaction);
+    }
+
+    // metrics are reported by bank slot
+    pub fn report_metrics(&self, bank: Arc<Bank>) {
+        self.report_sender
+            .send(QosMetrics::BlockBatchUpdate { bank })
+            .unwrap_or_else(|err| warn!("qos service report metrics failed: {:?}", err));
+    }
+
+    >>>>>>> 9e07272af (- Only commit successfully executed transactions' cost to cost_tracker;)
     pub fn accumulate_estimated_transaction_costs(
         &self,
         cost_details: &BatchedTransactionCostDetails,
@@ -306,21 +333,21 @@ mod tests {
     use {
         super::*,
         itertools::Itertools,
-        mundis_runtime::{
+        solana_runtime::{
             bank::Bank,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
         },
-        mundis_sdk::{
+        solana_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},
             system_transaction,
         },
-        mundis_vote_program::vote_transaction,
+        solana_vote_program::vote_transaction,
     };
 
     #[test]
     fn test_compute_transaction_costs() {
-        mundis_logger::setup();
+        solana_logger::setup();
 
         // make a vec of txs
         let keypair = Keypair::new();
@@ -360,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_select_transactions_per_cost() {
-        mundis_logger::setup();
+        solana_logger::setup();
         let GenesisConfigInfo { genesis_config, .. } = create_genesis_config(10);
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
         let cost_model = Arc::new(RwLock::new(CostModel::default()));
@@ -412,8 +439,8 @@ mod tests {
 
     #[test]
     fn test_async_report_metrics() {
-        mundis_logger::setup();
-        //mundis_logger::setup_with_default("mundis=info");
+        solana_logger::setup();
+        //solana_logger::setup_with_default("solana=info");
 
         // make a vec of txs
         let txs_count = 128usize;
