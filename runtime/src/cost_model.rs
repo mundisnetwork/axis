@@ -201,7 +201,6 @@ mod tests {
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
         },
         mundis_sdk::{
-            bpf_loader,
             hash::Hash,
             instruction::CompiledInstruction,
             message::Message,
@@ -216,6 +215,7 @@ mod tests {
             thread::{self, JoinHandle},
         },
     };
+    use mundis_sdk::native_loader;
 
     fn test_setup() -> (Keypair, Hash) {
         mundis_logger::setup();
@@ -239,9 +239,9 @@ mod tests {
         assert_eq!(100, testee.find_instruction_cost(&known_key));
 
         testee
-            .upsert_instruction_cost(&bpf_loader::id(), 1999)
+            .upsert_instruction_cost(&native_loader::id(), 1999)
             .unwrap();
-        assert_eq!(1999, testee.find_instruction_cost(&bpf_loader::id()));
+        assert_eq!(1999, testee.find_instruction_cost(&native_loader::id()));
 
         // unknown program is assigned with default cost
         assert_eq!(

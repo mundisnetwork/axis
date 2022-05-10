@@ -6762,7 +6762,6 @@ pub(crate) mod tests {
         },
         mundis_sdk::{
             account::Account,
-            bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable,
             clock::{DEFAULT_SLOTS_PER_EPOCH, DEFAULT_TICKS_PER_SLOT},
             compute_budget::ComputeBudgetInstruction,
             epoch_schedule::MINIMUM_SLOTS_PER_EPOCH,
@@ -13916,9 +13915,6 @@ pub(crate) mod tests {
         }
 
         let accounts = &[
-            (key1, new_executable_account(bpf_loader_upgradeable::id())),
-            (key2, new_executable_account(bpf_loader::id())),
-            (key3, new_executable_account(bpf_loader_deprecated::id())),
             (key4, new_executable_account(native_loader::id())),
             (key5, AccountSharedData::default()),
         ];
@@ -13981,7 +13977,7 @@ pub(crate) mod tests {
         let key2 = mundis_sdk::pubkey::new_rand();
         let executor: Arc<dyn Executor> = Arc::new(TestExecutor {});
         let executable_account = AccountSharedData::from(Account {
-            owner: bpf_loader_upgradeable::id(),
+            owner: native_loader::id(),
             executable: true,
             ..Account::default()
         });
@@ -14328,18 +14324,7 @@ pub(crate) mod tests {
             Ok(())
         }
         let builtins = Builtins {
-            genesis_builtins: vec![
-                Builtin::new(
-                    "mock bpf",
-                    mundis_sdk::bpf_loader::id(),
-                    mock_process_instruction,
-                ),
-                Builtin::new(
-                    "mock bpf",
-                    mundis_sdk::bpf_loader_deprecated::id(),
-                    mock_process_instruction,
-                ),
-            ],
+            genesis_builtins: vec![],
             feature_transitions: (vec![]),
         };
 
