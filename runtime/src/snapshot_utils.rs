@@ -391,10 +391,18 @@ pub fn archive_snapshot_package(
         metadata.len()
     );
     datapoint_info!(
-        "snapshot-package",
+        "archive-snapshot-package",
         ("slot", snapshot_package.slot(), i64),
         ("duration_ms", timer.as_ms(), i64),
-        ("size", metadata.len(), i64)
+        (
+            if snapshot_package.snapshot_type.is_full_snapshot() {
+                "full-snapshot-archive-size"
+            } else {
+                "incremental-snapshot-archive-size"
+            },
+            metadata.len(),
+            i64
+        ),
     );
     Ok(())
 }
