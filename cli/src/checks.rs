@@ -5,7 +5,7 @@ use {
         rpc_client::RpcClient,
     },
     mundis_sdk::{
-        commitment_config::CommitmentConfig, message::Message, native_token::lamports_to_mdis,
+        commitment_config::CommitmentConfig, message::Message, native_token::lamports_to_mun,
         pubkey::Pubkey,
     },
 };
@@ -78,13 +78,13 @@ pub fn check_account_for_spend_multiple_fees_with_commitment(
     {
         if balance > 0 {
             return Err(CliError::InsufficientFundsForSpendAndFee(
-                lamports_to_mdis(balance),
-                lamports_to_mdis(fee),
+                lamports_to_mun(balance),
+                lamports_to_mun(fee),
                 *account_pubkey,
             ));
         } else {
             return Err(CliError::InsufficientFundsForFee(
-                lamports_to_mdis(fee),
+                lamports_to_mun(fee),
                 *account_pubkey,
             ));
         }

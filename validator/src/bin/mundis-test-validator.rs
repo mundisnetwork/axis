@@ -17,7 +17,7 @@ use {
         account::AccountSharedData,
         clock::Slot,
         epoch_schedule::{EpochSchedule, MINIMUM_SLOTS_PER_EPOCH},
-        native_token::mdis_to_lamports,
+        native_token::mun_to_lamports,
         pubkey::Pubkey,
         rent::Rent,
         rpc_port,
@@ -283,13 +283,13 @@ fn main() {
                 .help("Keep this amount of shreds in root slots."),
         )
         .arg(
-            Arg::with_name("faucet_mdis")
-                .long("faucet-mdis")
+            Arg::with_name("faucet_mun")
+                .long("faucet-mun")
                 .takes_value(true)
-                .value_name("MDIS")
+                .value_name("MUN")
                 .default_value(default_faucet_sol.as_str())
                 .help(
-                    "Give the faucet address this much MDIS in genesis. \
+                    "Give the faucet address this much MUN in genesis. \
                      If the ledger already exists then this parameter is silently ignored",
                 ),
         )
@@ -471,7 +471,7 @@ fn main() {
         None
     };
 
-    let faucet_lamports = mdis_to_lamports(value_of(&matches, "faucet_mun").unwrap());
+    let faucet_lamports = mun_to_lamports(value_of(&matches, "faucet_mun").unwrap());
     let faucet_keypair_file = ledger_path.join("faucet-keypair.json");
     if !faucet_keypair_file.exists() {
         write_keypair_file(&Keypair::new(), faucet_keypair_file.to_str().unwrap()).unwrap_or_else(
@@ -515,7 +515,7 @@ fn main() {
             ("mint_address", "--mint"),
             ("ticks_per_slot", "--ticks-per-slot"),
             ("slots_per_epoch", "--slots-per-epoch"),
-            ("faucet_mdis", "--faucet-mdis"),
+            ("faucet_mun", "--faucet-mun"),
             ("deactivate_feature", "--deactivate-feature"),
         ] {
             if matches.is_present(name) {
@@ -525,7 +525,7 @@ fn main() {
     } else if random_mint {
         println_name_value(
             "\nNotice!",
-            "No wallet available. `mundis airdrop` localnet MDIS after creating one\n",
+            "No wallet available. `mundis airdrop` localnet MUN after creating one\n",
         );
     }
 

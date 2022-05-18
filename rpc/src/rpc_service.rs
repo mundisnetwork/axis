@@ -32,7 +32,7 @@ use {
     },
     mundis_sdk::{
         exit::Exit, genesis_config::DEFAULT_GENESIS_DOWNLOAD_PATH, hash::Hash,
-        native_token::lamports_to_mdis, pubkey::Pubkey,
+        native_token::lamports_to_mun, pubkey::Pubkey,
     },
     mundis_send_transaction_service::send_transaction_service::{self, SendTransactionService},
     std::{
@@ -293,14 +293,14 @@ fn process_rest(bank_forks: &Arc<RwLock<BankForks>>, path: &str) -> Option<Strin
                     .lamports;
             Some(format!(
                 "{}",
-                lamports_to_mdis(total_supply - non_circulating_supply)
+                lamports_to_mun(total_supply - non_circulating_supply)
             ))
         }
         "/v0/total-supply" => {
             let r_bank_forks = bank_forks.read().unwrap();
             let bank = r_bank_forks.root_bank();
             let total_supply = bank.capitalization();
-            Some(format!("{}", lamports_to_mdis(total_supply)))
+            Some(format!("{}", lamports_to_mun(total_supply)))
         }
         _ => None,
     }

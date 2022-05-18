@@ -4,7 +4,7 @@ use {
     console::style,
     indicatif::{ProgressBar, ProgressStyle},
     mundis_sdk::{
-        clock::UnixTimestamp, hash::Hash, message::Message, native_token::lamports_to_mdis,
+        clock::UnixTimestamp, hash::Hash, message::Message, native_token::lamports_to_mun,
         program_utils::limited_deserialize, pubkey::Pubkey, stake, transaction::Transaction,
     },
     mundis_transaction_status::UiTransactionStatusMeta,
@@ -40,8 +40,8 @@ pub fn build_balance_message_with_config(
     let value = if config.use_lamports_unit {
         lamports.to_string()
     } else {
-        let mdis = lamports_to_mdis(lamports);
-        let sol_str = format!("{:.9}", mdis);
+        let mun = lamports_to_mun(lamports);
+        let sol_str = format!("{:.9}", mun);
         if config.trim_trailing_zeros {
             sol_str
                 .trim_end_matches('0')
@@ -56,7 +56,7 @@ pub fn build_balance_message_with_config(
             let ess = if lamports == 1 { "" } else { "s" };
             format!(" lamport{}", ess)
         } else {
-            " MDIS".to_string()
+            " MUN".to_string()
         }
     } else {
         "".to_string()
@@ -283,7 +283,7 @@ pub fn write_transaction<W: io::Write>(
             w,
             "{}  Fee: ◎{}",
             prefix,
-            lamports_to_mdis(transaction_status.fee)
+            lamports_to_mun(transaction_status.fee)
         )?;
         assert_eq!(
             transaction_status.pre_balances.len(),
@@ -301,7 +301,7 @@ pub fn write_transaction<W: io::Write>(
                     "{}  Account {} balance: ◎{}",
                     prefix,
                     i,
-                    lamports_to_mdis(*pre)
+                    lamports_to_mun(*pre)
                 )?;
             } else {
                 writeln!(
@@ -309,8 +309,8 @@ pub fn write_transaction<W: io::Write>(
                     "{}  Account {} balance: ◎{} -> ◎{}",
                     prefix,
                     i,
-                    lamports_to_mdis(*pre),
-                    lamports_to_mdis(*post)
+                    lamports_to_mun(*pre),
+                    lamports_to_mun(*post)
                 )?;
             }
         }
@@ -345,8 +345,8 @@ pub fn write_transaction<W: io::Write>(
                             "-".to_string()
                         },
                         sign,
-                        lamports_to_mdis(reward.lamports.abs() as u64),
-                        lamports_to_mdis(reward.post_balance)
+                        lamports_to_mun(reward.lamports.abs() as u64),
+                        lamports_to_mun(reward.post_balance)
                     )?;
                 }
             }

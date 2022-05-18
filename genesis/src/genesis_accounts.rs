@@ -3,7 +3,7 @@ use {
         stakes::{create_and_add_stakes, StakerInfo},
         unlocks::UnlockInfo,
     },
-    mundis_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_MDIS},
+    mundis_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_MUN},
 };
 
 // Team schedule: unlock after 9 months, then monthly for 24 months
@@ -51,11 +51,11 @@ const UNLOCK_FROM_DAY_ZERO: UnlockInfo = UnlockInfo {
     custodian: "MuneGztCcF9wXt5aNCuqe6Uq34nGDm86ccHWuEHhYPj",
 };
 
-const TEAM_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MDIS;
-const FOUNDATION_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MDIS;
-const COMMUNITY_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MDIS;
-const PRIVATE_SALE_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MDIS;
-const PUBLIC_SALE_LAMPORTS: u64 = 20_000_000 * LAMPORTS_PER_MDIS;
+const TEAM_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MUN;
+const FOUNDATION_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MUN;
+const COMMUNITY_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MUN;
+const PRIVATE_SALE_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MUN;
+const PUBLIC_SALE_LAMPORTS: u64 = 20_000_000 * LAMPORTS_PER_MUN;
 
 pub const TEAM_STAKER_INFOS: &[StakerInfo] = &[
     StakerInfo {
@@ -139,7 +139,7 @@ pub fn add_genesis_accounts(genesis_config: &mut GenesisConfig) {
         &UNLOCK_FROM_DAY_ZERO_VESTED_FOR_12,
     );
 
-    assert_eq!(400_000_000 * LAMPORTS_PER_MDIS, total_lamports);
+    assert_eq!(400_000_000 * LAMPORTS_PER_MUN, total_lamports);
 }
 
 #[cfg(test)]
@@ -147,7 +147,7 @@ mod tests {
     use std::time::Duration;
     use mundis_sdk::clock::Epoch;
     use mundis_sdk::epoch_schedule::EpochSchedule;
-    use mundis_sdk::native_token::lamports_to_mdis;
+    use mundis_sdk::native_token::lamports_to_mun;
     use crate::unlocks::Unlocks;
     use super::*;
 
@@ -163,7 +163,7 @@ mod tests {
             .map(|(_, account)| account.lamports)
             .sum::<u64>();
 
-        assert_eq!(400_000_000 * LAMPORTS_PER_MDIS, lamports);
+        assert_eq!(400_000_000 * LAMPORTS_PER_MUN, lamports);
     }
 
     #[test]
@@ -193,7 +193,7 @@ mod tests {
                 &tick_duration,
                 ticks_per_slot,
             ).map(|unlock| {
-                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mdis(unlock.amount(TEAM_LAMPORTS)));
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(TEAM_LAMPORTS)));
                 return unlock.amount(TEAM_LAMPORTS);
             })
                 .sum::<u64>()
@@ -211,7 +211,7 @@ mod tests {
                 &tick_duration,
                 ticks_per_slot,
             ).map(|unlock| {
-                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mdis(unlock.amount(FOUNDATION_LAMPORTS)));
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(FOUNDATION_LAMPORTS)));
                 return unlock.amount(FOUNDATION_LAMPORTS);
             })
                 .sum::<u64>()
@@ -229,7 +229,7 @@ mod tests {
                 &tick_duration,
                 ticks_per_slot,
             ).map(|unlock| {
-                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mdis(unlock.amount(COMMUNITY_LAMPORTS)));
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(COMMUNITY_LAMPORTS)));
                 return unlock.amount(COMMUNITY_LAMPORTS);
             })
                 .sum::<u64>()
@@ -247,7 +247,7 @@ mod tests {
                 &tick_duration,
                 ticks_per_slot,
             ).map(|unlock| {
-                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mdis(unlock.amount(PRIVATE_SALE_LAMPORTS)));
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(PRIVATE_SALE_LAMPORTS)));
                 return unlock.amount(PRIVATE_SALE_LAMPORTS);
             })
                 .sum::<u64>()
@@ -265,7 +265,7 @@ mod tests {
                 &tick_duration,
                 ticks_per_slot,
             ).map(|unlock| {
-                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mdis(unlock.amount(PUBLIC_SALE_LAMPORTS)));
+                println!("Month: {}, amount: {}", unlock.epoch / EPOCHS_PER_MONTH, lamports_to_mun(unlock.amount(PUBLIC_SALE_LAMPORTS)));
                 return unlock.amount(PUBLIC_SALE_LAMPORTS);
             })
                 .sum::<u64>()

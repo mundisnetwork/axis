@@ -5,7 +5,7 @@ use {
     mundis_faucet::faucet::run_local_faucet,
     mundis_sdk::{
         commitment_config::CommitmentConfig,
-        native_token::mdis_to_lamports,
+        native_token::mun_to_lamports,
         signature::{Keypair, Signer},
     },
     mundis_streamer::socket::SocketAddrSpace,
@@ -24,7 +24,7 @@ fn test_cli_request_airdrop() {
     bob_config.json_rpc_url = test_validator.rpc_url();
     bob_config.command = CliCommand::Airdrop {
         pubkey: None,
-        lamports: mdis_to_lamports(50.0),
+        lamports: mun_to_lamports(50.0),
     };
     let keypair = Keypair::new();
     bob_config.signers = vec![&keypair];
@@ -38,5 +38,5 @@ fn test_cli_request_airdrop() {
     let balance = rpc_client
         .get_balance(&bob_config.signers[0].pubkey())
         .unwrap();
-    assert_eq!(balance, mdis_to_lamports(50.0));
+    assert_eq!(balance, mun_to_lamports(50.0));
 }

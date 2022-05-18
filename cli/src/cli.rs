@@ -365,7 +365,7 @@ pub enum CliCommand {
         tx_info: TxInfo,
     },
     WrapToken {
-        mdis: f64,
+        mun: f64,
         wallet_address: Pubkey,
         wrapped_sol_account: Option<Pubkey>,
         tx_info: TxInfo,
@@ -577,11 +577,11 @@ pub enum CliError {
     ClientError(#[from] ClientError),
     #[error("Command not recognized: {0}")]
     CommandNotRecognized(String),
-    #[error("Account {1} has insufficient funds for fee ({0} MDIS)")]
+    #[error("Account {1} has insufficient funds for fee ({0} MUN)")]
     InsufficientFundsForFee(f64, Pubkey),
-    #[error("Account {1} has insufficient funds for spend ({0} MDIS)")]
+    #[error("Account {1} has insufficient funds for spend ({0} MUN)")]
     InsufficientFundsForSpend(f64, Pubkey),
-    #[error("Account {2} has insufficient funds for spend ({0} MDIS) + fee ({1} MDIS)")]
+    #[error("Account {2} has insufficient funds for spend ({0} MUN) + fee ({1} MUN)")]
     InsufficientFundsForSpendAndFee(f64, f64, Pubkey),
     #[error(transparent)]
     InvalidNonce(nonce_utils::Error),
@@ -1922,11 +1922,11 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
         } => process_unfreeze_token_command(&rpc_client, config, *account, *mint_address, *freeze_authority, multisigner_pubkeys, tx_info),
 
         CliCommand::WrapToken {
-            mdis,
+            mun,
             wallet_address,
             wrapped_sol_account,
             ref tx_info
-        } => process_wrap_token_command(&rpc_client, config, *mdis, *wallet_address, *wrapped_sol_account, tx_info),
+        } => process_wrap_token_command(&rpc_client, config, *mun, *wallet_address, *wrapped_sol_account, tx_info),
 
         CliCommand::UnwrapToken {
             wallet_address,
@@ -2397,7 +2397,7 @@ mod tests {
             pubkey: None,
             use_lamports_unit: false,
         };
-        assert_eq!(process_command(&config).unwrap(), "0.00000005 MDIS");
+        assert_eq!(process_command(&config).unwrap(), "0.00000005 MUN");
 
         let good_signature = Signature::new(&bs58::decode(SIGNATURE).into_vec().unwrap());
         config.command = CliCommand::Confirm(good_signature);
@@ -2711,7 +2711,7 @@ mod tests {
         write_keypair_file(&default_keypair, &default_keypair_file).unwrap();
         let default_signer = DefaultSigner::new("", &default_keypair_file);
 
-        //Test Transfer Subcommand, MDIS
+        //Test Transfer Subcommand, MUN
         let from_keypair = keypair_from_seed(&[0u8; 32]).unwrap();
         let from_pubkey = from_keypair.pubkey();
         let from_string = from_pubkey.to_string();

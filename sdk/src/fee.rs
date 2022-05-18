@@ -1,4 +1,4 @@
-use crate::native_token::mdis_to_lamports;
+use crate::native_token::mun_to_lamports;
 
 /// A fee and its associated compute unit limit
 #[derive(Debug, Default, Clone)]
@@ -22,20 +22,20 @@ pub struct FeeStructure {
 
 impl FeeStructure {
     pub fn new(
-        mdis_per_signature: f64,
-        mdis_per_write_lock: f64,
+        sol_per_signature: f64,
+        sol_per_write_lock: f64,
         compute_fee_bins: Vec<(u64, f64)>,
     ) -> Self {
         let compute_fee_bins = compute_fee_bins
             .iter()
-            .map(|(limit, mdis)| FeeBin {
+            .map(|(limit, mun)| FeeBin {
                 limit: *limit,
-                fee: mdis_to_lamports(*mdis),
+                fee: mun_to_lamports(*mun),
             })
             .collect::<Vec<_>>();
         FeeStructure {
-            lamports_per_signature: mdis_to_lamports(mdis_per_signature),
-            lamports_per_write_lock: mdis_to_lamports(mdis_per_write_lock),
+            lamports_per_signature: mun_to_lamports(sol_per_signature),
+            lamports_per_write_lock: mun_to_lamports(sol_per_write_lock),
             compute_fee_bins,
         }
     }

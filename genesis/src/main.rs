@@ -16,13 +16,13 @@ use {
     mundis_ledger::{blockstore::create_new_ledger, blockstore_db::AccessType},
     mundis_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
     mundis_sdk::{
-        account::{AccountSharedData, ReadableAccount, WritableAccount},
+        account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
         clock,
         epoch_schedule::EpochSchedule,
         fee_calculator::FeeRateGovernor,
         genesis_config::{ClusterType, GenesisConfig},
         inflation::Inflation,
-        native_token::mdis_to_lamports,
+        native_token::mun_to_lamports,
         poh_config::PohConfig,
         pubkey::Pubkey,
         rent::Rent,
@@ -36,7 +36,7 @@ use {
         collections::HashMap,
         error,
         fs::File,
-        io::self,
+        io::{self, Read},
         path::PathBuf,
         process,
         str::FromStr,
@@ -119,11 +119,11 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let rent = Rent::default();
 
     // vote account
-    let default_bootstrap_validator_lamports = &mdis_to_lamports(500.0)
+    let default_bootstrap_validator_lamports = &mun_to_lamports(500.0)
         .max(VoteState::get_rent_exempt_reserve(&rent))
         .to_string();
     // stake account
-    let default_bootstrap_validator_stake_lamports = &mdis_to_lamports(0.5)
+    let default_bootstrap_validator_stake_lamports = &mun_to_lamports(0.5)
         .max(StakeState::get_rent_exempt_reserve(&rent))
         .to_string();
 
