@@ -12,7 +12,7 @@ use {
         fee_calculator::FeeRateGovernor,
         hash::{hash, Hash},
         inflation::Inflation,
-        native_token::lamports_to_mun,
+        native_token::lamports_to_mdis,
         poh_config::PohConfig,
         pubkey::Pubkey,
         rent::Rent,
@@ -255,7 +255,7 @@ impl fmt::Display for GenesisConfig {
              {:?}\n\
              {:?}\n\
              {:?}\n\
-             Capitalization: {} MUN in {} accounts\n\
+             Capitalization: {} MDIS in {} accounts\n\
              Native instruction processors: {:#?}\n\
              Rewards pool: {:#?}\n\
              ",
@@ -276,7 +276,7 @@ impl fmt::Display for GenesisConfig {
             self.inflation,
             self.rent,
             self.fee_rate_governor,
-            lamports_to_mun(
+            lamports_to_mdis(
                 self.accounts
                     .iter()
                     .map(|(pubkey, account)| {

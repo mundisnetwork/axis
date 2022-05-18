@@ -120,7 +120,7 @@ use {
             SanitizedMessage,
         },
         native_loader,
-        native_token::mun_to_lamports,
+        native_token::mdis_to_lamports,
         nonce, nonce_account,
         packet::PACKET_DATA_SIZE,
         precompiles::get_precompiles,
@@ -6577,7 +6577,7 @@ impl Bank {
             let mut native_mint_account = mundis_sdk::account::AccountSharedData::from(Account {
                 owner: inline_mundis_token::id(),
                 data: inline_mundis_token::native_mint::ACCOUNT_DATA.to_vec(),
-                lamports: mun_to_lamports(1.),
+                lamports: mdis_to_lamports(1.),
                 executable: false,
                 rent_epoch: self.epoch() + 1,
             });
@@ -15700,15 +15700,15 @@ pub(crate) mod tests {
             .iter()
             .cloned()
             .zip(vec![
-                mun_to_lamports(2.0),
-                mun_to_lamports(3.0),
-                mun_to_lamports(3.0),
-                mun_to_lamports(4.0),
-                mun_to_lamports(5.0),
+                mdis_to_lamports(2.0),
+                mdis_to_lamports(3.0),
+                mdis_to_lamports(3.0),
+                mdis_to_lamports(4.0),
+                mdis_to_lamports(5.0),
             ])
             .collect();
 
-        // Initialize accounts; all have larger MUN balances than current Bank built-ins
+        // Initialize accounts; all have larger MDIS balances than current Bank built-ins
         let account0 = AccountSharedData::new(pubkeys_balances[0].1, 0, &Pubkey::default());
         bank.store_account(&pubkeys_balances[0].0, &account0);
         let account1 = AccountSharedData::new(pubkeys_balances[1].1, 0, &Pubkey::default());
@@ -15730,17 +15730,17 @@ pub(crate) mod tests {
         assert_eq!(
             bank.get_largest_accounts(1, &pubkeys_hashset, AccountAddressFilter::Include)
                 .unwrap(),
-            vec![(pubkeys[4], mun_to_lamports(5.0))]
+            vec![(pubkeys[4], mdis_to_lamports(5.0))]
         );
         assert_eq!(
             bank.get_largest_accounts(1, &HashSet::new(), AccountAddressFilter::Exclude)
                 .unwrap(),
-            vec![(pubkeys[4], mun_to_lamports(5.0))]
+            vec![(pubkeys[4], mdis_to_lamports(5.0))]
         );
         assert_eq!(
             bank.get_largest_accounts(1, &exclude4, AccountAddressFilter::Exclude)
                 .unwrap(),
-            vec![(pubkeys[3], mun_to_lamports(4.0))]
+            vec![(pubkeys[3], mdis_to_lamports(4.0))]
         );
 
         // Return all added accounts
@@ -16388,7 +16388,7 @@ pub(crate) mod tests {
         // Explicit fee schedule
 
         let expected_fee_structure = &[
-            // (units requested, fee in MUN),
+            // (units requested, fee in MDIS),
             (0, 0.0),
             (5_000, 0.0),
             (10_000, 0.0),
@@ -16411,7 +16411,7 @@ pub(crate) mod tests {
             let fee = Bank::calculate_fee(&message, 1, &fee_structure, true);
             assert_eq!(
                 fee,
-                mun_to_lamports(pair.1) + lamports_per_signature + ADDITIONAL_FEE
+                mdis_to_lamports(pair.1) + lamports_per_signature + ADDITIONAL_FEE
             );
         }
     }
@@ -16623,7 +16623,7 @@ pub(crate) mod tests {
             mut genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config_with_leader(mun_to_lamports(100.), &Pubkey::new_unique(), 42);
+        } = create_genesis_config_with_leader(mdis_to_lamports(100.), &Pubkey::new_unique(), 42);
         genesis_config.rent = Rent::default();
 
         let mock_program_id = Pubkey::new_unique();
@@ -16734,7 +16734,7 @@ pub(crate) mod tests {
             mut genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config_with_leader(mun_to_lamports(100.), &Pubkey::new_unique(), 42);
+        } = create_genesis_config_with_leader(mdis_to_lamports(100.), &Pubkey::new_unique(), 42);
         genesis_config.rent = Rent::default();
 
         let mock_program_id = Pubkey::new_unique();
@@ -16792,7 +16792,7 @@ pub(crate) mod tests {
             mut genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config_with_leader(mun_to_lamports(100.), &Pubkey::new_unique(), 42);
+        } = create_genesis_config_with_leader(mdis_to_lamports(100.), &Pubkey::new_unique(), 42);
         genesis_config.rent = Rent::default();
         activate_all_features(&mut genesis_config);
 
@@ -16883,13 +16883,13 @@ pub(crate) mod tests {
             mut genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config_with_leader(mun_to_lamports(100.), &Pubkey::new_unique(), 42);
+        } = create_genesis_config_with_leader(mdis_to_lamports(100.), &Pubkey::new_unique(), 42);
         genesis_config.rent = Rent::default();
         // Activate features, including require_rent_exempt_accounts
         activate_all_features(&mut genesis_config);
 
         let validator_pubkey = mundis_sdk::pubkey::new_rand();
-        let validator_stake_lamports = mun_to_lamports(1.);
+        let validator_stake_lamports = mdis_to_lamports(1.);
         let validator_staking_keypair = Keypair::new();
         let validator_voting_keypair = Keypair::new();
 
@@ -16947,7 +16947,7 @@ pub(crate) mod tests {
             mut genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config_with_leader(mun_to_lamports(100.), &Pubkey::new_unique(), 42);
+        } = create_genesis_config_with_leader(mdis_to_lamports(100.), &Pubkey::new_unique(), 42);
         genesis_config.rent = Rent::default();
         genesis_config.fee_rate_governor = FeeRateGovernor::new(
             mundis_sdk::fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
@@ -16993,7 +16993,7 @@ pub(crate) mod tests {
             &[system_instruction::transfer(
                 &rent_exempt_fee_payer.pubkey(),
                 &recipient,
-                mun_to_lamports(1.),
+                mdis_to_lamports(1.),
             )],
             Some(&rent_exempt_fee_payer.pubkey()),
             &recent_blockhash,
@@ -17197,7 +17197,7 @@ pub(crate) mod tests {
             mut genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config_with_leader(mun_to_lamports(100.), &Pubkey::new_unique(), 42);
+        } = create_genesis_config_with_leader(mdis_to_lamports(100.), &Pubkey::new_unique(), 42);
         genesis_config.rent = Rent::default();
         let rent_exempt_minimum = genesis_config.rent.minimum_balance(0);
 
@@ -17218,7 +17218,7 @@ pub(crate) mod tests {
             mut genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config_with_leader(mun_to_lamports(100.), &Pubkey::new_unique(), 42);
+        } = create_genesis_config_with_leader(mdis_to_lamports(100.), &Pubkey::new_unique(), 42);
         genesis_config.rent = Rent::default();
         // Activate features, including require_rent_exempt_accounts
         activate_all_features(&mut genesis_config);
@@ -17228,7 +17228,7 @@ pub(crate) mod tests {
         let tx = system_transaction::transfer(
             &mint_keypair,
             &recipient,
-            mun_to_lamports(1.),
+            mdis_to_lamports(1.),
             bank.last_blockhash(),
         );
         let num_accounts = tx.message().account_keys.len();

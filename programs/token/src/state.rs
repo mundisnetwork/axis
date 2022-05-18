@@ -84,7 +84,7 @@ pub struct TokenAccount {
     pub state: AccountState,
     /// If is_some, this is a native token, and the value logs the rent-exempt reserve. An Account
     /// is required to be rent-exempt, so the value is used by the Processor to ensure that wrapped
-    /// MUN accounts do not drop below this threshold.
+    /// MDIS accounts do not drop below this threshold.
     pub is_native: bool,
     /// The amount delegated
     pub delegated_amount: u64,
