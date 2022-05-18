@@ -17,7 +17,7 @@ use mundis_sdk::feature_set::FEATURE_NAMES;
 use mundis_sdk::fee_calculator::FeeRateGovernor;
 use mundis_sdk::genesis_config::{ClusterType, GenesisConfig};
 use mundis_sdk::hash::Hash;
-use mundis_sdk::native_token::mun_to_lamports;
+use mundis_sdk::native_token::mdis_to_lamports;
 use mundis_sdk::poh_config::PohConfig;
 use mundis_sdk::pubkey::Pubkey;
 use mundis_sdk::rent::Rent;
@@ -164,13 +164,13 @@ impl ProgramTest {
         let fee_rate_governor = FeeRateGovernor::default();
         let bootstrap_validator_pubkey = Pubkey::new_unique();
         let bootstrap_validator_stake_lamports =
-            rent.minimum_balance(VoteState::size_of()) + mun_to_lamports(1_000_000.0);
+            rent.minimum_balance(VoteState::size_of()) + mdis_to_lamports(1_000_000.0);
 
         let mint_keypair = Keypair::new();
         let voting_keypair = Keypair::new();
 
         let mut genesis_config = create_genesis_config_with_leader_ex(
-            mun_to_lamports(1_000_000.0),
+            mdis_to_lamports(1_000_000.0),
             &mint_keypair.pubkey(),
             &bootstrap_validator_pubkey,
             &voting_keypair.pubkey(),
@@ -285,7 +285,7 @@ impl ProgramTest {
     /// Start the test client
     ///
     /// Returns a `BanksClient` interface into the test environment as well as a payer `Keypair`
-    /// with MUN for sending transactions
+    /// with MDIS for sending transactions
     pub async fn start_with_context(self) -> ProgramTestContext {
         let (bank_forks, block_commitment_cache, last_blockhash, gci) = self.setup_bank();
         let target_tick_duration = gci.genesis_config.poh_config.target_tick_duration;
@@ -317,6 +317,7 @@ impl<T> Drop for DroppableTask<T> {
     }
 }
 
+#[allow(dead_code)]
 pub struct ProgramTestContext {
     pub banks_client: BanksClient,
     pub last_blockhash: Hash,

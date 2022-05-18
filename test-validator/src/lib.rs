@@ -29,7 +29,7 @@ use {
         fee_calculator::FeeRateGovernor,
         instruction::{AccountMeta, Instruction},
         message::Message,
-        native_token::mun_to_lamports,
+        native_token::mdis_to_lamports,
         pubkey::Pubkey,
         rent::Rent,
         signature::{read_keypair_file, write_keypair_file, Keypair, Signer},
@@ -460,9 +460,9 @@ impl TestValidator {
         let validator_identity = Keypair::new();
         let validator_vote_account = Keypair::new();
         let validator_stake_account = Keypair::new();
-        let validator_identity_lamports = mun_to_lamports(500.);
-        let validator_stake_lamports = mun_to_lamports(1_000_000.);
-        let mint_lamports = mun_to_lamports(500_000_000.);
+        let validator_identity_lamports = mdis_to_lamports(500.);
+        let validator_stake_lamports = mdis_to_lamports(1_000_000.);
+        let mint_lamports = mdis_to_lamports(500_000_000.);
 
         let accounts = config.accounts.clone();
 

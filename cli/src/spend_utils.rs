@@ -8,7 +8,7 @@ use {
     mundis_client::rpc_client::RpcClient,
     mundis_sdk::{
         commitment_config::CommitmentConfig, hash::Hash, message::Message,
-        native_token::lamports_to_mun, pubkey::Pubkey,
+        native_token::lamports_to_mdis, pubkey::Pubkey,
     },
 };
 
@@ -118,22 +118,22 @@ where
         if from_pubkey == fee_pubkey {
             if from_balance == 0 || from_balance < spend + fee {
                 return Err(CliError::InsufficientFundsForSpendAndFee(
-                    lamports_to_mun(spend),
-                    lamports_to_mun(fee),
+                    lamports_to_mdis(spend),
+                    lamports_to_mdis(fee),
                     *from_pubkey,
                 ));
             }
         } else {
             if from_balance < spend {
                 return Err(CliError::InsufficientFundsForSpend(
-                    lamports_to_mun(spend),
+                    lamports_to_mdis(spend),
                     *from_pubkey,
                 ));
             }
             if !check_account_for_balance_with_commitment(rpc_client, fee_pubkey, fee, commitment)?
             {
                 return Err(CliError::InsufficientFundsForFee(
-                    lamports_to_mun(fee),
+                    lamports_to_mdis(fee),
                     *fee_pubkey,
                 ));
             }

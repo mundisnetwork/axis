@@ -72,7 +72,7 @@ fn test_vote_authorize_and_withdraw() {
         .max(1);
     check_balance!(expected_balance, &rpc_client, &vote_account_pubkey);
 
-    // Transfer in some more MUN
+    // Transfer in some more MDIS
     config.signers = vec![&default_signer];
     config.command = CliCommand::Transfer {
         amount: SpendAmount::Some(10_000),
@@ -291,7 +291,7 @@ fn test_offline_vote_authorize_and_withdraw() {
         .max(1);
     check_balance!(expected_balance, &rpc_client, &vote_account_pubkey);
 
-    // Transfer in some more MUN
+    // Transfer in some more MDIS
     config_payer.signers = vec![&default_signer];
     config_payer.command = CliCommand::Transfer {
         amount: SpendAmount::Some(10_000),

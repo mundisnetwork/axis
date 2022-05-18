@@ -142,14 +142,14 @@ impl Unlock {
 
 #[cfg(test)]
 mod tests {
-    use mundis_sdk::native_token::LAMPORTS_PER_MUN;
+    use mundis_sdk::native_token::LAMPORTS_PER_MDIS;
     use super::*;
 
     #[test]
     #[allow(clippy::float_cmp)]
     fn test_make_lockups() {
         // this number just a random val
-        let total_lamports: u64 = 400_000_000 * LAMPORTS_PER_MUN;
+        let total_lamports: u64 = 400_000_000 * LAMPORTS_PER_MDIS;
 
         // expected config
         const EPOCHS_PER_MONTH: Epoch = 2;
