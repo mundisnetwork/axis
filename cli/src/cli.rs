@@ -2098,7 +2098,7 @@ pub(crate) fn create_tx_info(
 mod tests {
     use {
         super::*,
-        serde_json::{json, Value},
+        serde_json::json,
         mundis_client::{
             blockhash_query,
             mock_sender::SIGNATURE,
@@ -2114,7 +2114,6 @@ mod tests {
             transaction::TransactionError,
         },
         mundis_transaction_status::TransactionConfirmationStatus,
-        std::path::PathBuf,
     };
 
     fn make_tmp_path(name: &str) -> String {
@@ -2432,7 +2431,7 @@ mod tests {
         let vote_account_info_response = json!(Response {
             context: RpcResponseContext { slot: 1 },
             value: json!({
-                "data": ["KLUv/QBYNQIAtAIBAAAAbnoc3Smwt4/ROvTFWY/v9O8qlxZuPKby5Pv8zYBQW/EFAAEAAB8ACQD6gx92zAiAAecDP4B2XeEBSIx7MQeung==", "base64+zstd"],
+                "data": ["KLUv/QBYNQIAtAIAAAAAbnoc3Smwt4/ROvTFWY/v9O8qlxZuPKby5Pv8zYBQW/EFAAEAAB8ACQD6gx92zAiAAecDP4B2XeEBSIx7MQeung==", "base64+zstd"],
                 "lamports": 42,
                 "owner": "Vote111111111111111111111111111111111111111",
                 "executable": false,

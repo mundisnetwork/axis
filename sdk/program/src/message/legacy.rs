@@ -731,7 +731,7 @@ mod tests {
         let builtins = format!("{:?}", *BUILTIN_PROGRAMS_KEYS);
         assert_eq!(
             format!("{}", hash::hash(builtins.as_bytes())),
-            "ACqmMkYbo9eqK6QrRSrB3HLyR6uHhLf31SCfGUAJjiWj"
+            "9RK4xRc2BnbMpN1QQPxcPBc1Mi6tWYdEk4A7zmuiQJBW"
         );
     }
 
@@ -1190,7 +1190,7 @@ mod tests {
         let message = Message::new(&instructions, Some(&id1));
         assert_eq!(
             message.hash(),
-            Hash::from_str("CXRH7GHLieaQZRUjH1mpnNnUZQtU4V4RpJpAFgy77i3z").unwrap()
+            Hash::from_str("HFzDpLtQDzq72zdZL7bkkrEB2JCcgytespt98H3vcE7b").unwrap()
         )
     }
 }
