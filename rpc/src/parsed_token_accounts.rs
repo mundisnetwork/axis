@@ -47,12 +47,12 @@ where
     let mut mint_decimals: HashMap<Pubkey, u8> = HashMap::new();
     keyed_accounts.filter_map(move |(pubkey, account)| {
         let additional_data = get_token_account_mint(account.data()).map(|mint_pubkey| {
-            let anima_token_decimals = mint_decimals.get(&mint_pubkey).cloned().or_else(|| {
+            let token_decimals = mint_decimals.get(&mint_pubkey).cloned().or_else(|| {
                 let (_, decimals) = get_mint_owner_and_decimals(&bank, &mint_pubkey).ok()?;
                 mint_decimals.insert(mint_pubkey, decimals);
                 Some(decimals)
             });
-            AccountAdditionalData { token_decimals: anima_token_decimals }
+            AccountAdditionalData { token_decimals }
         });
 
         let maybe_encoded_account = UiAccount::encode(
@@ -62,6 +62,7 @@ where
             additional_data,
             None,
         );
+
         if let UiAccountData::Json(_) = &maybe_encoded_account.data {
             Some(RpcKeyedAccount {
                 pubkey: pubkey.to_string(),

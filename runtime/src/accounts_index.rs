@@ -2075,8 +2075,8 @@ pub mod tests {
         }
 
         (
-            ANIMA_TOKEN_ACCOUNT_OWNER_OFFSET,
-            ANIMA_TOKEN_ACCOUNT_OWNER_OFFSET + PUBKEY_BYTES,
+            TOKEN_ACCOUNT_OWNER_OFFSET,
+            TOKEN_ACCOUNT_OWNER_OFFSET + PUBKEY_BYTES,
             anima_token_owner_index_enabled(),
         )
     }

@@ -4,7 +4,7 @@ use mundis_sdk::pubkey::{Pubkey, PUBKEY_BYTES};
 mundis_sdk::declare_id!("Token11111111111111111111111111111111111111");
 
 /*
-    anima_token::state::Account {
+    mundis_token_program::state::Account {
         mint: Pubkey,
         owner: Pubkey,
         amount: u64,
@@ -15,21 +15,21 @@ mundis_sdk::declare_id!("Token11111111111111111111111111111111111111");
         close_authority: COption<Pubkey>,
     }
 */
-pub const ANIMA_TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
-pub const ANIMA_TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
-const ANIMA_TOKEN_ACCOUNT_LENGTH: usize = 165;
+pub const TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
+pub const TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
+const TOKEN_ACCOUNT_LENGTH: usize = 165;
 
 pub(crate) trait GenericTokenAccount {
     fn valid_account_data(account_data: &[u8]) -> bool;
 
     // Call after account length has already been verified
     fn unpack_account_owner_unchecked(account_data: &[u8]) -> &Pubkey {
-        Self::unpack_pubkey_unchecked(account_data, ANIMA_TOKEN_ACCOUNT_OWNER_OFFSET)
+        Self::unpack_pubkey_unchecked(account_data, TOKEN_ACCOUNT_OWNER_OFFSET)
     }
 
     // Call after account length has already been verified
     fn unpack_account_mint_unchecked(account_data: &[u8]) -> &Pubkey {
-        Self::unpack_pubkey_unchecked(account_data, ANIMA_TOKEN_ACCOUNT_MINT_OFFSET)
+        Self::unpack_pubkey_unchecked(account_data, TOKEN_ACCOUNT_MINT_OFFSET)
     }
 
     // Call after account length has already been verified
@@ -57,13 +57,13 @@ pub(crate) trait GenericTokenAccount {
 pub struct Account;
 impl Account {
     pub fn get_packed_len() -> usize {
-        ANIMA_TOKEN_ACCOUNT_LENGTH
+        TOKEN_ACCOUNT_LENGTH
     }
 }
 
 impl GenericTokenAccount for Account {
     fn valid_account_data(account_data: &[u8]) -> bool {
-        account_data.len() == ANIMA_TOKEN_ACCOUNT_LENGTH
+        account_data.len() == TOKEN_ACCOUNT_LENGTH
     }
 }
 
@@ -72,16 +72,20 @@ pub mod native_mint {
 
     /*
         Mint {
-            mint_authority: COption::None,
+            mint_authority: None,
             supply: 0,
             decimals: 9,
             is_initialized: true,
-            freeze_authority: COption::None,
+            freeze_authority: None,
+            name: "Mundis".to_string(),
+            symbol: "MDIS".to_string(),
         }
     */
-    pub const ACCOUNT_DATA: [u8; 82] = [
+    pub const ACCOUNT_DATA: [u8; 134] = [
+        0, 6, 0, 0, 0, 0, 0, 0, 0, 77, 117, 110, 100, 105, 115, 4, 0, 0, 0, 0, 0, 0, 0, 77, 68,
+        73, 83, 0, 0, 0, 0, 0, 0, 0, 0, 9, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     ];
 }

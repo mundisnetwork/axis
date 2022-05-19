@@ -22,7 +22,7 @@ pub struct Inflation {
     __unused: f64,
 }
 
-const DEFAULT_INITIAL: f64 = 0.1175;
+const DEFAULT_INITIAL: f64 = 0.11750;
 const DEFAULT_TERMINAL: f64 = 0.04;
 const DEFAULT_TAPER: f64 = 0.085;
 const DEFAULT_FOUNDATION: f64 = 0.05;
