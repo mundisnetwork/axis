@@ -1442,40 +1442,6 @@ mod tests {
     }
 
     #[test]
-    fn test_load_accounts_unknown_program_id() {
-        let mut accounts: Vec<(Pubkey, AccountSharedData)> = Vec::new();
-        let mut error_counters = ErrorCounters::default();
-
-        let keypair = Keypair::new();
-        let key0 = keypair.pubkey();
-        let key1 = Pubkey::new(&[5u8; 32]);
-
-        let account = AccountSharedData::new(1, 0, &Pubkey::default());
-        accounts.push((key0, account));
-
-        let account = AccountSharedData::new(2, 1, &Pubkey::default());
-        accounts.push((key1, account));
-
-        let instructions = vec![CompiledInstruction::new(1, &(), vec![0])];
-        let tx = Transaction::new_with_compiled_instructions(
-            &[&keypair],
-            &[],
-            Hash::default(),
-            vec![Pubkey::default()],
-            instructions,
-        );
-
-        let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
-
-        assert_eq!(error_counters.account_not_found, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        assert_eq!(
-            loaded_accounts[0],
-            (Err(TransactionError::ProgramAccountNotFound), None,)
-        );
-    }
-
-    #[test]
     fn test_load_accounts_insufficient_funds() {
         let mut accounts: Vec<(Pubkey, AccountSharedData)> = Vec::new();
         let mut error_counters = ErrorCounters::default();
@@ -1727,75 +1693,6 @@ mod tests {
         assert_eq!(
             loaded_accounts[0],
             (Err(TransactionError::CallChainTooDeep), None,)
-        );
-    }
-
-    #[test]
-    fn test_load_accounts_bad_owner() {
-        let mut accounts: Vec<(Pubkey, AccountSharedData)> = Vec::new();
-        let mut error_counters = ErrorCounters::default();
-
-        let keypair = Keypair::new();
-        let key0 = keypair.pubkey();
-        let key1 = Pubkey::new(&[5u8; 32]);
-
-        let account = AccountSharedData::new(1, 0, &Pubkey::default());
-        accounts.push((key0, account));
-
-        let mut account = AccountSharedData::new(40, 1, &Pubkey::default());
-        account.set_executable(true);
-        accounts.push((key1, account));
-
-        let instructions = vec![CompiledInstruction::new(1, &(), vec![0])];
-        let tx = Transaction::new_with_compiled_instructions(
-            &[&keypair],
-            &[],
-            Hash::default(),
-            vec![key1],
-            instructions,
-        );
-
-        let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
-
-        assert_eq!(error_counters.account_not_found, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        assert_eq!(
-            loaded_accounts[0],
-            (Err(TransactionError::ProgramAccountNotFound), None,)
-        );
-    }
-
-    #[test]
-    fn test_load_accounts_not_executable() {
-        let mut accounts: Vec<(Pubkey, AccountSharedData)> = Vec::new();
-        let mut error_counters = ErrorCounters::default();
-
-        let keypair = Keypair::new();
-        let key0 = keypair.pubkey();
-        let key1 = Pubkey::new(&[5u8; 32]);
-
-        let account = AccountSharedData::new(1, 0, &Pubkey::default());
-        accounts.push((key0, account));
-
-        let account = AccountSharedData::new(40, 1, &native_loader::id());
-        accounts.push((key1, account));
-
-        let instructions = vec![CompiledInstruction::new(1, &(), vec![0])];
-        let tx = Transaction::new_with_compiled_instructions(
-            &[&keypair],
-            &[],
-            Hash::default(),
-            vec![key1],
-            instructions,
-        );
-
-        let loaded_accounts = load_accounts(tx, &accounts, &mut error_counters);
-
-        assert_eq!(error_counters.invalid_program_for_execution, 1);
-        assert_eq!(loaded_accounts.len(), 1);
-        assert_eq!(
-            loaded_accounts[0],
-            (Err(TransactionError::InvalidProgramForExecution), None,)
         );
     }
 

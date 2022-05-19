@@ -32,7 +32,7 @@ pub const DEFAULT_EXEMPTION_THRESHOLD: f64 = 1.0;
 pub const DEFAULT_BURN_PERCENT: u8 = 50;
 
 /// account storage overhead for calculation of base rent
-pub const ACCOUNT_STORAGE_OVERHEAD: u64 = 512;
+pub const ACCOUNT_STORAGE_OVERHEAD: u64 = 128;
 
 impl Default for Rent {
     fn default() -> Self {

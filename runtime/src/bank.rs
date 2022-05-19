@@ -7099,16 +7099,16 @@ pub(crate) mod tests {
             cluster_type: ClusterType::MainnetBeta,
             ..GenesisConfig::default()
         }));
-        let sysvar_and_builtin_program_delta0 = 10;
+        let sysvar_and_builtin_program_delta0 = 13;
         assert_eq!(
             bank0.capitalization(),
-            42 * 42 + sysvar_and_builtin_program_delta0
+            42 * 42 + mdis_to_lamports(1.0) + sysvar_and_builtin_program_delta0
         );
         let bank1 = Bank::new_from_parent(&bank0, &Pubkey::default(), 1);
         let sysvar_and_builtin_program_delta1 = 2;
         assert_eq!(
             bank1.capitalization(),
-            42 * 42 + sysvar_and_builtin_program_delta0 + sysvar_and_builtin_program_delta1,
+            42 * 42 + mdis_to_lamports(1.0) + sysvar_and_builtin_program_delta0 + sysvar_and_builtin_program_delta1,
         );
     }
 
@@ -8854,10 +8854,10 @@ pub(crate) mod tests {
         // not being eagerly-collected for exact rewards calculation
         bank0.restore_old_behavior_for_fragile_tests();
 
-        let sysvar_and_builtin_program_delta0 = 10;
+        let sysvar_and_builtin_program_delta0 = 13;
         assert_eq!(
             bank0.capitalization(),
-            42 * 1_000_000_000 + sysvar_and_builtin_program_delta0
+            42 * 1_000_000_000 + mdis_to_lamports(1.0) + sysvar_and_builtin_program_delta0
         );
         assert!(bank0.rewards.read().unwrap().is_empty());
 
@@ -8880,7 +8880,6 @@ pub(crate) mod tests {
                 VoteStateVersions::Current(v) => {
                     vote_state = Some(*v);
                 }
-                _ => panic!("Has to be of type Current"),
             };
         }
         bank0.store_account_and_update_capitalization(&vote_id, &vote_account);
@@ -8989,10 +8988,10 @@ pub(crate) mod tests {
         // not being eagerly-collected for exact rewards calculation
         bank.restore_old_behavior_for_fragile_tests();
 
-        let sysvar_and_builtin_program_delta = 10;
+        let sysvar_and_builtin_program_delta = 13;
         assert_eq!(
             bank.capitalization(),
-            42 * 1_000_000_000 + sysvar_and_builtin_program_delta
+            42 * 1_000_000_000 + mdis_to_lamports(1.0) + sysvar_and_builtin_program_delta
         );
         assert!(bank.rewards.read().unwrap().is_empty());
 
@@ -9019,7 +9018,6 @@ pub(crate) mod tests {
                 VoteStateVersions::Current(v) => {
                     vote_state = Some(*v);
                 }
-                _ => panic!("Has to be of type Current"),
             };
         }
         bank.store_account_and_update_capitalization(&vote_id, &vote_account);
@@ -13039,25 +13037,25 @@ pub(crate) mod tests {
             if bank.slot == 0 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "7jRygKXT3WYoJWigqwHvnEHY2MGtCpV9DicY51kGjzKW"
+                    "FsqaJWkSF7ZExT8GJeR19VC8jq4KsQKChoTqT3ycRpFk"
                 );
             }
             if bank.slot == 32 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "B8qZwsyx9h9NeUcVTG7uWFLCgxVQBca5fVmziWjNwfec"
+                    "DjKfoDLCWNBzvrRcfaEsB72bT9R44dRuCEd1czjnxEMf"
                 );
             }
             if bank.slot == 64 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "A893DSezmoRuEAWPQdHNEzShx4AtaY2VFFRKEeh9sx42"
+                    "81oWHwW9mdKJJn8VWgED4VJh12JhNXZFMWGN4E6fHyRc"
                 );
             }
             if bank.slot == 128 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "9qHRKxR56VhJ49rHiCpXcw6AyvYh7r2JT5jDxJyeqDnT"
+                    "AQBRhiZtqPqVdsEz3jFs4LTrHzitCUMRKn7XxqhR8r2r"
                 );
                 break;
             }
@@ -13285,7 +13283,7 @@ pub(crate) mod tests {
         // No more slots should be shrunk
         assert_eq!(bank2.shrink_candidate_slots(), 0);
         // alive_counts represents the count of alive accounts in the three slots 0,1,2
-        assert_eq!(alive_counts, vec![9, 1, 7]);
+        assert_eq!(alive_counts, vec![12, 1, 7]);
     }
 
     #[test]
@@ -13333,7 +13331,7 @@ pub(crate) mod tests {
             .map(|_| bank.process_stale_slot_with_budget(0, force_to_return_alive_account))
             .sum();
         // consumed_budgets represents the count of alive accounts in the three slots 0,1,2
-        assert_eq!(consumed_budgets, 10);
+        assert_eq!(consumed_budgets, 13);
     }
 
     #[test]
@@ -13659,49 +13657,35 @@ pub(crate) mod tests {
             1000000000
         );
 
-        // Testnet - Native mint blinks into existence at epoch 93
+        // Testnet - Native mint exists immediately
         genesis_config.cluster_type = ClusterType::Testnet;
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
-        assert_eq!(bank.get_balance(&inline_mundis_token::native_mint::id()), 0);
+        assert_eq!(bank.get_balance(&inline_mundis_token::native_mint::id()), 1000000000);
         bank.deposit(&inline_mundis_token::native_mint::id(), 4200000000)
             .unwrap();
-
-        let bank = Bank::new_from_parent(
-            &bank,
-            &Pubkey::default(),
-            genesis_config.epoch_schedule.get_first_slot_in_epoch(93),
-        );
-
         let native_mint_account = bank
             .get_account(&inline_mundis_token::native_mint::id())
             .unwrap();
-        assert_eq!(native_mint_account.data().len(), 82);
+        assert_eq!(native_mint_account.data().len(), mundis_token_program::state::Mint::packed_len());
         assert_eq!(
             bank.get_balance(&inline_mundis_token::native_mint::id()),
-            4200000000
+            5200000000
         );
         assert_eq!(native_mint_account.owner(), &inline_mundis_token::id());
 
         // MainnetBeta - Native mint blinks into existence at epoch 75
         genesis_config.cluster_type = ClusterType::MainnetBeta;
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
-        assert_eq!(bank.get_balance(&inline_mundis_token::native_mint::id()), 0);
+        assert_eq!(bank.get_balance(&inline_mundis_token::native_mint::id()), 1000000000);
         bank.deposit(&inline_mundis_token::native_mint::id(), 4200000000)
             .unwrap();
-
-        let bank = Bank::new_from_parent(
-            &bank,
-            &Pubkey::default(),
-            genesis_config.epoch_schedule.get_first_slot_in_epoch(75),
-        );
-
         let native_mint_account = bank
             .get_account(&inline_mundis_token::native_mint::id())
             .unwrap();
-        assert_eq!(native_mint_account.data().len(), 82);
+        assert_eq!(native_mint_account.data().len(), mundis_token_program::state::Mint::packed_len());
         assert_eq!(
             bank.get_balance(&inline_mundis_token::native_mint::id()),
-            4200000000
+            5200000000
         );
         assert_eq!(native_mint_account.owner(), &inline_mundis_token::id());
     }
@@ -13739,7 +13723,7 @@ pub(crate) mod tests {
         assert!(bank1.get_account(&reward_pubkey).is_none());
         let sysvar_and_builtin_program_delta = 1;
         assert_eq!(
-            bank0.capitalization() + 1 + 1_000_000_000 + sysvar_and_builtin_program_delta,
+            bank0.capitalization() + 1 + sysvar_and_builtin_program_delta,
             bank1.capitalization()
         );
         assert_eq!(bank1.capitalization(), bank1.calculate_capitalization(true));
@@ -13890,135 +13874,6 @@ pub(crate) mod tests {
         cache.put(&[(&key3, executor.clone())]);
         assert!(cache.get(&entries[0].0).is_none());
         assert!(cache.get(&entries[1].0).is_some());
-    }
-
-    #[test]
-    fn test_bank_executor_cache() {
-        mundis_logger::setup();
-
-        let (genesis_config, _) = create_genesis_config(1);
-        let bank = Bank::new_for_tests(&genesis_config);
-
-        let key1 = mundis_sdk::pubkey::new_rand();
-        let key2 = mundis_sdk::pubkey::new_rand();
-        let key3 = mundis_sdk::pubkey::new_rand();
-        let key4 = mundis_sdk::pubkey::new_rand();
-        let key5 = mundis_sdk::pubkey::new_rand();
-        let executor: Arc<dyn Executor> = Arc::new(TestExecutor {});
-
-        fn new_executable_account(owner: Pubkey) -> AccountSharedData {
-            AccountSharedData::from(Account {
-                owner,
-                executable: true,
-                ..Account::default()
-            })
-        }
-
-        let accounts = &[
-            (key4, new_executable_account(native_loader::id())),
-            (key5, AccountSharedData::default()),
-        ];
-
-        // don't do any work if not dirty
-        let mut executors = Executors::default();
-        executors.insert(key1, TransactionExecutor::new_cached(executor.clone()));
-        executors.insert(key2, TransactionExecutor::new_cached(executor.clone()));
-        executors.insert(key3, TransactionExecutor::new_cached(executor.clone()));
-        executors.insert(key4, TransactionExecutor::new_cached(executor.clone()));
-        let executors = Rc::new(RefCell::new(executors));
-        executors
-            .borrow_mut()
-            .get_mut(&key1)
-            .unwrap()
-            .clear_miss_for_test();
-        bank.update_executors(true, executors);
-        let executors = bank.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 0);
-
-        // do work
-        let mut executors = Executors::default();
-        executors.insert(key1, TransactionExecutor::new_miss(executor.clone()));
-        executors.insert(key2, TransactionExecutor::new_miss(executor.clone()));
-        executors.insert(key3, TransactionExecutor::new_miss(executor.clone()));
-        executors.insert(key4, TransactionExecutor::new_miss(executor.clone()));
-        let executors = Rc::new(RefCell::new(executors));
-        bank.update_executors(true, executors);
-        let executors = bank.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 3);
-        assert!(executors.borrow().contains_key(&key1));
-        assert!(executors.borrow().contains_key(&key2));
-        assert!(executors.borrow().contains_key(&key3));
-
-        // Check inheritance
-        let bank = Bank::new_from_parent(&Arc::new(bank), &mundis_sdk::pubkey::new_rand(), 1);
-        let executors = bank.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 3);
-        assert!(executors.borrow().contains_key(&key1));
-        assert!(executors.borrow().contains_key(&key2));
-        assert!(executors.borrow().contains_key(&key3));
-
-        // Remove all
-        bank.remove_executor(&key1);
-        bank.remove_executor(&key2);
-        bank.remove_executor(&key3);
-        bank.remove_executor(&key4);
-        let executors = bank.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 0);
-    }
-
-    #[test]
-    fn test_bank_executor_cow() {
-        mundis_logger::setup();
-
-        let (genesis_config, _) = create_genesis_config(1);
-        let root = Arc::new(Bank::new_for_tests(&genesis_config));
-
-        let key1 = mundis_sdk::pubkey::new_rand();
-        let key2 = mundis_sdk::pubkey::new_rand();
-        let executor: Arc<dyn Executor> = Arc::new(TestExecutor {});
-        let executable_account = AccountSharedData::from(Account {
-            owner: native_loader::id(),
-            executable: true,
-            ..Account::default()
-        });
-
-        let accounts = &[
-            (key1, executable_account.clone()),
-            (key2, executable_account),
-        ];
-
-        // add one to root bank
-        let mut executors = Executors::default();
-        executors.insert(key1, TransactionExecutor::new_miss(executor.clone()));
-        let executors = Rc::new(RefCell::new(executors));
-        root.update_executors(true, executors);
-        let executors = root.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 1);
-
-        let fork1 = Bank::new_from_parent(&root, &Pubkey::default(), 1);
-        let fork2 = Bank::new_from_parent(&root, &Pubkey::default(), 2);
-
-        let executors = fork1.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 1);
-        let executors = fork2.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 1);
-
-        let mut executors = Executors::default();
-        executors.insert(key2, TransactionExecutor::new_miss(executor.clone()));
-        let executors = Rc::new(RefCell::new(executors));
-        fork1.update_executors(true, executors);
-
-        let executors = fork1.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 2);
-        let executors = fork2.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 1);
-
-        fork1.remove_executor(&key1);
-
-        let executors = fork1.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 1);
-        let executors = fork2.get_executors(accounts);
-        assert_eq!(executors.borrow().len(), 1);
     }
 
     #[test]

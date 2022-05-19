@@ -245,7 +245,7 @@ mod tests {
         let mut account = AccountSharedData::default();
         let epoch = 3;
         let huge_lamports = 123_456_789_012;
-        let tiny_lamports = 789_012;
+        let tiny_lamports = 394_506;
         let pubkey = mundis_sdk::pubkey::new_rand();
 
         account.set_lamports(huge_lamports);
