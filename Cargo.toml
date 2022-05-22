@@ -24,6 +24,7 @@ members = [
     "storage-bigtable",
     "storage-proto",
     "streamer",
+    "ledger-tool",
     "measure",
     "metrics",
     "poh",
