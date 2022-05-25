@@ -286,10 +286,10 @@ fn main() {
             Arg::with_name("faucet_mdis")
                 .long("faucet-mdis")
                 .takes_value(true)
-                .value_name("MDIS")
+                .value_name("MUNDIS")
                 .default_value(default_faucet_sol.as_str())
                 .help(
-                    "Give the faucet address this much MDIS in genesis. \
+                    "Give the faucet address this much MUNDIS in genesis. \
                      If the ledger already exists then this parameter is silently ignored",
                 ),
         )
@@ -525,7 +525,7 @@ fn main() {
     } else if random_mint {
         println_name_value(
             "\nNotice!",
-            "No wallet available. `mundis airdrop` localnet MDIS after creating one\n",
+            "No wallet available. `mundis airdrop` localnet MUNDIS after creating one\n",
         );
     }
 

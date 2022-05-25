@@ -568,7 +568,7 @@ impl TokenSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("wrap")
-                        .about("Wrap native MDIS in a MDIS token account")
+                        .about("Wrap native MUNDIS in a MUNDIS token account")
                         .arg(
                             Arg::with_name("amount")
                                 .validator(is_amount)
@@ -863,7 +863,7 @@ impl TokenSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("sync-native")
-                        .about("Sync a native MDIS token account to its underlying lamports")
+                        .about("Sync a native MUNDIS token account to its underlying lamports")
                         .arg(
                             owner_address_arg()
                                 .index(1)
@@ -1669,7 +1669,7 @@ pub fn process_transfer_token_command(
                     println_display(
                         config,
                         format!(
-                            "  Funding recipient: {} ({} MDIS)",
+                            "  Funding recipient: {} ({} MUNDIS)",
                             recipient_token_account,
                             lamports_to_mdis(minimum_balance_for_rent_exemption)
                         ),
@@ -2154,7 +2154,7 @@ pub fn process_wrap_token_command(
     let instructions = if let Some(wrapped_sol_account) = wrapped_sol_account {
         println_display(
             config,
-            format!("Wrapping {} MDIS into {}", mdis, wrapped_sol_account),
+            format!("Wrapping {} MUNDIS into {}", mdis, wrapped_sol_account),
         );
         vec![
             system_instruction::create_account(
@@ -2185,7 +2185,7 @@ pub fn process_wrap_token_command(
             }
         }
 
-        println_display(config, format!("Wrapping {} MDIS into {}", mdis, account));
+        println_display(config, format!("Wrapping {} MUNDIS into {}", mdis, account));
         vec![
             system_instruction::transfer(&wallet_address, &account, lamports),
             create_associated_token_account(&config.signers[tx_info.fee_payer].pubkey(), &wallet_address, &native_mint::id()),
@@ -2263,14 +2263,14 @@ pub fn process_unwrap_token_command(
         let lamports = rpc_client.get_balance(&address)?;
         if lamports == 0 {
             if use_associated_account {
-                return Err("No wrapped MDIS in associated account; did you mean to specify an auxiliary address?".to_string().into());
+                return Err("No wrapped MUNDIS in associated account; did you mean to specify an auxiliary address?".to_string().into());
             } else {
-                return Err(format!("No wrapped MDIS in {}", address).into());
+                return Err(format!("No wrapped MUNDIS in {}", address).into());
             }
         }
         println_display(
             config,
-            format!("  Amount: {} MDIS", lamports_to_mdis(lamports)),
+            format!("  Amount: {} MUNDIS", lamports_to_mdis(lamports)),
         );
     }
     println_display(config, format!("  Recipient: {}", &wallet_address));

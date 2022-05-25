@@ -41,14 +41,14 @@ pub fn build_balance_message_with_config(
         lamports.to_string()
     } else {
         let mdis = lamports_to_mdis(lamports);
-        let sol_str = format!("{:.9}", mdis);
+        let mdis_str = format!("{:.9}", mdis);
         if config.trim_trailing_zeros {
-            sol_str
+            mdis_str
                 .trim_end_matches('0')
                 .trim_end_matches('.')
                 .to_string()
         } else {
-            sol_str
+            mdis_str
         }
     };
     let unit = if config.show_unit {
@@ -56,7 +56,7 @@ pub fn build_balance_message_with_config(
             let ess = if lamports == 1 { "" } else { "s" };
             format!(" lamport{}", ess)
         } else {
-            " MDIS".to_string()
+            " MUNDIS".to_string()
         }
     } else {
         "".to_string()

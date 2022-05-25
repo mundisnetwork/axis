@@ -39,7 +39,7 @@ pub enum TokenInstruction {
     },
     /// Initializes a new account to hold tokens.  If this account is associated
     /// with the native mint then the token balance of the initialized account
-    /// will be equal to the amount of MDIS in the account. If this account is
+    /// will be equal to the amount of MUNDIS in the account. If this account is
     /// associated with another mint, that mint must be initialized before this
     /// command can succeed.
     ///
@@ -80,7 +80,7 @@ pub enum TokenInstruction {
     },
     /// Transfers tokens from one account to another either directly or via a
     /// delegate.  If this account is associated with the native mint then equal
-    /// amounts of MDIS and Tokens will be transferred to the destination
+    /// amounts of MUNDIS and Tokens will be transferred to the destination
     /// account.
     ///
     /// Accounts expected by this instruction:
@@ -187,7 +187,7 @@ pub enum TokenInstruction {
         /// The amount of tokens to burn.
         amount: u64,
     },
-    /// Close an account by transferring all its MDIS to the destination account.
+    /// Close an account by transferring all its MUNDIS to the destination account.
     /// Non-native accounts may only be closed if its token amount is zero.
     ///
     /// Accounts expected by this instruction:
@@ -237,7 +237,7 @@ pub enum TokenInstruction {
 
     /// Transfers tokens from one account to another either directly or via a
     /// delegate.  If this account is associated with the native mint then equal
-    /// amounts of MDIS and Tokens will be transferred to the destination
+    /// amounts of MUNDIS and Tokens will be transferred to the destination
     /// account.
     ///
     /// This instruction differs from Transfer in that the token mint and
@@ -355,9 +355,9 @@ pub enum TokenInstruction {
         /// The new account's owner/multisignature.
         owner: Pubkey,
     },
-    /// Given a wrapped / native token account (a token account containing MDIS)
+    /// Given a wrapped / native token account (a token account containing MUNDIS)
     /// updates its amount field based on the account's underlying `lamports`.
-    /// This is useful if a non-wrapped MDIS account uses `system_instruction::transfer`
+    /// This is useful if a non-wrapped MUNDIS account uses `system_instruction::transfer`
     /// to move lamports to a wrapped token account, and needs to have its token
     /// `amount` field updated.
     ///

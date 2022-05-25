@@ -72,7 +72,7 @@ impl WalletSubCommands for App<'_, '_> {
                     Arg::with_name("lamports")
                         .long("lamports")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of MDIS"),
+                        .help("Display balance in lamports instead of MUNDIS"),
                 ),
         )
         .subcommand(
@@ -87,7 +87,7 @@ impl WalletSubCommands for App<'_, '_> {
         )
         .subcommand(
             SubCommand::with_name("airdrop")
-                .about("Request MDIS from a faucet")
+                .about("Request MUNDIS from a faucet")
                 .arg(
                     Arg::with_name("amount")
                         .index(1)
@@ -95,7 +95,7 @@ impl WalletSubCommands for App<'_, '_> {
                         .takes_value(true)
                         .validator(is_amount)
                         .required(true)
-                        .help("The airdrop amount to request, in MDIS"),
+                        .help("The airdrop amount to request, in MUNDIS"),
                 )
                 .arg(
                     pubkey!(Arg::with_name("to")
@@ -117,7 +117,7 @@ impl WalletSubCommands for App<'_, '_> {
                     Arg::with_name("lamports")
                         .long("lamports")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of MDIS"),
+                        .help("Display balance in lamports instead of MUNDIS"),
                 ),
         )
         .subcommand(
@@ -227,7 +227,7 @@ impl WalletSubCommands for App<'_, '_> {
                         .takes_value(true)
                         .validator(is_amount_or_all)
                         .required(true)
-                        .help("The amount to send, in MDIS; accepts keyword ALL"),
+                        .help("The amount to send, in MUNDIS; accepts keyword ALL"),
                 )
                 .arg(
                     pubkey!(Arg::with_name("from")

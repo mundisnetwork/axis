@@ -1,9 +1,9 @@
 //! The Mint that represents the native token
 
-/// There are 10^9 lamports in one MDIS
+/// There are 10^9 lamports in one MUNDIS
 pub const DECIMALS: u8 = 9;
 
-// The Mint for native MDIS Token accounts
+// The Mint for native MUNDIS Token accounts
 mundis_sdk::declare_id!("Mun1111111111111111111111111111111111111112");
 
 #[cfg(test)]

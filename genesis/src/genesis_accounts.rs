@@ -3,7 +3,7 @@ use {
         stakes::{create_and_add_stakes, StakerInfo},
         unlocks::UnlockInfo,
     },
-    mundis_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_MDIS},
+    mundis_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_MUNDIS},
 };
 
 // Team schedule: unlock after 9 months, then monthly for 24 months
@@ -51,11 +51,11 @@ const UNLOCK_FROM_DAY_ZERO: UnlockInfo = UnlockInfo {
     custodian: "MuneGztCcF9wXt5aNCuqe6Uq34nGDm86ccHWuEHhYPj",
 };
 
-const TEAM_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MDIS;
-const FOUNDATION_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MDIS;
-const COMMUNITY_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MDIS;
-const PRIVATE_SALE_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MDIS;
-const PUBLIC_SALE_LAMPORTS: u64 = 20_000_000 * LAMPORTS_PER_MDIS;
+const TEAM_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MUNDIS;
+const FOUNDATION_LAMPORTS: u64 = 50_000_000 * LAMPORTS_PER_MUNDIS;
+const COMMUNITY_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MUNDIS;
+const PRIVATE_SALE_LAMPORTS: u64 = 140_000_000 * LAMPORTS_PER_MUNDIS;
+const PUBLIC_SALE_LAMPORTS: u64 = 20_000_000 * LAMPORTS_PER_MUNDIS;
 
 pub const TEAM_STAKER_INFOS: &[StakerInfo] = &[
     StakerInfo {
@@ -139,7 +139,7 @@ pub fn add_genesis_accounts(genesis_config: &mut GenesisConfig) {
         &UNLOCK_FROM_DAY_ZERO_VESTED_FOR_12,
     );
 
-    assert_eq!(400_000_000 * LAMPORTS_PER_MDIS, total_lamports);
+    assert_eq!(400_000_000 * LAMPORTS_PER_MUNDIS, total_lamports);
 }
 
 #[cfg(test)]
@@ -163,7 +163,7 @@ mod tests {
             .map(|(_, account)| account.lamports)
             .sum::<u64>();
 
-        assert_eq!(400_000_000 * LAMPORTS_PER_MDIS, lamports);
+        assert_eq!(400_000_000 * LAMPORTS_PER_MUNDIS, lamports);
     }
 
     #[test]

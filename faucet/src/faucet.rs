@@ -126,7 +126,7 @@ impl Faucet {
         if let Some((per_request_cap, per_time_cap)) = per_request_cap.zip(per_time_cap) {
             if per_time_cap < per_request_cap {
                 warn!(
-                    "per_time_cap {} MDIS < per_request_cap {} MDIS; \
+                    "per_time_cap {} MUNDIS < per_request_cap {} MUNDIS; \
                     maximum single requests will fail",
                     lamports_to_mdis(per_time_cap),
                     lamports_to_mdis(per_request_cap),
@@ -172,7 +172,7 @@ impl Faucet {
     /// Checks per-request and per-time-ip limits; if both pass, this method returns a signed
     /// SystemProgram::Transfer transaction from the faucet keypair to the requested recipient. If
     /// the request exceeds this per-request limit, this method returns a signed Memo
-    /// transaction with the memo: "request too large; req: <REQUEST> MDIS cap: <CAP> MDIS"
+    /// transaction with the memo: "request too large; req: <REQUEST> MUNDIS cap: <CAP> MUNDIS"
     pub fn build_airdrop_transaction(
         &mut self,
         req: FaucetRequest,
@@ -187,7 +187,7 @@ impl Faucet {
             } => {
                 let mint_pubkey = self.faucet_keypair.pubkey();
                 info!(
-                    "Requesting airdrop of {} MDIS to {:?}",
+                    "Requesting airdrop of {} MUNDIS to {:?}",
                     lamports_to_mdis(lamports),
                     to
                 );

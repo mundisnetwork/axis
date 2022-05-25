@@ -8,11 +8,11 @@ mundis_sdk::declare_id!("Token11111111111111111111111111111111111111");
         mint: Pubkey,
         owner: Pubkey,
         amount: u64,
-        delegate: COption<Pubkey>,
+        delegate: Option<Pubkey>,
         state: AccountState,
-        is_native: COption<u64>,
+        is_native: bool,
         delegated_amount: u64,
-        close_authority: COption<Pubkey>,
+        close_authority: Option<Pubkey>,
     }
 */
 pub const TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
@@ -78,14 +78,36 @@ pub mod native_mint {
             is_initialized: true,
             freeze_authority: None,
             name: "Mundis".to_string(),
-            symbol: "MDIS".to_string(),
+            symbol: "MUNDIS".to_string(),
         }
     */
     pub const ACCOUNT_DATA: [u8; 134] = [
-        0, 6, 0, 0, 0, 0, 0, 0, 0, 77, 117, 110, 100, 105, 115, 4, 0, 0, 0, 0, 0, 0, 0, 77, 68,
-        73, 83, 0, 0, 0, 0, 0, 0, 0, 0, 9, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 6, 0, 0, 0, 0, 0, 0, 0, 77, 117, 110, 100, 105, 115, 6, 0, 0, 0, 0, 0, 0, 0, 77, 85,
+        78, 68, 73, 83, 0, 0, 0, 0, 0, 0, 0, 0, 9, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     ];
+}
+
+#[cfg(test)]
+pub mod test {
+    use mundis_token_program::state::Mint;
+
+    #[test]
+    fn generate_account_data() {
+        let mint = Mint {
+            mint_authority: None,
+            supply: 0,
+            decimals: 9,
+            is_initialized: true,
+            freeze_authority: None,
+            name: "Mundis".to_string(),
+            symbol: "MUNDIS".to_string(),
+        };
+
+        let mut packed: [u8; Mint::LEN] = [0; Mint::LEN];
+        mint.pack(&mut packed).unwrap();
+        println!("{:?}", packed);
+    }
 }
