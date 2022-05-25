@@ -471,7 +471,7 @@ fn main() {
         None
     };
 
-    let faucet_lamports = mdis_to_lamports(value_of(&matches, "faucet_mun").unwrap());
+    let faucet_lamports = mdis_to_lamports(value_of(&matches, "faucet_mdis").unwrap());
     let faucet_keypair_file = ledger_path.join("faucet-keypair.json");
     if !faucet_keypair_file.exists() {
         write_keypair_file(&Keypair::new(), faucet_keypair_file.to_str().unwrap()).unwrap_or_else(

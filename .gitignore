@@ -5,6 +5,7 @@
 /mundis-metrics.tar.bz2
 /target/
 /test-ledger/
+/test
 
 **/*.rs.bk
 .cargo
@@ -20,7 +21,7 @@ log-*/
 
 # intellij files
 /.idea/
-/solana.iml
+*.iml
 /.vscode/
 
 # fetch-spl.sh artifacts
