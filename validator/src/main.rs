@@ -1441,20 +1441,6 @@ pub fn main() {
                 ),
         )
         .arg(
-            Arg::with_name("no_bpf_jit")
-                .long("no-bpf-jit")
-                .takes_value(false)
-                .help("Disable the just-in-time compiler and instead use the interpreter for BPF"),
-        )
-        .arg(
-            // legacy nop argument
-            Arg::with_name("bpf_jit")
-                .long("bpf-jit")
-                .hidden(true)
-                .takes_value(false)
-                .conflicts_with("no_bpf_jit")
-        )
-        .arg(
             Arg::with_name("poh_pinned_cpu_core")
                 .hidden(true)
                 .long("experimental-poh-pinned-cpu-core")
