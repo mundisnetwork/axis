@@ -1,6 +1,6 @@
 [package]
 name = "mundis-perf"
-version = "1.9.18"
+version = "1.9.19"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -20,12 +20,12 @@ log = "0.4.14"
 rand = "0.7.0"
 rayon = "1.5.1"
 serde = "1.0.130"
-mundis-bloom = { path = "../bloom", version = "=1.9.18" }
-mundis-logger = { path = "../logger", version = "=1.9.18" }
-mundis-metrics = { path = "../metrics", version = "=1.9.18" }
-mundis-sdk = { path = "../sdk", version = "=1.9.18" }
-mundis-vote-program = { path = "../programs/vote", version = "=1.9.18" }
-mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.18" }
+mundis-bloom = { path = "../bloom", version = "=1.9.19" }
+mundis-logger = { path = "../logger", version = "=1.9.19" }
+mundis-metrics = { path = "../metrics", version = "=1.9.19" }
+mundis-sdk = { path = "../sdk", version = "=1.9.19" }
+mundis-vote-program = { path = "../programs/vote", version = "=1.9.19" }
+mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.19" }
 
 [target."cfg(target_os = \"linux\")".dependencies]
 caps = "0.5.3"

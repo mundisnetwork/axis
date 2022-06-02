@@ -1,6 +1,6 @@
 [package]
 name = "mundis-frozen-abi"
-version = "1.9.18"
+version = "1.9.19"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 homepage = "https://mundis.io/"
@@ -14,11 +14,11 @@ log = "0.4.14"
 serde = "1.0.130"
 serde_derive = "1.0.103"
 sha2 = "0.9.8"
-mundis-frozen-abi-macro = { path = "macro", version = "=1.9.18" }
+mundis-frozen-abi-macro = { path = "macro", version = "=1.9.19" }
 thiserror = "1.0"
 
 [target.'cfg(not(target_arch = "bpf"))'.dependencies]
-mundis-logger = { path = "../logger", version = "=1.9.18" }
+mundis-logger = { path = "../logger", version = "=1.9.19" }
 generic-array = { version = "0.14.4", default-features = false, features = ["serde", "more_lengths"]}
 memmap2 = "0.5.0"
 
