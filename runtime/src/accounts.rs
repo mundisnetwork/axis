@@ -2715,7 +2715,7 @@ mod tests {
 
     #[test]
     fn test_overrides() {
-        solana_logger::setup();
+        mundis_logger::setup();
         let accounts = Accounts::new_with_config_for_tests(
             Vec::new(),
             &ClusterType::Development,

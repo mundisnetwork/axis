@@ -74,8 +74,7 @@ fn bench_generate_ancestors_descendants(bench: &mut Bencher) {
                 .bank_forks
                 .read()
                 .unwrap()
-                .descendants()
-                .clone();
+                .descendants();
         }
     });
 }
