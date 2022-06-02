@@ -27,7 +27,6 @@ use {
         sync::Arc,
     },
 };
-
 const DEFAULT_MAX_ACTIVE_DISPLAY_AGE_SLOTS: Slot = 15_000_000; // ~90days
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -124,7 +123,7 @@ impl fmt::Display for CliFeatures {
                     "{:<44} | {:<27} | {}",
                     "Feature", "Status", "Description"
                 ))
-                .bold()
+                    .bold()
             )?;
         }
         for feature in &self.features {
@@ -270,7 +269,7 @@ impl fmt::Display for CliClusterFeatureSets {
                 max_rpc_percent_len,
                 rpc_percent_title,
             ))
-            .bold(),
+                .bold(),
         )?;
         for (software_versions, feature_set, stake_percent, rpc_percent, me) in feature_sets {
             writeln!(
@@ -330,8 +329,8 @@ impl FromStr for CliVersion {
 
 impl Serialize for CliVersion {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where
+            S: Serializer,
     {
         serializer.serialize_str(&self.to_string())
     }
@@ -339,8 +338,8 @@ impl Serialize for CliVersion {
 
 impl<'de> Deserialize<'de> for CliVersion {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
     {
         let s: &str = Deserialize::deserialize(deserializer)?;
         CliVersion::from_str(s).map_err(serde::de::Error::custom)
@@ -546,13 +545,13 @@ fn feature_set_stats(rpc_client: &RpcClient) -> Result<FeatureSetStats, ClientEr
         .into_iter()
         .filter_map(
             |(
-                feature_set,
-                WorkingFeatureSetStatsEntry {
-                    stake,
-                    rpc_nodes_count,
-                    software_versions,
-                },
-            )| {
+                 feature_set,
+                 WorkingFeatureSetStatsEntry {
+                     stake,
+                     rpc_nodes_count,
+                     software_versions,
+                 },
+             )| {
                 let stake_percent = (stake as f64 / total_active_stake as f64) * 100.;
                 let rpc_nodes_percent = (rpc_nodes_count as f32 / total_rpc_nodes as f32) * 100.;
                 let mut software_versions = software_versions.into_iter().collect::<Vec<_>>();
@@ -601,13 +600,13 @@ fn feature_activation_allowed(
             .into_iter()
             .map(
                 |(
-                    feature_set,
-                    FeatureSetStatsEntry {
-                        stake_percent,
-                        rpc_nodes_percent: rpc_percent,
-                        software_versions,
-                    },
-                )| {
+                     feature_set,
+                     FeatureSetStatsEntry {
+                         stake_percent,
+                         rpc_nodes_percent: rpc_percent,
+                         software_versions,
+                     },
+                 )| {
                     CliFeatureSet {
                         software_versions: software_versions.into_iter().map(CliVersion).collect(),
                         feature_set,
@@ -680,6 +679,12 @@ fn process_status(
     feature_ids: &[Pubkey],
     display_all: bool,
 ) -> ProcessResult {
+    let filter = if !display_all {
+        let now = rpc_client.get_slot()?;
+        now.checked_sub(DEFAULT_MAX_ACTIVE_DISPLAY_AGE_SLOTS)
+    } else {
+        None
+    };
     let mut inactive = false;
     let mut features = rpc_client
         .get_multiple_accounts(feature_ids)?
@@ -744,11 +749,11 @@ fn process_activate(
 
     if !feature_activation_allowed(rpc_client, false)?.0 {
         match force {
-        ForceActivation::Almost =>
-            return Err("Add force argument once more to override the sanity check to force feature activation ".into()),
-        ForceActivation::Yes => println!("FEATURE ACTIVATION FORCED"),
-        ForceActivation::No =>
-            return Err("Feature activation is not allowed at this time".into()),
+            ForceActivation::Almost =>
+                return Err("Add force argument once more to override the sanity check to force feature activation ".into()),
+            ForceActivation::Yes => println!("FEATURE ACTIVATION FORCED"),
+            ForceActivation::No =>
+                return Err("Feature activation is not allowed at this time".into()),
         }
     }
 
