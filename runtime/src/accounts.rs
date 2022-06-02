@@ -1298,6 +1298,7 @@ mod tests {
             log_messages: None,
             inner_instructions: None,
             durable_nonce_fee: nonce.map(DurableNonceFee::from),
+            executed_units: 0u64,
         })
     }
 

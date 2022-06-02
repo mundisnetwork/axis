@@ -585,6 +585,7 @@ pub struct TransactionExecutionDetails {
     pub log_messages: Option<Vec<String>>,
     pub inner_instructions: Option<Vec<Vec<CompiledInstruction>>>,
     pub durable_nonce_fee: Option<DurableNonceFee>,
+    pub executed_units: u64,
 }
 
 /// Type safe representation of a transaction execution attempt which
@@ -3943,6 +3944,8 @@ impl Bank {
 
         let (blockhash, lamports_per_signature) = self.last_blockhash_and_lamports_per_signature();
 
+        let mut executed_units = 0u64;
+
         let mut process_message_time = Measure::start("process_message_time");
         let process_result = MessageProcessor::process_message(
             &self.builtin_programs.vec,
@@ -3960,8 +3963,10 @@ impl Bank {
             blockhash,
             lamports_per_signature,
             self.load_accounts_data_len(),
+            &mut executed_units,
         );
         process_message_time.stop();
+
         saturating_add_assign!(
             timings.execute_accessories.process_message_us,
             process_message_time.as_us()
@@ -4026,6 +4031,7 @@ impl Bank {
             log_messages,
             inner_instructions,
             durable_nonce_fee,
+            executed_units
         })
     }
 
@@ -6818,6 +6824,7 @@ pub(crate) mod tests {
             log_messages: None,
             inner_instructions: None,
             durable_nonce_fee: nonce.map(DurableNonceFee::from),
+            executed_units: 0u64,
         })
     }
 
@@ -13037,25 +13044,25 @@ pub(crate) mod tests {
             if bank.slot == 0 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "FsqaJWkSF7ZExT8GJeR19VC8jq4KsQKChoTqT3ycRpFk"
+                    "6Ui4JmKMFk1qi5E9xRRt91H17hEby9NNg5mhR2PvwqRp"
                 );
             }
             if bank.slot == 32 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "DjKfoDLCWNBzvrRcfaEsB72bT9R44dRuCEd1czjnxEMf"
+                    "AZygoTGQaMuN22yKJh76uv7oDCmhowgP669peZMGC4Y6"
                 );
             }
             if bank.slot == 64 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "81oWHwW9mdKJJn8VWgED4VJh12JhNXZFMWGN4E6fHyRc"
+                    "96Kd7Wmomtj5XWcxnJM8pwrQzxNZfiCNDZtxUTtvChtw"
                 );
             }
             if bank.slot == 128 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "AQBRhiZtqPqVdsEz3jFs4LTrHzitCUMRKn7XxqhR8r2r"
+                    "4F5cSrvzPStGQbGiMPjVvRfY9oxAYh6BBwjTpnEf11dX"
                 );
                 break;
             }
