@@ -1197,7 +1197,7 @@ impl BankingStage {
         let mut transactions_execute_and_record_status: Vec<_> = execution_results
             .iter()
             .map(|execution_result| match execution_result {
-                TransactionExecutionResult::Executed(details) => {
+                TransactionExecutionResult::Executed { details, .. } => {
                     CommitTransactionDetails::Committed {
                         compute_units: details.executed_units,
                     }
@@ -2076,7 +2076,7 @@ mod tests {
             poh_recorder::{create_test_recorder, Record, WorkingBankEntry},
             poh_service::PohService,
         },
-        mundis_program_runtime::timings::ProgramTiming,
+        mundis_program_runtime::{invoke_context::Executors, timings::ProgramTiming},
         mundis_rpc::transaction_status_service::TransactionStatusService,
         mundis_runtime::bank::TransactionExecutionDetails,
         mundis_sdk::{
@@ -2092,8 +2092,10 @@ mod tests {
         mundis_transaction_status::TransactionWithMetadata,
         mundis_vote_program::vote_transaction,
         std::{
+            cell::RefCell,
             net::SocketAddr,
             path::Path,
+            rc::Rc,
             sync::{
                 atomic::{AtomicBool, Ordering},
                 mpsc::Receiver,
@@ -2111,13 +2113,16 @@ mod tests {
     }
 
     fn new_execution_result(status: Result<(), TransactionError>) -> TransactionExecutionResult {
-        TransactionExecutionResult::Executed(TransactionExecutionDetails {
-            status,
-            log_messages: None,
-            inner_instructions: None,
-            durable_nonce_fee: None,
-            executed_units: 0u64,
-        })
+        TransactionExecutionResult::Executed {
+            details: TransactionExecutionDetails {
+                status,
+                log_messages: None,
+                inner_instructions: None,
+                durable_nonce_fee: None,
+                executed_units: 0u64,
+            },
+            executors: Rc::new(RefCell::new(Executors::default())),
+        }
     }
 
     #[test]
