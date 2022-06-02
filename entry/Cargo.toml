@@ -1,6 +1,6 @@
 [package]
 name = "mundis-entry"
-version = "1.9.17"
+version = "1.9.18"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -14,17 +14,17 @@ log = "0.4.11"
 rand = "0.7.0"
 rayon = "1.5.1"
 serde = "1.0.130"
-mundis-measure = { path = "../measure", version = "=1.9.17" }
-mundis-merkle-tree = { path = "../merkle-tree", version = "=1.9.17" }
-mundis-metrics = { path = "../metrics", version = "=1.9.17" }
-mundis-perf = { path = "../perf", version = "=1.9.17" }
-mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.17" }
-mundis-sdk = { path = "../sdk", version = "=1.9.17" }
+mundis-measure = { path = "../measure", version = "=1.9.18" }
+mundis-merkle-tree = { path = "../merkle-tree", version = "=1.9.18" }
+mundis-metrics = { path = "../metrics", version = "=1.9.18" }
+mundis-perf = { path = "../perf", version = "=1.9.18" }
+mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.18" }
+mundis-sdk = { path = "../sdk", version = "=1.9.18" }
 bincode = "1.3.3"
 
 [dev-dependencies]
 matches = "0.1.9"
-mundis-logger = { path = "../logger", version = "=1.9.17" }
+mundis-logger = { path = "../logger", version = "=1.9.18" }
 
 [lib]
 crate-type = ["lib"]
