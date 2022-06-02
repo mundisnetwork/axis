@@ -1,7 +1,7 @@
 use {
     crate::{
         accounts_data_meter::AccountsDataMeter,
-        compute_budget::ComputeBudget,
+        compute_budget,
         ic_logger_msg, ic_msg,
         instruction_recorder::InstructionRecorder,
         log_collector::LogCollector,
@@ -30,6 +30,7 @@ use {
     },
     std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc, sync::Arc},
 };
+use crate::compute_budget::ComputeBudget;
 
 pub type TransactionAccountRefCell = (Pubkey, Rc<RefCell<AccountSharedData>>);
 pub type TransactionAccountRefCells = Vec<TransactionAccountRefCell>;
@@ -1070,6 +1071,8 @@ mod tests {
             native_loader,
         },
     };
+    use mundis_sdk::feature_set::requestable_heap_size;
+    use crate::compute_budget::ComputeBudget;
 
     #[derive(Debug, Serialize, Deserialize)]
     enum MockInstruction {
@@ -1570,6 +1573,77 @@ mod tests {
             );
             invoke_context.pop();
         }
+    }
+
+    #[test]
+    fn test_invoke_context_compute_budget() {
+        let program_id = Pubkey::new_unique();
+        let accounts = vec![
+            (
+                mundis_sdk::pubkey::new_rand(),
+                Rc::new(RefCell::new(AccountSharedData::default())),
+            ),
+            (
+                program_id,
+                Rc::new(RefCell::new(AccountSharedData::default())),
+            ),
+        ];
+
+        let noop_message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bincode(
+                accounts[0].0,
+                &MockInstruction::NoopSuccess,
+                vec![AccountMeta::new_readonly(accounts[0].0, false)],
+            )],
+            None,
+        ));
+        let neon_message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bincode(
+                program_id,
+                &MockInstruction::NoopSuccess,
+                vec![AccountMeta::new_readonly(accounts[0].0, false)],
+            )],
+            None,
+        ));
+
+        let mut feature_set = FeatureSet::all_enabled();
+        feature_set.deactivate(&tx_wide_compute_cap::id());
+        feature_set.deactivate(&requestable_heap_size::id());
+        let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+        invoke_context.feature_set = Arc::new(feature_set);
+        invoke_context.compute_budget = ComputeBudget::new(compute_budget::DEFAULT_UNITS);
+
+        invoke_context
+            .push(&noop_message, &noop_message.instructions()[0], &[0], &[])
+            .unwrap();
+        assert_eq!(
+            *invoke_context.get_compute_budget(),
+            ComputeBudget::new(compute_budget::DEFAULT_UNITS)
+        );
+        invoke_context.pop();
+
+        invoke_context
+            .push(&neon_message, &neon_message.instructions()[0], &[1], &[])
+            .unwrap();
+        let expected_compute_budget = ComputeBudget {
+            max_units: 200_000,
+            heap_size: None,
+            ..ComputeBudget::new(compute_budget::DEFAULT_UNITS)
+        };
+        assert_eq!(
+            *invoke_context.get_compute_budget(),
+            expected_compute_budget
+        );
+        invoke_context.pop();
+
+        invoke_context
+            .push(&noop_message, &noop_message.instructions()[0], &[0], &[])
+            .unwrap();
+        assert_eq!(
+            *invoke_context.get_compute_budget(),
+            ComputeBudget::new(compute_budget::DEFAULT_UNITS)
+        );
+        invoke_context.pop();
     }
 
     #[test]
