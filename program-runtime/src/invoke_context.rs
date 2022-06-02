@@ -1,7 +1,6 @@
 use {
     crate::{
         accounts_data_meter::AccountsDataMeter,
-        compute_budget,
         ic_logger_msg, ic_msg,
         instruction_recorder::InstructionRecorder,
         log_collector::LogCollector,
