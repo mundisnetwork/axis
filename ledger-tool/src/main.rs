@@ -3003,7 +3003,7 @@ fn main() {
                                 );
                             }
 
-                            assert_capitalization(bank);
+                            assert_capitalization(&bank);
                             println!("Inflation: {:?}", bank.inflation());
                             println!("RentCollector: {:?}", bank.rent_collector());
                             println!("Capitalization: {}", Mdis(bank.capitalization()));
