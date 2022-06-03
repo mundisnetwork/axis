@@ -1,6 +1,6 @@
 [package]
 name = "mundis-config-program"
-version = "0.9.25"
+version = "0.9.26"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -12,11 +12,11 @@ bincode = "1.3.3"
 chrono = { version = "0.4.11", features = ["serde"] }
 serde = "1.0.130"
 serde_derive = "1.0.103"
-mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.25" }
-mundis-sdk = { path = "../../sdk", version = "=0.9.25" }
+mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.26" }
+mundis-sdk = { path = "../../sdk", version = "=0.9.26" }
 
 [dev-dependencies]
-mundis-logger = { path = "../../logger", version = "=0.9.25" }
+mundis-logger = { path = "../../logger", version = "=0.9.26" }
 
 [lib]
 crate-type = ["lib"]

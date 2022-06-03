@@ -2,7 +2,7 @@
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 edition = "2021"
 name = "mundis-cli"
-version = "0.9.25"
+version = "0.9.26"
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
 homepage = "https://mundis.io/"
@@ -24,29 +24,29 @@ semver = "1.0.4"
 serde = "1.0.130"
 serde_derive = "1.0.103"
 serde_json = "1.0.72"
-mundis-account-decoder = { path = "../account-decoder", version = "=0.9.25" }
-mundis-clap-utils = { path = "../clap-utils", version = "=0.9.25" }
-mundis-cli-config = { path = "../cli-config", version = "=0.9.25" }
-mundis-cli-output = { path = "../cli-output", version = "=0.9.25" }
-mundis-client = { path = "../client", version = "=0.9.25" }
-mundis-config-program = { path = "../programs/config", version = "=0.9.25" }
-mundis-faucet = { path = "../faucet", version = "=0.9.25" }
-mundis-logger = { path = "../logger", version = "=0.9.25" }
-mundis-program-runtime = { path = "../program-runtime", version = "=0.9.25" }
-mundis-remote-wallet = { path = "../remote-wallet", version = "=0.9.25" }
-mundis-sdk = { path = "../sdk", version = "=0.9.25" }
-mundis-transaction-status = { path = "../transaction-status", version = "=0.9.25" }
-mundis-version = { path = "../version", version = "=0.9.25" }
-mundis-vote-program = { path = "../programs/vote", version = "=0.9.25" }
-mundis-memo-program = { path = "../programs/memo", version = "=0.9.25" }
-mundis-token-program = { path = "../programs/token", version = "=0.9.25" }
-mundis-token-account-program = { path = "../programs/token-account", version = "=0.9.25" }
+mundis-account-decoder = { path = "../account-decoder", version = "=0.9.26" }
+mundis-clap-utils = { path = "../clap-utils", version = "=0.9.26" }
+mundis-cli-config = { path = "../cli-config", version = "=0.9.26" }
+mundis-cli-output = { path = "../cli-output", version = "=0.9.26" }
+mundis-client = { path = "../client", version = "=0.9.26" }
+mundis-config-program = { path = "../programs/config", version = "=0.9.26" }
+mundis-faucet = { path = "../faucet", version = "=0.9.26" }
+mundis-logger = { path = "../logger", version = "=0.9.26" }
+mundis-program-runtime = { path = "../program-runtime", version = "=0.9.26" }
+mundis-remote-wallet = { path = "../remote-wallet", version = "=0.9.26" }
+mundis-sdk = { path = "../sdk", version = "=0.9.26" }
+mundis-transaction-status = { path = "../transaction-status", version = "=0.9.26" }
+mundis-version = { path = "../version", version = "=0.9.26" }
+mundis-vote-program = { path = "../programs/vote", version = "=0.9.26" }
+mundis-memo-program = { path = "../programs/memo", version = "=0.9.26" }
+mundis-token-program = { path = "../programs/token", version = "=0.9.26" }
+mundis-token-account-program = { path = "../programs/token-account", version = "=0.9.26" }
 thiserror = "1.0.30"
 tiny-bip39 = "0.8.2"
 
 [dev-dependencies]
-mundis-streamer = { path = "../streamer", version = "=0.9.25" }
-mundis-test-validator = { path = "../test-validator", version = "=0.9.25" }
+mundis-streamer = { path = "../streamer", version = "=0.9.26" }
+mundis-test-validator = { path = "../test-validator", version = "=0.9.26" }
 tempfile = "3.2.0"
 
 [[bin]]

@@ -1,6 +1,6 @@
 [package]
 name = "mundis-geyser-plugin-interface"
-version = "0.9.25"
+version = "0.9.26"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -10,8 +10,8 @@ edition = "2021"
 [dependencies]
 log = "0.4.11"
 thiserror = "1.0.30"
-mundis-sdk = { path = "../sdk", version = "=0.9.25" }
-mundis-transaction-status = { path = "../transaction-status", version = "=0.9.25" }
+mundis-sdk = { path = "../sdk", version = "=0.9.26" }
+mundis-transaction-status = { path = "../transaction-status", version = "=0.9.26" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

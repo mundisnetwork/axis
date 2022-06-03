@@ -1,6 +1,6 @@
 [package]
 name = "mundis-clap-utils"
-version = "0.9.25"
+version = "0.9.26"
 description = "Mundis utilities for the clap"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
@@ -11,9 +11,9 @@ edition = "2021"
 [dependencies]
 clap = "2.33.0"
 rpassword = "5.0"
-mundis-perf = { path = "../perf", version = "=0.9.25" }
-mundis-remote-wallet = { path = "../remote-wallet", version = "=0.9.25" }
-mundis-sdk = { path = "../sdk", version = "=0.9.25" }
+mundis-perf = { path = "../perf", version = "=0.9.26" }
+mundis-remote-wallet = { path = "../remote-wallet", version = "=0.9.26" }
+mundis-sdk = { path = "../sdk", version = "=0.9.26" }
 thiserror = "1.0.30"
 tiny-bip39 = "0.8.2"
 uriparse = "0.6.3"

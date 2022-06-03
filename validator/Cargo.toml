@@ -1,6 +1,6 @@
 [package]
 name = "mundis-validator"
-version = "0.9.25"
+version = "0.9.26"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 edition = "2021"
 repository = "https://github.com/mundisnetwork/axis"
@@ -23,29 +23,29 @@ jsonrpc-server-utils= "18.0.0"
 log = "0.4.14"
 num_cpus = "1.13.0"
 rand = "0.7.0"
-mundis-clap-utils = { path = "../clap-utils", version = "=0.9.25" }
-mundis-cli-config = { path = "../cli-config", version = "=0.9.25" }
-mundis-client = { path = "../client", version = "=0.9.25" }
-mundis-core = { path = "../core", version = "=0.9.25" }
-mundis-download-utils = { path = "../download-utils", version = "=0.9.25" }
-mundis-entry = { path = "../entry", version = "=0.9.25" }
-mundis-faucet = { path = "../faucet", version = "=0.9.25" }
-mundis-gossip = { path = "../gossip", version = "=0.9.25" }
-mundis-ledger = { path = "../ledger", version = "=0.9.25" }
-mundis-logger = { path = "../logger", version = "=0.9.25" }
-mundis-metrics = { path = "../metrics", version = "=0.9.25" }
-mundis-net-utils = { path = "../net-utils", version = "=0.9.25" }
-mundis-perf = { path = "../perf", version = "=0.9.25" }
-mundis-poh = { path = "../poh", version = "=0.9.25" }
-mundis-replica-lib = { path = "../replica-lib", version = "=0.9.25" }
-mundis-rpc = { path = "../rpc", version = "=0.9.25" }
-mundis-runtime = { path = "../runtime", version = "=0.9.25" }
-mundis-sdk = { path = "../sdk", version = "=0.9.25" }
-mundis-send-transaction-service = { path = "../send-transaction-service", version = "=0.9.25" }
-mundis-streamer = { path = "../streamer", version = "=0.9.25" }
-mundis-test-validator = { path = "../test-validator", version = "=0.9.25" }
-mundis-version = { path = "../version", version = "=0.9.25" }
-mundis-vote-program = { path = "../programs/vote", version = "=0.9.25" }
+mundis-clap-utils = { path = "../clap-utils", version = "=0.9.26" }
+mundis-cli-config = { path = "../cli-config", version = "=0.9.26" }
+mundis-client = { path = "../client", version = "=0.9.26" }
+mundis-core = { path = "../core", version = "=0.9.26" }
+mundis-download-utils = { path = "../download-utils", version = "=0.9.26" }
+mundis-entry = { path = "../entry", version = "=0.9.26" }
+mundis-faucet = { path = "../faucet", version = "=0.9.26" }
+mundis-gossip = { path = "../gossip", version = "=0.9.26" }
+mundis-ledger = { path = "../ledger", version = "=0.9.26" }
+mundis-logger = { path = "../logger", version = "=0.9.26" }
+mundis-metrics = { path = "../metrics", version = "=0.9.26" }
+mundis-net-utils = { path = "../net-utils", version = "=0.9.26" }
+mundis-perf = { path = "../perf", version = "=0.9.26" }
+mundis-poh = { path = "../poh", version = "=0.9.26" }
+mundis-replica-lib = { path = "../replica-lib", version = "=0.9.26" }
+mundis-rpc = { path = "../rpc", version = "=0.9.26" }
+mundis-runtime = { path = "../runtime", version = "=0.9.26" }
+mundis-sdk = { path = "../sdk", version = "=0.9.26" }
+mundis-send-transaction-service = { path = "../send-transaction-service", version = "=0.9.26" }
+mundis-streamer = { path = "../streamer", version = "=0.9.26" }
+mundis-test-validator = { path = "../test-validator", version = "=0.9.26" }
+mundis-version = { path = "../version", version = "=0.9.26" }
+mundis-vote-program = { path = "../programs/vote", version = "=0.9.26" }
 symlink = "0.1.0"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
