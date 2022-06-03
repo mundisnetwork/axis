@@ -497,9 +497,10 @@ impl Shred {
     pub(crate) fn first_coding_index(&self) -> Option<u32> {
         match self.shred_type() {
             ShredType::Data => None,
-            // TODO should be: self.index() - self.coding_header.position
-            // once position field is populated.
-            ShredType::Code => Some(self.fec_set_index()),
+            ShredType::Code => {
+                let position = u32::from(self.coding_header.position);
+                self.index().checked_sub(position)
+            }
         }
     }
 
