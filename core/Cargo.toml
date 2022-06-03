@@ -54,6 +54,7 @@ mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=0.9.27" }
 mundis-send-transaction-service = { path = "../send-transaction-service", version = "=0.9.27" }
 mundis-streamer = { path = "../streamer", version = "=0.9.27" }
 mundis-transaction-status = { path = "../transaction-status", version = "=0.9.27" }
+mundis-version = { path = "../version", version = "=0.9.27" }
 mundis-vote-program = { path = "../programs/vote", version = "=0.9.27" }
 tempfile = "3.2.0"
 thiserror = "1.0"
@@ -73,7 +74,6 @@ serde_json = "1.0.72"
 serial_test = "0.5.1"
 mundis-program-runtime = { path = "../program-runtime", version = "=0.9.27" }
 mundis-stake-program = { path = "../programs/stake", version = "=0.9.27" }
-mundis-version = { path = "../version", version = "=0.9.27" }
 static_assertions = "1.1.0"
 systemstat = "0.1.10"
 

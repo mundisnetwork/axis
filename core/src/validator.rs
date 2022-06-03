@@ -915,7 +915,11 @@ impl Validator {
             &identity_keypair,
         );
 
-        datapoint_info!("validator-new", ("id", id.to_string(), String));
+        datapoint_info!(
+            "validator-new",
+            ("id", id.to_string(), String),
+            ("version", mundis_version::version!(), String)
+        );
 
         *start_progress.write().unwrap() = ValidatorStartProgress::Running;
         Self {
