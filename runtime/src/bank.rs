@@ -3756,10 +3756,9 @@ impl Bank {
 
     pub fn check_transaction_for_nonce(
         &self,
-        _tx: &SanitizedTransaction,
+        tx: &SanitizedTransaction,
     ) -> Option<(Pubkey, AccountSharedData)> {
-        None
-        // self.check_message_for_nonce(tx.message())
+        self.check_message_for_nonce(tx.message())
     }
 
     pub fn check_transactions(
