@@ -2449,7 +2449,7 @@ checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 
 [[package]]
 name = "mundis-account-decoder"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "Inflector",
  "base64 0.12.3",
@@ -2470,7 +2470,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-address-lookup-table-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "bytemuck",
@@ -2488,7 +2488,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-bloom"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bv",
  "fnv",
@@ -2505,7 +2505,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-clap-utils"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "chrono",
  "clap",
@@ -2522,7 +2522,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-cli"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "bs58",
@@ -2566,7 +2566,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-cli-config"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "anyhow",
  "dirs-next",
@@ -2579,7 +2579,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-cli-output"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "Inflector",
  "base64 0.13.0",
@@ -2602,7 +2602,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-client"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "assert_matches",
  "base64 0.13.0",
@@ -2637,7 +2637,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-compute-budget-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "mundis-program-runtime",
  "mundis-sdk",
@@ -2645,7 +2645,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-config-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "chrono",
@@ -2658,7 +2658,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-core"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "ahash 0.7.6",
  "base64 0.12.3",
@@ -2726,7 +2726,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-download-utils"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "console",
  "indicatif",
@@ -2738,7 +2738,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-entry"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "dlopen",
@@ -2759,7 +2759,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-faucet"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "byteorder",
@@ -2780,7 +2780,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-frozen-abi"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bs58",
  "bv",
@@ -2798,7 +2798,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-frozen-abi-macro"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "proc-macro2 1.0.32",
  "quote 1.0.10",
@@ -2808,7 +2808,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-genesis"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "base64 0.12.3",
  "clap",
@@ -2830,7 +2830,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-geyser-plugin-interface"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "log 0.4.14",
  "mundis-sdk",
@@ -2840,7 +2840,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-geyser-plugin-manager"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bs58",
  "crossbeam-channel",
@@ -2862,7 +2862,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-gossip"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "bv",
@@ -2906,7 +2906,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-keygen"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bs58",
  "clap",
@@ -2922,7 +2922,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-ledger"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "assert_matches",
  "bincode",
@@ -2975,7 +2975,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-ledger-tool"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "assert_cmd",
  "bs58",
@@ -3011,7 +3011,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-logger"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "env_logger",
  "lazy_static",
@@ -3020,7 +3020,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-measure"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "log 0.4.14",
  "mundis-sdk",
@@ -3028,7 +3028,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-memo-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "log 0.4.14",
@@ -3048,7 +3048,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-merkle-tree"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "fast-math",
  "hex",
@@ -3058,7 +3058,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-metrics"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "env_logger",
  "gethostname",
@@ -3072,7 +3072,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-net-utils"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "clap",
@@ -3091,7 +3091,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-perf"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "ahash 0.7.6",
  "bincode",
@@ -3119,7 +3119,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-poh"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "core_affinity",
@@ -3140,7 +3140,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -3185,7 +3185,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-program-runtime"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "base64 0.13.0",
  "bincode",
@@ -3207,7 +3207,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-rayon-threadlimit"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "lazy_static",
  "num_cpus",
@@ -3215,7 +3215,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-remote-wallet"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "base32",
  "console",
@@ -3234,7 +3234,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-replica-lib"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "crossbeam-channel",
  "futures-util",
@@ -3250,7 +3250,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-replica-node"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "clap",
  "crossbeam-channel",
@@ -3278,7 +3278,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-rpc"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "base64 0.12.3",
  "bincode",
@@ -3332,7 +3332,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-runtime"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "arrayref",
  "assert_matches",
@@ -3392,7 +3392,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-sdk"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -3445,7 +3445,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-sdk-macro"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bs58",
  "proc-macro2 1.0.32",
@@ -3456,7 +3456,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-send-transaction-service"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "log 0.4.14",
  "mundis-logger",
@@ -3467,7 +3467,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-stake-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "log 0.4.14",
@@ -3490,7 +3490,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-storage-bigtable"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "backoff",
  "bincode",
@@ -3516,7 +3516,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-storage-proto"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "bs58",
@@ -3531,7 +3531,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-streamer"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "crossbeam-channel",
  "futures-util",
@@ -3556,7 +3556,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-test-harness"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "assert_matches",
  "async-trait",
@@ -3585,7 +3585,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-test-validator"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "base64 0.12.3",
  "log 0.4.14",
@@ -3606,7 +3606,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-token-account-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "log 0.4.14",
@@ -3624,7 +3624,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-token-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "arrayref",
  "bincode",
@@ -3640,7 +3640,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-transaction-status"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "Inflector",
  "base64 0.12.3",
@@ -3665,7 +3665,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-validator"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "chrono",
  "clap",
@@ -3713,7 +3713,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-version"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "log 0.4.14",
  "mundis-frozen-abi",
@@ -3726,7 +3726,7 @@ dependencies = [
 
 [[package]]
 name = "mundis-vote-program"
-version = "0.9.24"
+version = "0.9.25"
 dependencies = [
  "bincode",
  "log 0.4.14",

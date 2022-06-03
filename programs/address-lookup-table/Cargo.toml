@@ -1,7 +1,7 @@
 [package]
 name = "mundis-address-lookup-table-program"
 description = "Create collections of related addresses on-chain for concise use in a transaction's account inputs"
-version = "0.9.24"
+version = "0.9.25"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -15,10 +15,10 @@ log = "0.4.14"
 num-derive = "0.3"
 num-traits = "0.2"
 serde = { version = "1.0.127", features = ["derive"] }
-mundis-frozen-abi = { path = "../../frozen-abi", version = "=0.9.24" }
-mundis-frozen-abi-macro = { path = "../../frozen-abi/macro", version = "=0.9.24" }
-mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.24" }
-mundis-sdk = { path = "../../sdk", version = "=0.9.24" }
+mundis-frozen-abi = { path = "../../frozen-abi", version = "=0.9.25" }
+mundis-frozen-abi-macro = { path = "../../frozen-abi/macro", version = "=0.9.25" }
+mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.25" }
+mundis-sdk = { path = "../../sdk", version = "=0.9.25" }
 thiserror = "1.0"
 
 [build-dependencies]

@@ -1,6 +1,6 @@
 [package]
 name = "mundis-replica-lib"
-version = "0.9.24"
+version = "0.9.25"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 edition = "2021"
 repository = "https://github.com/mundisnetwork/axis"
@@ -12,9 +12,9 @@ crossbeam-channel = "0.5"
 futures-util = "0.3"
 log = "0.4.11"
 prost = "0.10.0"
-mundis-rpc = { path = "../rpc", version = "=0.9.24" }
-mundis-runtime = { path = "../runtime", version = "=0.9.24" }
-mundis-sdk = { path = "../sdk", version = "=0.9.24" }
+mundis-rpc = { path = "../rpc", version = "=0.9.25" }
+mundis-runtime = { path = "../runtime", version = "=0.9.25" }
+mundis-sdk = { path = "../sdk", version = "=0.9.25" }
 tokio = { version = "~1.14.1", features = ["full"] }
 tonic = { version = "0.7.1", features = ["tls", "transport"] }
 

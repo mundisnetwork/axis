@@ -1,6 +1,6 @@
 [package]
 name = "mundis-memo-program"
-version = "0.9.24"
+version = "0.9.25"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -14,12 +14,12 @@ num-derive = "0.3"
 num-traits = "0.2"
 serde = "1.0.130"
 serde_derive = "1.0.103"
-mundis-frozen-abi = { path = "../../frozen-abi", version = "=0.9.24" }
-mundis-frozen-abi-macro = { path = "../../frozen-abi/macro", version = "=0.9.24" }
-mundis-logger = { path = "../../logger", version = "=0.9.24" }
-mundis-metrics = { path = "../../metrics", version = "=0.9.24" }
-mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.24" }
-mundis-sdk = { path = "../../sdk", version = "=0.9.24" }
+mundis-frozen-abi = { path = "../../frozen-abi", version = "=0.9.25" }
+mundis-frozen-abi-macro = { path = "../../frozen-abi/macro", version = "=0.9.25" }
+mundis-logger = { path = "../../logger", version = "=0.9.25" }
+mundis-metrics = { path = "../../metrics", version = "=0.9.25" }
+mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.25" }
+mundis-sdk = { path = "../../sdk", version = "=0.9.25" }
 thiserror = "1.0"
 
 [build-dependencies]

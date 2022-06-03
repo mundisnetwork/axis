@@ -1,6 +1,6 @@
 [package]
 name = "mundis-transaction-status"
-version = "0.9.24"
+version = "0.9.25"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 homepage = "https://mundis.io/"
@@ -17,15 +17,15 @@ log = "0.4.14"
 serde = "1.0.130"
 serde_derive = "1.0.103"
 serde_json = "1.0.72"
-mundis-account-decoder = { path = "../account-decoder", version = "=0.9.24" }
-mundis-measure = { path = "../measure", version = "=0.9.24" }
-mundis-metrics = { path = "../metrics", version = "=0.9.24" }
-mundis-runtime = { path = "../runtime", version = "=0.9.24" }
-mundis-sdk = { path = "../sdk", version = "=0.9.24" }
-mundis-vote-program = { path = "../programs/vote", version = "=0.9.24" }
-mundis-memo-program = { path = "../programs/memo", version = "=0.9.24" }
-mundis-token-program = { path = "../programs/token", version = "=0.9.24" }
-mundis-token-account-program = { path = "../programs/token-account", version = "=0.9.24" }
+mundis-account-decoder = { path = "../account-decoder", version = "=0.9.25" }
+mundis-measure = { path = "../measure", version = "=0.9.25" }
+mundis-metrics = { path = "../metrics", version = "=0.9.25" }
+mundis-runtime = { path = "../runtime", version = "=0.9.25" }
+mundis-sdk = { path = "../sdk", version = "=0.9.25" }
+mundis-vote-program = { path = "../programs/vote", version = "=0.9.25" }
+mundis-memo-program = { path = "../programs/memo", version = "=0.9.25" }
+mundis-token-program = { path = "../programs/token", version = "=0.9.25" }
+mundis-token-account-program = { path = "../programs/token-account", version = "=0.9.25" }
 thiserror = "1.0"
 
 [package.metadata.docs.rs]

@@ -1,6 +1,6 @@
 [package]
 name = "mundis-runtime"
-version = "0.9.24"
+version = "0.9.25"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -34,23 +34,23 @@ rayon = "1.5.1"
 regex = "1.5.4"
 serde = { version = "1.0.130", features = ["rc"] }
 serde_derive = "1.0.103"
-mundis-address-lookup-table-program = { path = "../programs/address-lookup-table", version = "=0.9.24" }
-mundis-bloom = { path = "../bloom", version = "=0.9.24" }
-mundis-config-program = { path = "../programs/config", version = "=0.9.24" }
-mundis-compute-budget-program = { path = "../programs/compute-budget", version = "=0.9.24" }
-mundis-frozen-abi = { path = "../frozen-abi", version = "=0.9.24" }
-mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=0.9.24" }
-mundis-logger = { path = "../logger", version = "=0.9.24" }
-mundis-measure = { path = "../measure", version = "=0.9.24" }
-mundis-metrics = { path = "../metrics", version = "=0.9.24" }
-mundis-program-runtime = { path = "../program-runtime", version = "=0.9.24" }
-mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=0.9.24" }
-mundis-sdk = { path = "../sdk", version = "=0.9.24" }
-mundis-stake-program = { path = "../programs/stake", version = "=0.9.24" }
-mundis-vote-program = { path = "../programs/vote", version = "=0.9.24" }
-mundis-memo-program = { path = "../programs/memo", version = "=0.9.24" }
-mundis-token-program = { path = "../programs/token", version = "=0.9.24" }
-mundis-token-account-program = { path = "../programs/token-account", version = "=0.9.24" }
+mundis-address-lookup-table-program = { path = "../programs/address-lookup-table", version = "=0.9.25" }
+mundis-bloom = { path = "../bloom", version = "=0.9.25" }
+mundis-config-program = { path = "../programs/config", version = "=0.9.25" }
+mundis-compute-budget-program = { path = "../programs/compute-budget", version = "=0.9.25" }
+mundis-frozen-abi = { path = "../frozen-abi", version = "=0.9.25" }
+mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=0.9.25" }
+mundis-logger = { path = "../logger", version = "=0.9.25" }
+mundis-measure = { path = "../measure", version = "=0.9.25" }
+mundis-metrics = { path = "../metrics", version = "=0.9.25" }
+mundis-program-runtime = { path = "../program-runtime", version = "=0.9.25" }
+mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=0.9.25" }
+mundis-sdk = { path = "../sdk", version = "=0.9.25" }
+mundis-stake-program = { path = "../programs/stake", version = "=0.9.25" }
+mundis-vote-program = { path = "../programs/vote", version = "=0.9.25" }
+mundis-memo-program = { path = "../programs/memo", version = "=0.9.25" }
+mundis-token-program = { path = "../programs/token", version = "=0.9.25" }
+mundis-token-account-program = { path = "../programs/token-account", version = "=0.9.25" }
 symlink = "0.1.0"
 tar = "0.4.37"
 fs_extra = "1.2.0"
