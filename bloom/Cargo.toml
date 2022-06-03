@@ -1,6 +1,6 @@
 [package]
 name = "mundis-bloom"
-version = "0.9.26"
+version = "0.9.27"
 description = "Mundis bloom filter"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
@@ -15,9 +15,9 @@ rand = "0.7.0"
 serde = { version = "1.0.133", features = ["rc"] }
 rayon = "1.5.1"
 serde_derive = "1.0.103"
-mundis-frozen-abi = { path = "../frozen-abi", version = "=0.9.26" }
-mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=0.9.26" }
-mundis-sdk = { path = "../sdk", version = "=0.9.26" }
+mundis-frozen-abi = { path = "../frozen-abi", version = "=0.9.27" }
+mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=0.9.27" }
+mundis-sdk = { path = "../sdk", version = "=0.9.27" }
 log = "0.4.14"
 
 [lib]

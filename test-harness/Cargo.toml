@@ -1,6 +1,6 @@
 [package]
 name = "mundis-test-harness"
-version = "0.9.26"
+version = "0.9.27"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -16,15 +16,15 @@ chrono-humanize = "0.2.1"
 futures = "0.3"
 log = "0.4.14"
 serde = "1.0.130"
-mundis-logger = { path = "../logger", version = "=0.9.26" }
-mundis-program = { path = "../sdk/program", version = "=0.9.26" }
-mundis-program-runtime = { path = "../program-runtime", version = "=0.9.26" }
-mundis-runtime = { path = "../runtime", version = "=0.9.26" }
-mundis-sdk = { path = "../sdk", version = "=0.9.26" }
-mundis-send-transaction-service = { path = "../send-transaction-service", version = "=0.9.26" }
-mundis-vote-program = { path = "../programs/vote", version = "=0.9.26" }
-mundis-token-program = { path = "../programs/token", version = "=0.9.26" }
-mundis-token-account-program = { path = "../programs/token-account", version = "=0.9.26" }
+mundis-logger = { path = "../logger", version = "=0.9.27" }
+mundis-program = { path = "../sdk/program", version = "=0.9.27" }
+mundis-program-runtime = { path = "../program-runtime", version = "=0.9.27" }
+mundis-runtime = { path = "../runtime", version = "=0.9.27" }
+mundis-sdk = { path = "../sdk", version = "=0.9.27" }
+mundis-send-transaction-service = { path = "../send-transaction-service", version = "=0.9.27" }
+mundis-vote-program = { path = "../programs/vote", version = "=0.9.27" }
+mundis-token-program = { path = "../programs/token", version = "=0.9.27" }
+mundis-token-account-program = { path = "../programs/token-account", version = "=0.9.27" }
 tarpc = { version = "0.27.2", features = ["full"] }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
