@@ -1,6 +1,6 @@
 [package]
 name = "mundis-compute-budget-program"
-version = "0.9.22"
+version = "0.9.23"
 homepage = "https://mundis.io/"
 repository = "https://github.com/mundisnetwork/axis"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
@@ -8,8 +8,8 @@ license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
-mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.22" }
-mundis-sdk = { path = "../../sdk", version = "=0.9.22" }
+mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.23" }
+mundis-sdk = { path = "../../sdk", version = "=0.9.23" }
 
 [lib]
 crate-type = ["lib"]
