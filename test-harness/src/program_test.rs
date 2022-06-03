@@ -7,7 +7,7 @@ use tokio::task::JoinHandle;
 use mundis_program_runtime::compute_budget::ComputeBudget;
 use mundis_program_runtime::invoke_context::ProcessInstructionWithContext;
 use mundis_program_runtime::timings::ExecuteTimings;
-use mundis_runtime::bank::Bank;
+use mundis_runtime::bank::{Bank, CommitTransactionCounts};
 use mundis_runtime::bank_forks::BankForks;
 use mundis_runtime::builtins::Builtin;
 use mundis_runtime::commitment::BlockCommitmentCache;
@@ -32,13 +32,18 @@ fn setup_fees(bank: Bank) -> Bank {
     // `bank.commit_transactions()` so that the fee in the child bank will be
     // initialized with a non-zero fee.
     assert_eq!(bank.signature_count(), 0);
+    let (last_blockhash, lamports_per_signature) = bank.last_blockhash_and_lamports_per_signature();
     bank.commit_transactions(
         &[],     // transactions
         &mut [], // loaded accounts
         vec![],  // transaction execution results
-        0,       // executed tx count
-        0,       // executed with failure output tx count
-        1,       // signature count
+        last_blockhash,
+        lamports_per_signature,
+        CommitTransactionCounts {
+            committed_transactions_count: 0,
+            committed_with_failure_result_count: 0,
+            signature_count: 1,
+        },
         &mut ExecuteTimings::default(),
     );
     assert_eq!(bank.signature_count(), 1);

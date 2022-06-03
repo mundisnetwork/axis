@@ -1077,9 +1077,8 @@ mod tests {
             native_loader,
         },
     };
-    use mundis_sdk::compute_budget;
     use mundis_sdk::feature_set::requestable_heap_size;
-    use crate::compute_budget::ComputeBudget;
+    use crate::compute_budget::{ComputeBudget, DEFAULT_UNITS};
 
     #[derive(Debug, Serialize, Deserialize)]
     enum MockInstruction {
@@ -1618,14 +1617,14 @@ mod tests {
         feature_set.deactivate(&requestable_heap_size::id());
         let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
         invoke_context.feature_set = Arc::new(feature_set);
-        invoke_context.compute_budget = ComputeBudget::new(compute_budget::DEFAULT_UNITS);
+        invoke_context.compute_budget = ComputeBudget::new(DEFAULT_UNITS);
 
         invoke_context
             .push(&noop_message, &noop_message.instructions()[0], &[0], &[])
             .unwrap();
         assert_eq!(
             *invoke_context.get_compute_budget(),
-            ComputeBudget::new(compute_budget::DEFAULT_UNITS)
+            ComputeBudget::new(DEFAULT_UNITS)
         );
         invoke_context.pop();
 
@@ -1635,7 +1634,7 @@ mod tests {
         let expected_compute_budget = ComputeBudget {
             max_units: 200_000,
             heap_size: None,
-            ..ComputeBudget::new(compute_budget::DEFAULT_UNITS)
+            ..ComputeBudget::new(DEFAULT_UNITS)
         };
         assert_eq!(
             *invoke_context.get_compute_budget(),
@@ -1648,7 +1647,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             *invoke_context.get_compute_budget(),
-            ComputeBudget::new(compute_budget::DEFAULT_UNITS)
+            ComputeBudget::new(DEFAULT_UNITS)
         );
         invoke_context.pop();
     }
