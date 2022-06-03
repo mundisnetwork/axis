@@ -262,7 +262,7 @@ impl SigVerifyStage {
         );
 
         let mut discard_random_time = Measure::start("sigverify_discard_random_time");
-        let non_discarded_packets = solana_perf::discard::discard_batches_randomly(
+        let non_discarded_packets = mundis_perf::discard::discard_batches_randomly(
             &mut batches,
             MAX_DEDUP_BATCH,
             num_packets,

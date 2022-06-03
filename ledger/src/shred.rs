@@ -58,7 +58,7 @@ use {
     serde::{Deserialize, Deserializer, Serialize, Serializer},
     mundis_entry::entry::{create_ticks, Entry},
     mundis_measure::measure::Measure,
-    mundis_perf::packet::{limited_deserialize, Packet},
+    mundis_perf::packet::Packet,
     mundis_rayon_threadlimit::get_thread_count,
     mundis_sdk::{
         clock::Slot,
@@ -682,11 +682,7 @@ impl Shred {
         let slot_start = OFFSET_OF_SHRED_SLOT;
         let slot_end = slot_start + SIZE_OF_SHRED_SLOT;
 
-        if slot_end > p.meta.size {
-            return None;
-        }
-
-        limited_deserialize::<Slot>(&p.data[slot_start..slot_end]).ok()
+        p.deserialize_slice(slot_start..slot_end).ok()
     }
 
     pub fn reference_tick_from_data(data: &[u8]) -> u8 {
@@ -1129,30 +1125,26 @@ pub fn get_shred_slot_index_type(
         return None;
     }
 
-    let index;
-    match limited_deserialize::<u32>(&p.data[index_start..index_end]) {
-        Ok(x) => index = x,
+    let index = match p.deserialize_slice(index_start..index_end) {
+        Ok(x) => x,
         Err(_e) => {
             stats.index_bad_deserialize += 1;
             return None;
         }
-    }
+    };
 
     if index >= MAX_DATA_SHREDS_PER_SLOT as u32 {
         stats.index_out_of_bounds += 1;
         return None;
     }
 
-    let slot;
-    match limited_deserialize::<Slot>(&p.data[slot_start..slot_end]) {
-        Ok(x) => {
-            slot = x;
-        }
+    let slot = match p.deserialize_slice(slot_start..slot_end) {
+        Ok(x) => x,
         Err(_e) => {
             stats.slot_bad_deserialize += 1;
             return None;
         }
-    }
+    };
 
     let shred_type = match ShredType::from_u8(p.data[OFFSET_OF_SHRED_TYPE]) {
         None => {

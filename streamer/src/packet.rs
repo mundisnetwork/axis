@@ -9,8 +9,7 @@ use {
 };
 pub use {
     mundis_perf::packet::{
-        limited_deserialize, to_packet_batches, PacketBatch, PacketBatchRecycler, NUM_PACKETS,
-        PACKETS_PER_BATCH,
+        to_packet_batches, PacketBatch, PacketBatchRecycler, NUM_PACKETS, PACKETS_PER_BATCH,
     },
     mundis_sdk::packet::{Meta, Packet, PACKET_DATA_SIZE},
 };
