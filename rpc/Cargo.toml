@@ -50,7 +50,7 @@ mundis-vote-program = { path = "../programs/vote", version = "=0.9.21" }
 mundis-token-program = { path = "../programs/token", version = "=0.9.21" }
 stream-cancel = "0.8.1"
 thiserror = "1.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "~1.14.1", features = ["full"] }
 tokio-util = { version = "0.6", features = ["codec", "compat"] }
 
 [dev-dependencies]

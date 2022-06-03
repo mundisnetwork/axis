@@ -19,7 +19,7 @@ socket2 = "0.4.2"
 mundis-logger = { path = "../logger", version = "=0.9.21" }
 mundis-sdk = { path = "../sdk", version = "=0.9.21" }
 mundis-version = { path = "../version", version = "=0.9.21" }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "~1.14.1", features = ["full"] }
 url = "2.2.2"
 
 [lib]

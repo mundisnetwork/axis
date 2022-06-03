@@ -15,7 +15,7 @@ prost = "0.10.0"
 mundis-rpc = { path = "../rpc", version = "=0.9.21" }
 mundis-runtime = { path = "../runtime", version = "=0.9.21" }
 mundis-sdk = { path = "../sdk", version = "=0.9.21" }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "~1.14.1", features = ["full"] }
 tonic = { version = "0.7.1", features = ["tls", "transport"] }
 
 [package.metadata.docs.rs]
