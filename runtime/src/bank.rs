@@ -6817,7 +6817,7 @@ pub(crate) mod tests {
         },
         crossbeam_channel::{bounded, unbounded},
         mundis_program_runtime::{
-            compute_budget::{self, ComputeBudget},
+            compute_budget::ComputeBudget,
             instruction_recorder::InstructionRecorder, invoke_context::InvokeContext,
         },
         mundis_sdk::{
