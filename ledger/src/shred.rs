@@ -60,9 +60,11 @@ use {
     mundis_measure::measure::Measure,
     mundis_perf::packet::Packet,
     mundis_rayon_threadlimit::get_thread_count,
+    mundis_runtime::bank::Bank,
     mundis_sdk::{
         clock::Slot,
         hash::{hashv, Hash},
+        feature_set,
         packet::PACKET_DATA_SIZE,
         pubkey::Pubkey,
         signature::{Keypair, Signature, Signer},
@@ -606,13 +608,22 @@ impl Shred {
         self.common_header.signature
     }
 
-    pub fn seed(&self, leader_pubkey: Pubkey) -> [u8; 32] {
-        hashv(&[
-            &self.slot().to_le_bytes(),
-            &self.index().to_le_bytes(),
-            &leader_pubkey.to_bytes(),
-        ])
-            .to_bytes()
+    pub fn seed(&self, leader_pubkey: Pubkey, root_bank: &Bank) -> [u8; 32] {
+        if add_shred_type_to_shred_seed(self.slot(), root_bank) {
+            hashv(&[
+                &self.slot().to_le_bytes(),
+                &(self.shred_type() as u8).to_le_bytes(),
+                &self.index().to_le_bytes(),
+                &leader_pubkey.to_bytes(),
+            ])
+        } else {
+            hashv(&[
+                &self.slot().to_le_bytes(),
+                &self.index().to_le_bytes(),
+                &leader_pubkey.to_bytes(),
+            ])
+        }
+        .to_bytes()
     }
 
     #[inline]
@@ -1199,6 +1210,21 @@ pub fn verify_test_data_shred(
         assert!(shred.data_complete());
     } else {
         assert!(!shred.data_complete());
+    }
+}
+
+fn add_shred_type_to_shred_seed(shred_slot: Slot, bank: &Bank) -> bool {
+    let feature_slot = bank
+        .feature_set
+        .activated_slot(&feature_set::add_shred_type_to_shred_seed::id());
+    match feature_slot {
+        None => false,
+        Some(feature_slot) => {
+            let epoch_schedule = bank.epoch_schedule();
+            let feature_epoch = epoch_schedule.get_epoch(feature_slot);
+            let shred_epoch = epoch_schedule.get_epoch(shred_slot);
+            feature_epoch < shred_epoch
+        }
     }
 }
 
