@@ -2,7 +2,10 @@ use {
     crate::serve_repair::ServeRepair,
     mundis_ledger::blockstore::Blockstore,
     mundis_perf::recycler::Recycler,
-    mundis_streamer::{socket::SocketAddrSpace, streamer},
+    mundis_streamer::{
+        socket::SocketAddrSpace,
+        streamer::{self, StreamerReceiveStats},
+    },
     std::{
         net::UdpSocket,
         sync::{atomic::AtomicBool, mpsc::channel, Arc, RwLock},
@@ -31,10 +34,10 @@ impl ServeRepairService {
         );
         let t_receiver = streamer::receiver(
             serve_repair_socket.clone(),
-            exit,
+            exit.clone(),
             request_sender,
             Recycler::default(),
-            "serve_repair_receiver",
+            Arc::new(StreamerReceiveStats::new("serve_repair_receiver")),
             1,
             false,
         );

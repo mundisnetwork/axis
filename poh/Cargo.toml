@@ -1,6 +1,6 @@
 [package]
 name = "mundis-poh"
-version = "0.9.20"
+version = "0.9.21"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -11,20 +11,20 @@ edition = "2021"
 core_affinity = "0.5.10"
 crossbeam-channel = "0.5"
 log = "0.4.14"
-mundis-entry = { path = "../entry", version = "=0.9.20" }
-mundis-ledger = { path = "../ledger", version = "=0.9.20" }
-mundis-measure = { path = "../measure", version = "=0.9.20" }
-mundis-metrics = { path = "../metrics", version = "=0.9.20" }
-mundis-runtime = { path = "../runtime", version = "=0.9.20" }
-mundis-sdk = { path = "../sdk", version = "=0.9.20" }
+mundis-entry = { path = "../entry", version = "=0.9.21" }
+mundis-ledger = { path = "../ledger", version = "=0.9.21" }
+mundis-measure = { path = "../measure", version = "=0.9.21" }
+mundis-metrics = { path = "../metrics", version = "=0.9.21" }
+mundis-runtime = { path = "../runtime", version = "=0.9.21" }
+mundis-sdk = { path = "../sdk", version = "=0.9.21" }
 thiserror = "1.0"
 
 [dev-dependencies]
 bincode = "1.3.3"
 matches = "0.1.9"
 rand = "0.7.0"
-mundis-logger = { path = "../logger", version = "=0.9.20" }
-mundis-perf = { path = "../perf", version = "=0.9.20" }
+mundis-logger = { path = "../logger", version = "=0.9.21" }
+mundis-perf = { path = "../perf", version = "=0.9.21" }
 
 [lib]
 crate-type = ["lib"]

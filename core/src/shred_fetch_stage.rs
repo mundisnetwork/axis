@@ -11,7 +11,9 @@ use {
     },
     mundis_runtime::bank_forks::BankForks,
     mundis_sdk::clock::{Slot, DEFAULT_MS_PER_SLOT},
-    mundis_streamer::streamer::{self, PacketBatchReceiver, PacketBatchSender},
+    mundis_streamer::streamer::{
+        self, PacketBatchReceiver, PacketBatchSender, StreamerReceiveStats,
+    },
     std::{
         net::UdpSocket,
         sync::{atomic::AtomicBool, mpsc::channel, Arc, RwLock},
@@ -148,10 +150,10 @@ impl ShredFetchStage {
             .map(|s| {
                 streamer::receiver(
                     s,
-                    exit,
+                    exit.clone(),
                     packet_sender.clone(),
                     recycler.clone(),
-                    "packet_modifier",
+                    Arc::new(StreamerReceiveStats::new("packet_modifier")),
                     1,
                     true,
                 )
