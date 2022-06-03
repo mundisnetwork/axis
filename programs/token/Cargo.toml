@@ -1,6 +1,6 @@
 [package]
 name = "mundis-token-program"
-version = "1.9.19"
+version = "0.9.20"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -13,8 +13,8 @@ bincode = "1.3.1"
 num-derive = "0.3"
 num-traits = "0.2"
 num_enum = "0.5.1"
-mundis-program-runtime = { path = "../../program-runtime", version = "=1.9.19" }
-mundis-sdk = { path = "../../sdk", version = "=1.9.19" }
+mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.20" }
+mundis-sdk = { path = "../../sdk", version = "=0.9.20" }
 serde = "1.0.130"
 serde_derive = "1.0.103"
 thiserror = "1.0"

@@ -1,6 +1,6 @@
 [package]
 name = "mundis-logger"
-version = "1.9.19"
+version = "0.9.20"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
