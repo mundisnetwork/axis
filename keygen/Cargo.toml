@@ -1,6 +1,6 @@
 [package]
 name = "mundis-keygen"
-version = "0.9.21"
+version = "0.9.22"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -12,11 +12,11 @@ bs58 = "0.4.0"
 clap = "2.33"
 dirs-next = "2.0.0"
 num_cpus = "1.13.1"
-mundis-clap-utils = { path = "../clap-utils", version = "=0.9.21" }
-mundis-cli-config = { path = "../cli-config", version = "=0.9.21" }
-mundis-remote-wallet = { path = "../remote-wallet", version = "=0.9.21" }
-mundis-sdk = { path = "../sdk", version = "=0.9.21" }
-mundis-version = { path = "../version", version = "=0.9.21" }
+mundis-clap-utils = { path = "../clap-utils", version = "=0.9.22" }
+mundis-cli-config = { path = "../cli-config", version = "=0.9.22" }
+mundis-remote-wallet = { path = "../remote-wallet", version = "=0.9.22" }
+mundis-sdk = { path = "../sdk", version = "=0.9.22" }
+mundis-version = { path = "../version", version = "=0.9.22" }
 tiny-bip39 = "0.8.2"
 
 [[bin]]

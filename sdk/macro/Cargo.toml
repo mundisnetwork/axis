@@ -1,6 +1,6 @@
 [package]
 name = "mundis-sdk-macro"
-version = "0.9.21"
+version = "0.9.22"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 homepage = "https://mundis.io/"

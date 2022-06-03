@@ -1,6 +1,6 @@
 [package]
 name = "mundis-streamer"
-version = "0.9.21"
+version = "0.9.22"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -21,10 +21,10 @@ rcgen = "0.8.14"
 rustls = { version = "0.20.2", features = ["dangerous_configuration"] }
 pem = "1.0.2"
 pkcs8 = { version = "0.8.0", features = ["alloc"] }
-mundis-logger = { path = "../logger", version = "=0.9.21" }
-mundis-metrics = { path = "../metrics", version = "=0.9.21" }
-mundis-sdk = { path = "../sdk", version = "=0.9.21" }
-mundis-perf = { path = "../perf", version = "=0.9.21" }
+mundis-logger = { path = "../logger", version = "=0.9.22" }
+mundis-metrics = { path = "../metrics", version = "=0.9.22" }
+mundis-sdk = { path = "../sdk", version = "=0.9.22" }
+mundis-perf = { path = "../perf", version = "=0.9.22" }
 thiserror = "1.0"
 tokio = { version = "~1.14.1", features = ["full"] }
 

@@ -1,6 +1,6 @@
 [package]
 name = "mundis-token-account-program"
-version = "0.9.21"
+version = "0.9.22"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -14,13 +14,13 @@ num-derive = "0.3"
 num-traits = "0.2"
 serde = "1.0.130"
 serde_derive = "1.0.103"
-mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.21" }
-mundis-sdk = { path = "../../sdk", version = "=0.9.21" }
-mundis-token-program = { path = "../token", version = "=0.9.21" }
+mundis-program-runtime = { path = "../../program-runtime", version = "=0.9.22" }
+mundis-sdk = { path = "../../sdk", version = "=0.9.22" }
+mundis-token-program = { path = "../token", version = "=0.9.22" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-mundis-test-harness = { path = "../../test-harness", version = "=0.9.21" }
+mundis-test-harness = { path = "../../test-harness", version = "=0.9.22" }
 
 [build-dependencies]
 rustc_version = "0.4"
