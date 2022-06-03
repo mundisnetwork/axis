@@ -1,6 +1,6 @@
 [package]
 name = "mundis-rpc"
-version = "0.9.23"
+version = "0.9.24"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -28,26 +28,26 @@ serde = "1.0.130"
 serde_derive = "1.0.103"
 serde_json = "1.0.72"
 soketto = "0.7"
-mundis-account-decoder = { path = "../account-decoder", version = "=0.9.23" }
-mundis-client = { path = "../client", version = "=0.9.23" }
-mundis-entry = { path = "../entry", version = "=0.9.23" }
-mundis-faucet = { path = "../faucet", version = "=0.9.23" }
-mundis-gossip = { path = "../gossip", version = "=0.9.23" }
-mundis-ledger = { path = "../ledger", version = "=0.9.23" }
-mundis-measure = { path = "../measure", version = "=0.9.23" }
-mundis-metrics = { path = "../metrics", version = "=0.9.23" }
-mundis-perf = { path = "../perf", version = "=0.9.23" }
-mundis-poh = { path = "../poh", version = "=0.9.23" }
-mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=0.9.23" }
-mundis-runtime = { path = "../runtime", version = "=0.9.23" }
-mundis-sdk = { path = "../sdk", version = "=0.9.23" }
-mundis-send-transaction-service = { path = "../send-transaction-service", version = "=0.9.23" }
-mundis-streamer = { path = "../streamer", version = "=0.9.23" }
-mundis-storage-bigtable = { path = "../storage-bigtable", version = "=0.9.23" }
-mundis-transaction-status = { path = "../transaction-status", version = "=0.9.23" }
-mundis-version = { path = "../version", version = "=0.9.23" }
-mundis-vote-program = { path = "../programs/vote", version = "=0.9.23" }
-mundis-token-program = { path = "../programs/token", version = "=0.9.23" }
+mundis-account-decoder = { path = "../account-decoder", version = "=0.9.24" }
+mundis-client = { path = "../client", version = "=0.9.24" }
+mundis-entry = { path = "../entry", version = "=0.9.24" }
+mundis-faucet = { path = "../faucet", version = "=0.9.24" }
+mundis-gossip = { path = "../gossip", version = "=0.9.24" }
+mundis-ledger = { path = "../ledger", version = "=0.9.24" }
+mundis-measure = { path = "../measure", version = "=0.9.24" }
+mundis-metrics = { path = "../metrics", version = "=0.9.24" }
+mundis-perf = { path = "../perf", version = "=0.9.24" }
+mundis-poh = { path = "../poh", version = "=0.9.24" }
+mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=0.9.24" }
+mundis-runtime = { path = "../runtime", version = "=0.9.24" }
+mundis-sdk = { path = "../sdk", version = "=0.9.24" }
+mundis-send-transaction-service = { path = "../send-transaction-service", version = "=0.9.24" }
+mundis-streamer = { path = "../streamer", version = "=0.9.24" }
+mundis-storage-bigtable = { path = "../storage-bigtable", version = "=0.9.24" }
+mundis-transaction-status = { path = "../transaction-status", version = "=0.9.24" }
+mundis-version = { path = "../version", version = "=0.9.24" }
+mundis-vote-program = { path = "../programs/vote", version = "=0.9.24" }
+mundis-token-program = { path = "../programs/token", version = "=0.9.24" }
 stream-cancel = "0.8.1"
 thiserror = "1.0"
 tokio = { version = "~1.14.1", features = ["full"] }
@@ -55,8 +55,8 @@ tokio-util = { version = "0.6", features = ["codec", "compat"] }
 
 [dev-dependencies]
 serial_test = "0.5.1"
-mundis-net-utils = { path = "../net-utils", version = "=0.9.23" }
-mundis-stake-program = { path = "../programs/stake", version = "=0.9.23" }
+mundis-net-utils = { path = "../net-utils", version = "=0.9.24" }
+mundis-stake-program = { path = "../programs/stake", version = "=0.9.24" }
 symlink = "0.1.0"
 
 [lib]

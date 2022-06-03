@@ -1,6 +1,6 @@
 [package]
 name = "mundis-frozen-abi-macro"
-version = "0.9.23"
+version = "0.9.24"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 homepage = "https://mundis.io/"

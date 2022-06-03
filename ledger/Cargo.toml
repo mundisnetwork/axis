@@ -1,6 +1,6 @@
 [package]
 name = "mundis-ledger"
-version = "0.9.23"
+version = "0.9.24"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -29,21 +29,21 @@ rayon = "1.5.1"
 serde = "1.0.130"
 serde_bytes = "0.11.5"
 sha2 = "0.9.8"
-mundis-entry = { path = "../entry", version = "=0.9.23" }
-mundis-frozen-abi = { path = "../frozen-abi", version = "=0.9.23" }
-mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=0.9.23" }
-mundis-transaction-status = { path = "../transaction-status", version = "=0.9.23" }
-mundis-logger = { path = "../logger", version = "=0.9.23" }
-mundis-measure = { path = "../measure", version = "=0.9.23" }
-mundis-metrics = { path = "../metrics", version = "=0.9.23" }
-mundis-perf = { path = "../perf", version = "=0.9.23" }
-mundis-program-runtime = { path = "../program-runtime", version = "=0.9.23" }
-mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=0.9.23" }
-mundis-runtime = { path = "../runtime", version = "=0.9.23" }
-mundis-sdk = { path = "../sdk", version = "=0.9.23" }
-mundis-storage-bigtable = { path = "../storage-bigtable", version = "=0.9.23" }
-mundis-storage-proto = { path = "../storage-proto", version = "=0.9.23" }
-mundis-vote-program = { path = "../programs/vote", version = "=0.9.23" }
+mundis-entry = { path = "../entry", version = "=0.9.24" }
+mundis-frozen-abi = { path = "../frozen-abi", version = "=0.9.24" }
+mundis-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=0.9.24" }
+mundis-transaction-status = { path = "../transaction-status", version = "=0.9.24" }
+mundis-logger = { path = "../logger", version = "=0.9.24" }
+mundis-measure = { path = "../measure", version = "=0.9.24" }
+mundis-metrics = { path = "../metrics", version = "=0.9.24" }
+mundis-perf = { path = "../perf", version = "=0.9.24" }
+mundis-program-runtime = { path = "../program-runtime", version = "=0.9.24" }
+mundis-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=0.9.24" }
+mundis-runtime = { path = "../runtime", version = "=0.9.24" }
+mundis-sdk = { path = "../sdk", version = "=0.9.24" }
+mundis-storage-bigtable = { path = "../storage-bigtable", version = "=0.9.24" }
+mundis-storage-proto = { path = "../storage-proto", version = "=0.9.24" }
+mundis-vote-program = { path = "../programs/vote", version = "=0.9.24" }
 tempfile = "3.2.0"
 thiserror = "1.0"
 tokio = { version = "~1.14.1", features = ["full"] }
@@ -61,7 +61,7 @@ features = ["lz4"]
 [dev-dependencies]
 assert_matches = "1.5.0"
 matches = "0.1.9"
-mundis-account-decoder = { path = "../account-decoder", version = "=0.9.23" }
+mundis-account-decoder = { path = "../account-decoder", version = "=0.9.24" }
 
 [build-dependencies]
 rustc_version = "0.4"
