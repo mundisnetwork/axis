@@ -3815,18 +3815,26 @@ impl Bank {
         Rc::new(RefCell::new(executors))
     }
 
-    /// Add executors back to the bank's cache if modified
-    fn update_executors(&self, allow_updates: bool, executors: Rc<RefCell<Executors>>) {
+    /// Add executors back to the bank's cache if they were missing and not updated
+    fn store_missing_executors(&self, executors: &RefCell<Executors>) {
+        self.store_executors_internal(executors, |e| e.is_missing())
+    }
+
+    /// Add updated executors back to the bank's cache
+    fn store_updated_executors(&self, executors: &RefCell<Executors>) {
+        self.store_executors_internal(executors, |e| e.is_updated())
+    }
+
+    /// Helper to write a selection of executors to the bank's cache
+    fn store_executors_internal(
+        &self,
+        executors: &RefCell<Executors>,
+        selector: impl Fn(&TransactionExecutor) -> bool,
+    ) {
         let executors = executors.borrow();
         let dirty_executors: Vec<_> = executors
             .iter()
-            .filter_map(|(key, executor)| {
-                if executor.is_dirty(allow_updates) {
-                    Some((key, executor.get()))
-                } else {
-                    None
-                }
-            })
+            .filter_map(|(key, executor)| selector(executor).then(|| (key, executor.get())))
             .collect();
 
         if !dirty_executors.is_empty() {
@@ -3931,6 +3939,14 @@ impl Bank {
         saturating_add_assign!(
             timings.execute_accessories.process_message_us,
             process_message_time.as_us()
+        );
+
+        let mut store_missing_executors_time = Measure::start("store_missing_executors_time");
+        self.store_missing_executors(&executors);
+        store_missing_executors_time.stop();
+        saturating_add_assign!(
+            timings.execute_accessories.update_executors_us,
+            store_missing_executors_time.as_us()
         );
 
         let status = process_result
@@ -4475,16 +4491,18 @@ impl Bank {
             .update_stakes_cache_us
             .saturating_add(update_stakes_cache_time.as_us());
 
-        let mut update_executors_time = Measure::start("update_executors_time");
+        let mut store_updated_executors_time = Measure::start("store_updated_executors_time");
         for execution_result in &execution_results {
             if let TransactionExecutionResult::Executed { details, executors } = execution_result {
-                self.update_executors(details.status.is_ok(), executors.clone());
+                if details.status.is_ok() {
+                    self.store_updated_executors(executors);
+                }
             }
         }
-        update_executors_time.stop();
+        store_updated_executors_time.stop();
         saturating_add_assign!(
             timings.execute_accessories.update_executors_us,
-            update_executors_time.as_us()
+            store_updated_executors_time.as_us()
         );
 
         self.update_transaction_statuses(sanitized_txs, &execution_results);
