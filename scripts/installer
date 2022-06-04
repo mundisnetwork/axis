@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+#
+# Copyright 2016 The Rust Project Developers. See the COPYRIGHT
+# file at the top-level directory of this distribution and at
+# http://rust-lang.org/COPYRIGHT.
+#
+# Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+# http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+# <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+# option. This file may not be copied, modified, or distributed
+# except according to those terms.
+
+# This is just a little script that can be downloaded from the internet to
+# install MUNDIS binaries. It just does platform detection and downloads the binaries
+
+MUNDIS_RELEASE=v0.0.0
+MUNDIS_DOWNLOAD_ROOT=https://release.mundis.io
+
+set -e
+
+main() {
+    downloader --check
+    need_cmd uname
+    need_cmd mktemp
+    need_cmd chmod
+    need_cmd mkdir
+    need_cmd rm
+    need_cmd sed
+    need_cmd grep
+
+    for arg in "$@"; do
+      case "$arg" in
+        -h|--help)
+          usage
+          exit 0
+          ;;
+        *)
+          ;;
+      esac
+    done
+
+    _ostype="$(uname -s)"
+    _cputype="$(uname -m)"
+
+    case "$_ostype" in
+    Linux)
+      _ostype=unknown-linux-gnu
+      ;;
+    *)
+      err "machine architecture is currently unsupported"
+      ;;
+    esac
+
+    echo "Downloading Mundis $MUNDIS_RELEASE binaries"
+    binaries=('mundis' 'mundis-faucet' 'mundis-genesis' 'mundis-gossip' 'mundis-keygen' 'mundis-ledger-tool' 'mundis-validator')
+
+    for binary in "${binaries[@]}"
+    do
+        echo -n "Fetching '/usr/local/bin/$binary'..."
+        ensure downloader "$MUNDIS_DOWNLOAD_ROOT/$MUNDIS_RELEASE/$binary" "/usr/local/bin/$binary"
+        ensure chmod a+x "/usr/local/bin/$binary"
+        echo "Done"
+    done
+}
+
+err() {
+    printf 'Mundis installer: %s\n' "$1" >&2
+    exit 1
+}
+
+need_cmd() {
+    if ! check_cmd "$1"; then
+        err "need '$1' (command not found)"
+    fi
+}
+
+check_cmd() {
+    command -v "$1" > /dev/null 2>&1
+}
+
+# Run a command that should never fail. If the command fails execution
+# will immediately terminate with an error showing the failing
+# command.
+ensure() {
+    if ! "$@"; then
+      err "command failed: $*"
+    fi
+}
+
+# This is just for indicating that commands' results are being
+# intentionally ignored. Usually, because it's being executed
+# as part of error handling.
+ignore() {
+    "$@"
+}
+
+# This wraps curl or wget. Try curl first, if not installed,
+# use wget instead.
+downloader() {
+    if check_cmd curl; then
+        program=curl
+    elif check_cmd wget; then
+        program=wget
+    else
+        program='curl or wget' # to be used in error message of need_cmd
+    fi
+
+    if [ "$1" = --check ]; then
+        need_cmd "$program"
+    elif [ "$program" = curl ]; then
+        curl -sSfL "$1" -o "$2"
+    elif [ "$program" = wget ]; then
+        wget "$1" -O "$2"
+    else
+        err "Unknown downloader"   # should not reach here
+    fi
+}
+
+main "$@"
