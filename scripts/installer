@@ -13,7 +13,7 @@
 # This is just a little script that can be downloaded from the internet to
 # install MUNDIS binaries. It just does platform detection and downloads the binaries
 
-MUNDIS_RELEASE=v0.0.0
+MUNDIS_RELEASE=v0.9.27
 MUNDIS_DOWNLOAD_ROOT=https://release.mundis.io
 
 set -e
@@ -51,16 +51,126 @@ main() {
       ;;
     esac
 
+    echo -n "Checking 'mundis' user: "
+    if id "mundis" &>/dev/null; then
+	echo "no action needed."
+    else
+        adduser mundis --gecos "" --disabled-password --quiet
+	echo "added."
+    fi
+
+    echo -n "Tuning kernel params: "
+    if [ -f "/etc/sysctl.d/99-mundis.conf" ]; then
+	echo "not needed"
+    else
+	cat <<EOF > /etc/sysctl.d/99-mundis.conf
+net.core.rmem_max=134217728
+net.core.optmem_max=0
+net.core.rmem_default=134217728
+net.core.wmem_default=134217728
+net.core.netdev_max_backlog=0
+vm.max_map_count=1000000
+net.core.wmem_max=134217728
+EOF
+	sysctl --system > /dev/null
+	echo "done."
+    fi
+
     echo "Downloading Mundis $MUNDIS_RELEASE binaries"
     binaries=('mundis' 'mundis-faucet' 'mundis-genesis' 'mundis-gossip' 'mundis-keygen' 'mundis-ledger-tool' 'mundis-validator')
 
     for binary in "${binaries[@]}"
     do
         echo -n "Fetching '/usr/local/bin/$binary'..."
+	rm -f "/usr/local/bin/$binary"
         ensure downloader "$MUNDIS_DOWNLOAD_ROOT/$MUNDIS_RELEASE/$binary" "/usr/local/bin/$binary"
         ensure chmod a+x "/usr/local/bin/$binary"
-        echo "Done"
+        echo "done."
     done
+
+    echo -n "Creating validator scripts: "
+    mkdir -p /home/mundis/bin
+    mkdir -p /home/mundis/logs
+    cat << EOF > /home/mundis/bin/validator.sh
+#!/usr/bin/env bash
+set -ex
+shopt -s nullglob
+
+export RUST_BACKTRACE=1
+export RUST_LOG=info
+
+# Delete any zero-length snapshots that can cause validator startup to fail
+find /mnt/ledger -name 'snapshot-*' -size 0 -print -exec rm {} \; || true
+
+args=(
+  --dynamic-port-range 8002-8015
+  --gossip-port 8001
+  --identity "\$IDENTITY_KEYPAIR"
+  --ledger "\$LEDGER_DIR"
+  --accounts "\$ACCOUNTS_DIR"
+  --limit-ledger-size
+  --rpc-port 8899
+  --expected-genesis-hash "\$GENESIS_HASH"
+  --wal-recovery-mode skip_any_corrupted_record
+  --vote-account "\$VOTE_ACCOUNT_KEYPAIR"
+  --authorized-voter "\$IDENTITY_KEYPAIR"
+  --expected-shred-version "\$SHRED_VERSION"
+  --entrypoint entrypoint1.devnet.mundis.io:8001
+  --entrypoint entrypoint2.devnet.mundis.io:8001
+  --no-genesis-fetch
+  --no-snapshot-fetch
+  --log "\$VALIDATOR_LOG_FILE"
+  --no-wait-for-vote-to-start-leader
+  --snapshot-interval-slots 200
+)
+
+exec mundis-validator "${args[@]}"
+EOF
+    chmod 755 /home/mundis/bin/validator.sh
+    echo "done."
+
+    echo -n "Creating system services: "
+    mkdir -p /mnt/accounts
+    mkdir -p /mnt/ledger
+
+    cat <<EOF > /etc/systemd/system/validator.service
+[Unit]
+Description=Mundis Validator
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=mundis
+LimitNOFILE=500000
+LogRateLimitIntervalSec=0
+ExecStart=/home/mundis/bin/validator.sh
+EnvironmentFile=-/etc/default/validator
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+   cat <<EOF > /etc/default/validator
+SHRED_VERSION=1583
+GENESIS_HASH=3GYa2Q2H2qEDU9gQLjNQpH6q381Dk2u3TR2DcLhBgdoW
+LEDGER_DIR=/mnt/ledger
+ACCOUNTS_DIR=/mnt/accounts
+IDENTITY_KEYPAIR=/home/mundis/validator-identity.json
+VOTE_ACCOUNT_KEYPAIR=/home/mundis/validator-vote-account.json
+MUNDIS_METRICS_CONFIG=host=http://metrics.devnet.mundis.io:8086,db=devnet,u=admin,p=Metaverse2022
+VALIDATOR_LOG_FILE=/home/mundis/logs/validator.log
+EOF
+   systemctl daemon-reload
+   systemctl enable validator
+   echo "done."
+
+   echo ""
+   echo "Please update the following configuration params in the /etc/default/validator file:"
+   echo "------------------------------------------------------------------------------------"
+   cat /etc/default/validator
 }
 
 err() {
