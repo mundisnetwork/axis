@@ -1,0 +1,18 @@
+[Unit]
+Description=Mundis Validator
+After=network.target
+Wants=solana-sys-tuner.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=mundis
+LimitNOFILE=500000
+LogRateLimitIntervalSec=0
+ExecStart=/home/mundis/bin/validator.sh
+EnvironmentFile=-/etc/default/mundis
+
+[Install]
+WantedBy=multi-user.target
