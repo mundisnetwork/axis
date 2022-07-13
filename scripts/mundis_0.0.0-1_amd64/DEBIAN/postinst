@@ -1,0 +1,4 @@
+#!/bin/sh
+
+chown -R mundis:mundis /home/mundis
+systemctl daemon-reload

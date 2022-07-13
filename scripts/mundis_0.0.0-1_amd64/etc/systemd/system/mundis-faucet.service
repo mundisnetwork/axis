@@ -1,5 +1,5 @@
 [Unit]
-Description=Mundis API Node
+Description=Mundis Faucet
 After=network.target
 StartLimitIntervalSec=0
 
@@ -8,9 +8,8 @@ Type=simple
 Restart=always
 RestartSec=1
 User=mundis
-LimitNOFILE=500000
 LogRateLimitIntervalSec=0
-ExecStart=/home/mundis/bin/api.sh
+ExecStart=/home/mundis/bin/faucet.sh
 EnvironmentFile=-/etc/default/mundis
 
 [Install]
