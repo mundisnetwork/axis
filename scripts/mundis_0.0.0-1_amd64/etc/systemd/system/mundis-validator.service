@@ -1,7 +1,6 @@
 [Unit]
 Description=Mundis Validator
 After=network.target
-Wants=solana-sys-tuner.service
 StartLimitIntervalSec=0
 
 [Service]
