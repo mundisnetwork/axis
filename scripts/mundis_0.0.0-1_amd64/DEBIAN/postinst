@@ -8,4 +8,5 @@ chown -R mundis:mundis /var/log/mundis /var/lib/mundis /mnt/ledger /mnt/accounts
 sysctl --system
 
 systemctl daemon-reload
+systemctl restart logrotate.service
 systemctl disable mundis-validator

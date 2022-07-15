@@ -1,0 +1,8 @@
+/var/log/mundis/validator.log {
+  rotate 7
+  daily
+  missingok
+  postrotate
+    systemctl kill -s USR1 mundis-validator.service
+  endscript
+}
