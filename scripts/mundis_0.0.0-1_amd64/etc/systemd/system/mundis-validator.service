@@ -9,10 +9,9 @@ Type=simple
 Restart=always
 RestartSec=1
 User=mundis
-LimitNOFILE=500000
+LimitNOFILE=1000000
 LogRateLimitIntervalSec=0
-ExecStart=/home/mundis/bin/validator.sh
-EnvironmentFile=-/etc/default/mundis
+ExecStart=/usr/local/bin/start-mundis-validator.sh
 
 [Install]
 WantedBy=multi-user.target

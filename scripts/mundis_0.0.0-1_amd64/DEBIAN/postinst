@@ -1,4 +1,11 @@
 #!/bin/sh
 
-chown -R mundis:mundis /home/mundis
+/usr/local/bin/mundis-keygen new --no-bip39-passphrase -f -o /var/lib/mundis/validator-vote-account.json
+/usr/local/bin/mundis-keygen new --no-bip39-passphrase -f -o /var/lib/mundis/validator-identity.json
+
+chown -R mundis:mundis /var/log/mundis /var/lib/mundis /mnt/ledger /mnt/accounts
+
+sysctl --system
+
 systemctl daemon-reload
+systemctl disable mundis-validator

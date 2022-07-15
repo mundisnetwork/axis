@@ -2,7 +2,7 @@
 
 set -ex
 
-source /etc/default/mundis-validator
+source /etc/default/mundis
 
 GENESIS_HASH="$(RUST_LOG=none mundis-ledger-tool genesis-hash --ledger $LEDGER_DIR)"
 SHRED_VERSION="$(RUST_LOG=none mundis-ledger-tool shred-version --ledger $LEDGER_DIR)"

@@ -5,5 +5,7 @@ set -e
 USER=mundis
 
 if ! getent passwd $USER >/dev/null ; then
-  adduser --system --disabled-login --group --gecos "Mundis" --shell /bin/bash $USER > /dev/null
+  adduser --system --disabled-login --group --gecos "Mundis" --shell /bin/false --no-create-home $USER > /dev/null
 fi
+
+mkdir -p /mnt/ledger /mnt/accounts /var/log/mundis/ /var/lib/mundis/
