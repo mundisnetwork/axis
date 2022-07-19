@@ -3114,7 +3114,8 @@ mod tests {
         assert!(nonce_account::verify_nonce_account(
             &collected_nonce_account,
             durable_nonce.as_hash(),
-        ));
+        )
+            .is_some());
     }
 
     #[test]
@@ -3220,7 +3221,8 @@ mod tests {
         assert!(nonce_account::verify_nonce_account(
             &collected_nonce_account,
             durable_nonce.as_hash()
-        ));
+        )
+            .is_some());
     }
 
     #[test]
