@@ -38,7 +38,7 @@ impl Source {
                 #[allow(clippy::redundant_closure)]
                     let data = nonce_utils::get_account_with_commitment(rpc_client, pubkey, commitment)
                     .and_then(|ref a| nonce_utils::data_from_account(a))?;
-                Ok((data.blockhash, data.fee_calculator))
+                Ok((data.blockhash(), data.fee_calculator))
             }
         }
     }
@@ -65,7 +65,7 @@ impl Source {
                 let res = nonce_utils::get_account_with_commitment(rpc_client, pubkey, commitment)?;
                 let res = nonce_utils::data_from_account(&res)?;
                 Ok(Some(res)
-                    .filter(|d| d.blockhash == *blockhash)
+                    .filter(|d| d.blockhash() == *blockhash)
                     .map(|d| d.fee_calculator))
             }
         }
@@ -85,7 +85,7 @@ impl Source {
                 #[allow(clippy::redundant_closure)]
                 let data = nonce_utils::get_account_with_commitment(rpc_client, pubkey, commitment)
                     .and_then(|ref a| nonce_utils::data_from_account(a))?;
-                Ok(data.blockhash)
+                Ok(data.blockhash())
             }
         }
     }
@@ -194,7 +194,12 @@ mod tests {
         clap::App,
         serde_json::{self, json},
         mundis_account_decoder::{UiAccount, UiAccountEncoding},
-        mundis_sdk::{account::Account, hash::hash, nonce, system_program},
+        mundis_sdk::{
+            account::Account,
+            hash::hash,
+            nonce::{self, state::DurableNonce},
+            system_program,
+        },
         std::collections::HashMap,
     };
     use mundis_sdk::fee_calculator::FeeCalculator;
@@ -408,11 +413,13 @@ mod tests {
             .get_blockhash_and_fee_calculator(&rpc_client, CommitmentConfig::default())
             .is_err());
 
-        let nonce_blockhash = Hash::new(&[2u8; 32]);
+        let durable_nonce =
+            DurableNonce::from_blockhash(&Hash::new(&[2u8; 32]), /*separate_domains:*/ true);
+        let nonce_blockhash = *durable_nonce.as_hash();
         let nonce_fee_calc = FeeCalculator::new(4242);
         let data = nonce::state::Data {
             authority: Pubkey::new(&[3u8; 32]),
-            blockhash: nonce_blockhash,
+            blockhash: durable_nonce,
             fee_calculator: nonce_fee_calc.clone(),
         };
         let nonce_account = Account::new_data_with_space(
