@@ -1,6 +1,6 @@
 [package]
 name = "mundis-faucet"
-version = "0.9.27"
+version = "0.9.29"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -14,13 +14,13 @@ clap = "2.33"
 log = "0.4.14"
 serde = "1.0.130"
 serde_derive = "1.0.103"
-mundis-clap-utils = { path = "../clap-utils", version = "=0.9.27" }
-mundis-cli-config = { path = "../cli-config", version = "=0.9.27" }
-mundis-logger = { path = "../logger", version = "=0.9.27" }
-mundis-metrics = { path = "../metrics", version = "=0.9.27" }
-mundis-sdk = { path = "../sdk", version = "=0.9.27" }
-mundis-version = { path = "../version", version = "=0.9.27" }
-mundis-memo-program = { path = "../programs/memo", version = "=0.9.27" }
+mundis-clap-utils = { path = "../clap-utils", version = "=0.9.29" }
+mundis-cli-config = { path = "../cli-config", version = "=0.9.29" }
+mundis-logger = { path = "../logger", version = "=0.9.29" }
+mundis-metrics = { path = "../metrics", version = "=0.9.29" }
+mundis-sdk = { path = "../sdk", version = "=0.9.29" }
+mundis-version = { path = "../version", version = "=0.9.29" }
+mundis-memo-program = { path = "../programs/memo", version = "=0.9.29" }
 thiserror = "1.0"
 tokio = { version = "~1.14.1", features = ["full"] }
 

@@ -1,6 +1,6 @@
 [package]
 name = "mundis-ledger-tool"
-version = "0.9.27"
+version = "0.9.29"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -21,20 +21,20 @@ regex = "1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.72"
 serde_yaml = "0.8.21"
-mundis-clap-utils = { path = "../clap-utils", version = "=0.9.27" }
-mundis-cli-output = { path = "../cli-output", version = "=0.9.27" }
-mundis-core = { path = "../core", version = "=0.9.27" }
-mundis-entry = { path = "../entry", version = "=0.9.27" }
-mundis-ledger = { path = "../ledger", version = "=0.9.27" }
-mundis-logger = { path = "../logger", version = "=0.9.27" }
-mundis-measure = { path = "../measure", version = "=0.9.27" }
-mundis-runtime = { path = "../runtime", version = "=0.9.27" }
-mundis-sdk = { path = "../sdk", version = "=0.9.27" }
-mundis-stake-program = { path = "../programs/stake", version = "=0.9.27" }
-mundis-storage-bigtable = { path = "../storage-bigtable", version = "=0.9.27" }
-mundis-transaction-status = { path = "../transaction-status", version = "=0.9.27" }
-mundis-version = { path = "../version", version = "=0.9.27" }
-mundis-vote-program = { path = "../programs/vote", version = "=0.9.27" }
+mundis-clap-utils = { path = "../clap-utils", version = "=0.9.29" }
+mundis-cli-output = { path = "../cli-output", version = "=0.9.29" }
+mundis-core = { path = "../core", version = "=0.9.29" }
+mundis-entry = { path = "../entry", version = "=0.9.29" }
+mundis-ledger = { path = "../ledger", version = "=0.9.29" }
+mundis-logger = { path = "../logger", version = "=0.9.29" }
+mundis-measure = { path = "../measure", version = "=0.9.29" }
+mundis-runtime = { path = "../runtime", version = "=0.9.29" }
+mundis-sdk = { path = "../sdk", version = "=0.9.29" }
+mundis-stake-program = { path = "../programs/stake", version = "=0.9.29" }
+mundis-storage-bigtable = { path = "../storage-bigtable", version = "=0.9.29" }
+mundis-transaction-status = { path = "../transaction-status", version = "=0.9.29" }
+mundis-version = { path = "../version", version = "=0.9.29" }
+mundis-vote-program = { path = "../programs/vote", version = "=0.9.29" }
 tokio = { version = "~1.14.1", features = ["full"] }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]

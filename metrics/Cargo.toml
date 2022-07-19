@@ -1,6 +1,6 @@
 [package]
 name = "mundis-metrics"
-version = "0.9.27"
+version = "0.9.29"
 authors = ["Mundis Maintainers <maintainers@mundis.io>"]
 repository = "https://github.com/mundisnetwork/axis"
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ gethostname = "0.2.1"
 lazy_static = "1.4.0"
 log = "0.4.14"
 reqwest = { version = "0.11.6", default-features = false, features = ["blocking", "rustls-tls", "json"] }
-mundis-sdk = { path = "../sdk", version = "=0.9.27" }
+mundis-sdk = { path = "../sdk", version = "=0.9.29" }
 
 [dev-dependencies]
 rand = "0.7.0"
