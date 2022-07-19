@@ -419,12 +419,15 @@ mod tests {
         let nonce_fee_calc = FeeCalculator::new(4242);
         let data = nonce::state::Data {
             authority: Pubkey::new(&[3u8; 32]),
-            blockhash: durable_nonce,
+            durable_nonce,
             fee_calculator: nonce_fee_calc.clone(),
         };
         let nonce_account = Account::new_data_with_space(
             42,
-            &nonce::state::Versions::new_current(nonce::State::Initialized(data)),
+            &nonce::state::Versions::new(
+                nonce::State::Initialized(data),
+                true, // separate_domains
+            ),
             nonce::State::size(),
             &system_program::id(),
         )
