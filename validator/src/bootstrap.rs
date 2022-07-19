@@ -1123,10 +1123,10 @@ mod with_incremental_snapshots {
             );
         }
 
-        retain_peer_snapshot_hashes_with_highest_full_snapshot_slot(&mut peer_snapshot_hashes);
         retain_peer_snapshot_hashes_with_highest_incremental_snapshot_slot(
             &mut peer_snapshot_hashes,
         );
+        retain_peer_snapshot_hashes_with_highest_full_snapshot_slot(&mut peer_snapshot_hashes);
 
         peer_snapshot_hashes
     }
