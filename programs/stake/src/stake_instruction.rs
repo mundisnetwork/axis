@@ -43,80 +43,49 @@ pub fn process_instruction(
             )?)?,
         ),
         StakeInstruction::Authorize(authorized_pubkey, stake_authorize) => {
-            let require_custodian_for_locked_stake_authorize = invoke_context
-                .feature_set
-                .is_active(&feature_set::require_custodian_for_locked_stake_authorize::id());
+            let clock = from_keyed_account::<Clock>(keyed_account_at_index(
+                keyed_accounts,
+                first_instruction_account + 1,
+            )?)?;
+            let _current_authority =
+                keyed_account_at_index(keyed_accounts, first_instruction_account + 2)?;
+            let custodian =
+                keyed_account_at_index(keyed_accounts, first_instruction_account + 3)
+                    .ok()
+                    .map(|ka| ka.unsigned_key());
 
-            if require_custodian_for_locked_stake_authorize {
-                let clock = from_keyed_account::<Clock>(keyed_account_at_index(
-                    keyed_accounts,
-                    first_instruction_account + 1,
-                )?)?;
-                let _current_authority =
-                    keyed_account_at_index(keyed_accounts, first_instruction_account + 2)?;
-                let custodian =
-                    keyed_account_at_index(keyed_accounts, first_instruction_account + 3)
-                        .ok()
-                        .map(|ka| ka.unsigned_key());
-
-                me.authorize(
-                    &signers,
-                    &authorized_pubkey,
-                    stake_authorize,
-                    require_custodian_for_locked_stake_authorize,
-                    &clock,
-                    custodian,
-                )
-            } else {
-                me.authorize(
-                    &signers,
-                    &authorized_pubkey,
-                    stake_authorize,
-                    require_custodian_for_locked_stake_authorize,
-                    &Clock::default(),
-                    None,
-                )
-            }
+            me.authorize(
+                &signers,
+                &authorized_pubkey,
+                stake_authorize,
+                true,
+                &clock,
+                custodian,
+            )
         }
         StakeInstruction::AuthorizeWithSeed(args) => {
             let authority_base =
                 keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?;
-            let require_custodian_for_locked_stake_authorize = invoke_context
-                .feature_set
-                .is_active(&feature_set::require_custodian_for_locked_stake_authorize::id());
 
-            if require_custodian_for_locked_stake_authorize {
-                let clock = from_keyed_account::<Clock>(keyed_account_at_index(
-                    keyed_accounts,
-                    first_instruction_account + 2,
-                )?)?;
-                let custodian =
-                    keyed_account_at_index(keyed_accounts, first_instruction_account + 3)
-                        .ok()
-                        .map(|ka| ka.unsigned_key());
+            let clock = from_keyed_account::<Clock>(keyed_account_at_index(
+                keyed_accounts,
+                first_instruction_account + 2,
+            )?)?;
+            let custodian =
+                keyed_account_at_index(keyed_accounts, first_instruction_account + 3)
+                    .ok()
+                    .map(|ka| ka.unsigned_key());
 
-                me.authorize_with_seed(
-                    authority_base,
-                    &args.authority_seed,
-                    &args.authority_owner,
-                    &args.new_authorized_pubkey,
-                    args.stake_authorize,
-                    require_custodian_for_locked_stake_authorize,
-                    &clock,
-                    custodian,
-                )
-            } else {
-                me.authorize_with_seed(
-                    authority_base,
-                    &args.authority_seed,
-                    &args.authority_owner,
-                    &args.new_authorized_pubkey,
-                    args.stake_authorize,
-                    require_custodian_for_locked_stake_authorize,
-                    &Clock::default(),
-                    None,
-                )
-            }
+            me.authorize_with_seed(
+                authority_base,
+                &args.authority_seed,
+                &args.authority_owner,
+                &args.new_authorized_pubkey,
+                args.stake_authorize,
+                true,
+                &clock,
+                custodian,
+            )
         }
         StakeInstruction::DelegateStake => {
             let can_reverse_deactivation = invoke_context
@@ -207,126 +176,98 @@ pub fn process_instruction(
             me.set_lockup(&lockup, &signers, clock.as_deref())
         }
         StakeInstruction::InitializeChecked => {
-            if invoke_context
-                .feature_set
-                .is_active(&feature_set::vote_stake_checked_instructions::id())
-            {
-                let authorized = Authorized {
-                    staker: *keyed_account_at_index(keyed_accounts, first_instruction_account + 2)?
-                        .unsigned_key(),
-                    withdrawer: *keyed_account_at_index(
-                        keyed_accounts,
-                        first_instruction_account + 3,
-                    )?
+            let authorized = Authorized {
+                staker: *keyed_account_at_index(keyed_accounts, first_instruction_account + 2)?
+                    .unsigned_key(),
+                withdrawer: *keyed_account_at_index(
+                    keyed_accounts,
+                    first_instruction_account + 3,
+                )?
                     .signer_key()
                     .ok_or(InstructionError::MissingRequiredSignature)?,
-                };
+            };
 
-                me.initialize(
-                    &authorized,
-                    &Lockup::default(),
-                    &from_keyed_account::<Rent>(keyed_account_at_index(
-                        keyed_accounts,
-                        first_instruction_account + 1,
-                    )?)?,
-                )
-            } else {
-                Err(InstructionError::InvalidInstructionData)
-            }
-        }
-        StakeInstruction::AuthorizeChecked(stake_authorize) => {
-            if invoke_context
-                .feature_set
-                .is_active(&feature_set::vote_stake_checked_instructions::id())
-            {
-                let clock = from_keyed_account::<Clock>(keyed_account_at_index(
+            me.initialize(
+                &authorized,
+                &Lockup::default(),
+                &from_keyed_account::<Rent>(keyed_account_at_index(
                     keyed_accounts,
                     first_instruction_account + 1,
-                )?)?;
-                let _current_authority =
-                    keyed_account_at_index(keyed_accounts, first_instruction_account + 2)?;
-                let authorized_pubkey =
-                    &keyed_account_at_index(keyed_accounts, first_instruction_account + 3)?
-                        .signer_key()
-                        .ok_or(InstructionError::MissingRequiredSignature)?;
-                let custodian =
-                    keyed_account_at_index(keyed_accounts, first_instruction_account + 4)
-                        .ok()
-                        .map(|ka| ka.unsigned_key());
+                )?)?,
+            )
+        }
+        StakeInstruction::AuthorizeChecked(stake_authorize) => {
+            let clock = from_keyed_account::<Clock>(keyed_account_at_index(
+                keyed_accounts,
+                first_instruction_account + 1,
+            )?)?;
+            let _current_authority =
+                keyed_account_at_index(keyed_accounts, first_instruction_account + 2)?;
+            let authorized_pubkey =
+                &keyed_account_at_index(keyed_accounts, first_instruction_account + 3)?
+                    .signer_key()
+                    .ok_or(InstructionError::MissingRequiredSignature)?;
+            let custodian =
+                keyed_account_at_index(keyed_accounts, first_instruction_account + 4)
+                    .ok()
+                    .map(|ka| ka.unsigned_key());
 
-                me.authorize(
-                    &signers,
-                    authorized_pubkey,
-                    stake_authorize,
-                    true,
-                    &clock,
-                    custodian,
-                )
-            } else {
-                Err(InstructionError::InvalidInstructionData)
-            }
+            me.authorize(
+                &signers,
+                authorized_pubkey,
+                stake_authorize,
+                true,
+                &clock,
+                custodian,
+            )
         }
         StakeInstruction::AuthorizeCheckedWithSeed(args) => {
-            if invoke_context
-                .feature_set
-                .is_active(&feature_set::vote_stake_checked_instructions::id())
-            {
-                let authority_base =
-                    keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?;
-                let clock = from_keyed_account::<Clock>(keyed_account_at_index(
-                    keyed_accounts,
-                    first_instruction_account + 2,
-                )?)?;
-                let authorized_pubkey =
-                    &keyed_account_at_index(keyed_accounts, first_instruction_account + 3)?
-                        .signer_key()
-                        .ok_or(InstructionError::MissingRequiredSignature)?;
-                let custodian =
-                    keyed_account_at_index(keyed_accounts, first_instruction_account + 4)
-                        .ok()
-                        .map(|ka| ka.unsigned_key());
+            let authority_base =
+                keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?;
+            let clock = from_keyed_account::<Clock>(keyed_account_at_index(
+                keyed_accounts,
+                first_instruction_account + 2,
+            )?)?;
+            let authorized_pubkey =
+                &keyed_account_at_index(keyed_accounts, first_instruction_account + 3)?
+                    .signer_key()
+                    .ok_or(InstructionError::MissingRequiredSignature)?;
+            let custodian =
+                keyed_account_at_index(keyed_accounts, first_instruction_account + 4)
+                    .ok()
+                    .map(|ka| ka.unsigned_key());
 
-                me.authorize_with_seed(
-                    authority_base,
-                    &args.authority_seed,
-                    &args.authority_owner,
-                    authorized_pubkey,
-                    args.stake_authorize,
-                    true,
-                    &clock,
-                    custodian,
-                )
-            } else {
-                Err(InstructionError::InvalidInstructionData)
-            }
+            me.authorize_with_seed(
+                authority_base,
+                &args.authority_seed,
+                &args.authority_owner,
+                authorized_pubkey,
+                args.stake_authorize,
+                true,
+                &clock,
+                custodian,
+            )
         }
         StakeInstruction::SetLockupChecked(lockup_checked) => {
-            if invoke_context
-                .feature_set
-                .is_active(&feature_set::vote_stake_checked_instructions::id())
+            let custodian = if let Ok(custodian) =
+            keyed_account_at_index(keyed_accounts, first_instruction_account + 2)
             {
-                let custodian = if let Ok(custodian) =
-                    keyed_account_at_index(keyed_accounts, first_instruction_account + 2)
-                {
-                    Some(
-                        *custodian
-                            .signer_key()
-                            .ok_or(InstructionError::MissingRequiredSignature)?,
-                    )
-                } else {
-                    None
-                };
-
-                let lockup = LockupArgs {
-                    unix_timestamp: lockup_checked.unix_timestamp,
-                    epoch: lockup_checked.epoch,
-                    custodian,
-                };
-                let clock = Some(invoke_context.get_sysvar_cache().get_clock()?);
-                me.set_lockup(&lockup, &signers, clock.as_deref())
+                Some(
+                    *custodian
+                        .signer_key()
+                        .ok_or(InstructionError::MissingRequiredSignature)?,
+                )
             } else {
-                Err(InstructionError::InvalidInstructionData)
-            }
+                None
+            };
+
+            let lockup = LockupArgs {
+                unix_timestamp: lockup_checked.unix_timestamp,
+                epoch: lockup_checked.epoch,
+                custodian,
+            };
+            let clock = Some(invoke_context.get_sysvar_cache().get_clock()?);
+            me.set_lockup(&lockup, &signers, clock.as_deref())
         }
     }
 }

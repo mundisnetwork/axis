@@ -10,7 +10,7 @@ use {
         stable_log,
     },
     mundis_sdk::{
-        feature_set, instruction::InstructionError, pubkey::Pubkey, stake, system_program,
+        instruction::InstructionError, pubkey::Pubkey, stake, system_program,
     },
     std::fmt,
 };
@@ -190,6 +190,26 @@ fn genesis_builtins() -> Vec<Builtin> {
             with_program_logging!(system_instruction_processor::process_instruction),
         ),
         Builtin::new(
+            "address_lookup_table_program",
+            mundis_address_lookup_table_program::id(),
+            with_program_logging!(mundis_address_lookup_table_program::processor::process_instruction),
+        ),
+        Builtin::new(
+            "compute_budget_program",
+            mundis_sdk::compute_budget::id(),
+            with_program_logging!(mundis_compute_budget_program::process_instruction),
+        ),
+        Builtin::new(
+                "secp256k1_program",
+                mundis_sdk::secp256k1_program::id(),
+                with_program_logging!(dummy_process_instruction),
+        ),
+        Builtin::new(
+                "ed25519_program",
+                mundis_sdk::ed25519_program::id(),
+                with_program_logging!(dummy_process_instruction),
+        ),
+        Builtin::new(
             "vote_program",
             mundis_vote_program::id(),
             with_program_logging!(mundis_vote_program::vote_instruction::process_instruction),
@@ -233,42 +253,7 @@ fn dummy_process_instruction(
 
 /// Dynamic feature transitions for builtin programs
 fn builtin_feature_transitions() -> Vec<BuiltinFeatureTransition> {
-    vec![
-        BuiltinFeatureTransition(InnerBuiltinFeatureTransition::Add {
-            builtin: Builtin::new(
-                "compute_budget_program",
-                mundis_sdk::compute_budget::id(),
-                mundis_compute_budget_program::process_instruction,
-            ),
-            feature_id: feature_set::add_compute_budget_program::id(),
-        }),
-        BuiltinFeatureTransition(InnerBuiltinFeatureTransition::RemoveOrRetain {
-            previously_added_builtin: Builtin::new(
-                "secp256k1_program",
-                mundis_sdk::secp256k1_program::id(),
-                dummy_process_instruction,
-            ),
-            addition_feature_id: feature_set::secp256k1_program_enabled::id(),
-            removal_feature_id: feature_set::prevent_calling_precompiles_as_programs::id(),
-        }),
-        BuiltinFeatureTransition(InnerBuiltinFeatureTransition::RemoveOrRetain {
-            previously_added_builtin: Builtin::new(
-                "ed25519_program",
-                mundis_sdk::ed25519_program::id(),
-                dummy_process_instruction,
-            ),
-            addition_feature_id: feature_set::ed25519_program_enabled::id(),
-            removal_feature_id: feature_set::prevent_calling_precompiles_as_programs::id(),
-        }),
-        BuiltinFeatureTransition(InnerBuiltinFeatureTransition::Add {
-            builtin: Builtin::new(
-                "address_lookup_table_program",
-                mundis_address_lookup_table_program::id(),
-                mundis_address_lookup_table_program::processor::process_instruction,
-            ),
-            feature_id: feature_set::versioned_tx_message_enabled::id(),
-        }),
-    ]
+    vec![]
 }
 
 pub(crate) fn get() -> Builtins {

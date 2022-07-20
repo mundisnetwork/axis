@@ -211,14 +211,6 @@ fn transfer(
     lamports: u64,
     invoke_context: &InvokeContext,
 ) -> Result<(), InstructionError> {
-    if !invoke_context
-        .feature_set
-        .is_active(&feature_set::system_transfer_zero_check::id())
-        && lamports == 0
-    {
-        return Ok(());
-    }
-
     if from.signer_key().is_none() {
         ic_msg!(
             invoke_context,
@@ -240,14 +232,6 @@ fn transfer_with_seed(
     lamports: u64,
     invoke_context: &InvokeContext,
 ) -> Result<(), InstructionError> {
-    if !invoke_context
-        .feature_set
-        .is_active(&feature_set::system_transfer_zero_check::id())
-        && lamports == 0
-    {
-        return Ok(());
-    }
-
     if from_base.signer_key().is_none() {
         ic_msg!(
             invoke_context,

@@ -5,7 +5,7 @@
 use {
     crate::{
         decode_error::DecodeError,
-        feature_set::{prevent_calling_precompiles_as_programs, FeatureSet},
+        feature_set::FeatureSet,
         instruction::CompiledInstruction,
         pubkey::Pubkey,
     },
@@ -78,18 +78,7 @@ impl Precompile {
 
 lazy_static! {
     /// The list of all precompiled programs
-    static ref PRECOMPILES: Vec<Precompile> = vec![
-        Precompile::new(
-            crate::secp256k1_program::id(),
-            Some(prevent_calling_precompiles_as_programs::id()),
-            crate::secp256k1_instruction::verify,
-        ),
-        Precompile::new(
-            crate::ed25519_program::id(),
-            Some(prevent_calling_precompiles_as_programs::id()),
-            crate::ed25519_instruction::verify,
-        ),
-    ];
+    static ref PRECOMPILES: Vec<Precompile> = vec![];
 }
 
 /// Check if a program is a precompiled program

@@ -1077,7 +1077,6 @@ mod tests {
             native_loader,
         },
     };
-    use mundis_sdk::feature_set::requestable_heap_size;
     use crate::compute_budget::{ComputeBudget, DEFAULT_UNITS};
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -1614,7 +1613,6 @@ mod tests {
 
         let mut feature_set = FeatureSet::all_enabled();
         feature_set.deactivate(&tx_wide_compute_cap::id());
-        feature_set.deactivate(&requestable_heap_size::id());
         let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
         invoke_context.feature_set = Arc::new(feature_set);
         invoke_context.compute_budget = ComputeBudget::new(DEFAULT_UNITS);

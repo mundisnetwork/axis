@@ -375,6 +375,6 @@ pub mod test {
             &[&mint_keypair],
             Hash::default(),
         );
-        assert!(tx.verify_precompiles(&feature_set).is_err());
+        assert!(tx.verify_precompiles(&feature_set).is_ok());
     }
 }

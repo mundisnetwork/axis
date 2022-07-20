@@ -106,8 +106,8 @@ use {
         epoch_schedule::EpochSchedule,
         feature,
         feature_set::{
-            self, default_units_per_instruction, disable_fee_calculator, nonce_must_be_writable,
-            requestable_heap_size, tx_wide_compute_cap, FeatureSet,
+            self, disable_fee_calculator, nonce_must_be_writable,
+            tx_wide_compute_cap, FeatureSet,
         },
         fee::FeeStructure,
         fee_calculator::{FeeCalculator, FeeRateGovernor},
@@ -3665,11 +3665,6 @@ impl Bank {
         self.rc.accounts.accounts_db.set_shrink_paths(paths);
     }
 
-    pub fn separate_nonce_from_blockhash(&self) -> bool {
-        self.feature_set
-            .is_active(&feature_set::separate_nonce_from_blockhash::id())
-    }
-
     fn check_age<'a>(
         &self,
         txs: impl Iterator<Item = &'a SanitizedTransaction>,
@@ -3677,15 +3672,10 @@ impl Bank {
         max_age: usize,
         error_counters: &mut TransactionErrorMetrics,
     ) -> Vec<TransactionCheckResult> {
-        let separate_nonce_from_blockhash = self.separate_nonce_from_blockhash();
-        let enable_durable_nonce = separate_nonce_from_blockhash
-            && self
-            .feature_set
-            .is_active(&feature_set::enable_durable_nonce::id());
         let hash_queue = self.blockhash_queue.read().unwrap();
         let last_blockhash = hash_queue.last_hash();
         let next_durable_nonce =
-            DurableNonce::from_blockhash(&last_blockhash, separate_nonce_from_blockhash);
+            DurableNonce::from_blockhash(&last_blockhash, true);
         txs.zip(lock_results)
             .map(|(tx, lock_res)| match lock_res {
                 Ok(()) => {
@@ -3695,7 +3685,7 @@ impl Bank {
                         (Ok(()), None)
                     } else if let Some((address, account)) = self.check_transaction_for_nonce(
                         tx,
-                        enable_durable_nonce,
+                        true,
                         &next_durable_nonce,
                     ) {
                         (Ok(()), Some(NoncePartial::new(address, account)))
@@ -3764,19 +3754,14 @@ impl Bank {
         let nonce_data = nonce_account::verify_nonce_account(
             &nonce_account,
             message.recent_blockhash(),
-            self.separate_nonce_from_blockhash(),
+            true,
         )?;
 
-        if self
-            .feature_set
-            .is_active(&feature_set::nonce_must_be_authorized::ID)
-        {
-            let nonce_is_authorized = message
-                .get_ix_signers(NONCED_TX_MARKER_IX_INDEX as usize)
-                .any(|signer| signer == &nonce_data.authority);
-            if !nonce_is_authorized {
-                return None;
-            }
+        let nonce_is_authorized = message
+            .get_ix_signers(NONCED_TX_MARKER_IX_INDEX as usize)
+            .any(|signer| signer == &nonce_data.authority);
+        if !nonce_is_authorized {
+            return None;
         }
 
         Some((*nonce_address, nonce_account))
@@ -3790,11 +3775,8 @@ impl Bank {
     ) -> Option<(Pubkey, AccountSharedData)> {
         let durable_nonces_enabled = enable_durable_nonce
             || self.cluster_type() != ClusterType::MainnetBeta;
-        let nonce_must_be_advanceable = self
-            .feature_set
-            .is_active(&feature_set::nonce_must_be_advanceable::ID);
         let nonce_is_advanceable = tx.message().recent_blockhash() != next_durable_nonce.as_hash();
-        (durable_nonces_enabled && (nonce_is_advanceable || !nonce_must_be_advanceable))
+        (durable_nonces_enabled && nonce_is_advanceable)
             .then(|| self.check_message_for_nonce(tx.message()))
             .flatten()
     }
@@ -3920,10 +3902,6 @@ impl Bank {
         &self,
         address_table_lookups: &[MessageAddressTableLookup],
     ) -> Result<LoadedAddresses> {
-        if !self.versioned_tx_message_enabled() {
-            return Err(TransactionError::UnsupportedVersion);
-        }
-
         let slot_hashes = self
             .sysvar_cache
             .read()
@@ -4158,8 +4136,8 @@ impl Bank {
                             Measure::start("compute_budget_process_transaction_time");
                         let process_transaction_result = compute_budget.process_message(
                             tx.message(),
-                            feature_set.is_active(&requestable_heap_size::id()),
-                            feature_set.is_active(&default_units_per_instruction::id()),
+                            true,
+                            true,
                         );
                         compute_budget_process_transaction_time.stop();
                         saturating_add_assign!(
@@ -4527,7 +4505,7 @@ impl Bank {
 
         let mut write_time = Measure::start("write_time");
         let durable_nonce = {
-            let separate_nonce_from_blockhash = self.separate_nonce_from_blockhash();
+            let separate_nonce_from_blockhash = true;
             let durable_nonce =
                 DurableNonce::from_blockhash(&last_blockhash, separate_nonce_from_blockhash);
             (durable_nonce, separate_nonce_from_blockhash)
@@ -4649,19 +4627,13 @@ impl Bank {
             }
         });
 
-        let enforce_fix = self.no_overflow_rent_distribution_enabled();
-
         let mut rent_distributed_in_initial_round = 0;
         let validator_rent_shares = validator_stakes
             .into_iter()
             .map(|(pubkey, staked)| {
-                let rent_share = if !enforce_fix {
-                    (((staked * rent_to_be_distributed) as f64) / (total_staked as f64)) as u64
-                } else {
-                    (((staked as u128) * (rent_to_be_distributed as u128)) / (total_staked as u128))
-                        .try_into()
-                        .unwrap()
-                };
+                let rent_share = (((staked as u128) * (rent_to_be_distributed as u128)) / (total_staked as u128))
+                    .try_into()
+                    .unwrap();
                 rent_distributed_in_initial_round += rent_share;
                 (pubkey, rent_share)
             })
@@ -4681,7 +4653,7 @@ impl Bank {
                 } else {
                     rent_share
                 };
-                if !enforce_fix || rent_to_be_paid > 0 {
+                if rent_to_be_paid > 0 {
                     let mut account = self
                         .get_account_with_fixed_root(&pubkey)
                         .unwrap_or_default();
@@ -4712,15 +4684,7 @@ impl Bank {
             });
         self.rewards.write().unwrap().append(&mut rewards);
 
-        if enforce_fix {
-            assert_eq!(leftover_lamports, 0);
-        } else if leftover_lamports != 0 {
-            warn!(
-                "There was leftover from rent distribution: {}",
-                leftover_lamports
-            );
-            self.capitalization.fetch_sub(leftover_lamports, Relaxed);
-        }
+        assert_eq!(leftover_lamports, 0);
     }
 
     fn distribute_rent(&self) {
@@ -5922,7 +5886,7 @@ impl Bank {
             })
         }?;
 
-        if self.verify_tx_signatures_len_enabled() && !sanitized_tx.verify_signatures_len() {
+        if !sanitized_tx.verify_signatures_len() {
             return Err(TransactionError::SanitizeFailure);
         }
 
@@ -6388,21 +6352,6 @@ impl Bank {
         self.rc.accounts.accounts_db.shrink_candidate_slots()
     }
 
-    pub fn no_overflow_rent_distribution_enabled(&self) -> bool {
-        self.feature_set
-            .is_active(&feature_set::no_overflow_rent_distribution::id())
-    }
-
-    pub fn verify_tx_signatures_len_enabled(&self) -> bool {
-        self.feature_set
-            .is_active(&feature_set::verify_tx_signatures_len::id())
-    }
-
-    pub fn versioned_tx_message_enabled(&self) -> bool {
-        self.feature_set
-            .is_active(&feature_set::versioned_tx_message_enabled::id())
-    }
-
     pub fn stake_program_advance_activating_credits_observed(&self) -> bool {
         self.feature_set
             .is_active(&feature_set::stake_program_advance_activating_credits_observed::id())
@@ -6416,11 +6365,6 @@ impl Bank {
     pub fn stakes_remove_delegation_if_inactive_enabled(&self) -> bool {
         self.feature_set
             .is_active(&feature_set::stakes_remove_delegation_if_inactive::id())
-    }
-
-    pub fn send_to_tpu_vote_port_enabled(&self) -> bool {
-        self.feature_set
-            .is_active(&feature_set::send_to_tpu_vote_port::id())
     }
 
     pub fn read_cost_tracker(&self) -> LockResult<RwLockReadGuard<CostTracker>> {
@@ -7200,7 +7144,7 @@ pub(crate) mod tests {
             cluster_type: ClusterType::MainnetBeta,
             ..GenesisConfig::default()
         }));
-        let sysvar_and_builtin_program_delta0 = 13;
+        let sysvar_and_builtin_program_delta0 = 17;
         assert_eq!(
             bank0.capitalization(),
             42 * 42 + mdis_to_lamports(1.0) + sysvar_and_builtin_program_delta0
@@ -7865,27 +7809,6 @@ pub(crate) mod tests {
             new_validator_lamports,
             old_validator_lamports + RENT_TO_BE_DISTRIBUTED
         );
-
-        genesis_config
-            .accounts
-            .remove(&feature_set::no_overflow_rent_distribution::id())
-            .unwrap();
-        let bank = std::panic::AssertUnwindSafe(Bank::new_for_tests(&genesis_config));
-        let old_validator_lamports = bank.get_balance(&validator_pubkey);
-        let new_validator_lamports = std::panic::catch_unwind(|| {
-            bank.distribute_rent_to_validators(&bank.vote_accounts(), RENT_TO_BE_DISTRIBUTED);
-            bank.get_balance(&validator_pubkey)
-        });
-
-        if let Ok(new_validator_lamports) = new_validator_lamports {
-            info!("asserting overflowing incorrect rent distribution");
-            assert_ne!(
-                new_validator_lamports,
-                old_validator_lamports + RENT_TO_BE_DISTRIBUTED
-            );
-        } else {
-            info!("NOT-asserting overflowing incorrect rent distribution");
-        }
     }
 
     #[test]
@@ -8955,7 +8878,7 @@ pub(crate) mod tests {
         // not being eagerly-collected for exact rewards calculation
         bank0.restore_old_behavior_for_fragile_tests();
 
-        let sysvar_and_builtin_program_delta0 = 13;
+        let sysvar_and_builtin_program_delta0 = 17;
         assert_eq!(
             bank0.capitalization(),
             42 * 1_000_000_000 + mdis_to_lamports(1.0) + sysvar_and_builtin_program_delta0
@@ -9089,7 +9012,7 @@ pub(crate) mod tests {
         // not being eagerly-collected for exact rewards calculation
         bank.restore_old_behavior_for_fragile_tests();
 
-        let sysvar_and_builtin_program_delta = 13;
+        let sysvar_and_builtin_program_delta = 17;
         assert_eq!(
             bank.capitalization(),
             42 * 1_000_000_000 + mdis_to_lamports(1.0) + sysvar_and_builtin_program_delta
@@ -11717,9 +11640,7 @@ pub(crate) mod tests {
 
     impl Bank {
         fn next_durable_nonce(&self) -> DurableNonce {
-            let separate_nonce_from_blockhash = self
-                .feature_set
-                .is_active(&feature_set::separate_nonce_from_blockhash::id());
+            let separate_nonce_from_blockhash = true;
             let hash_queue = self.blockhash_queue.read().unwrap();
             let last_blockhash = hash_queue.last_hash();
             DurableNonce::from_blockhash(&last_blockhash, separate_nonce_from_blockhash)
@@ -13207,25 +13128,25 @@ pub(crate) mod tests {
             if bank.slot == 0 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "6Ui4JmKMFk1qi5E9xRRt91H17hEby9NNg5mhR2PvwqRp"
+                    "HPREdvyDVdnq5ZAUKNv6a8rR4ZAAUpE7DdxaAFemoK2J"
                 );
             }
             if bank.slot == 32 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "AZygoTGQaMuN22yKJh76uv7oDCmhowgP669peZMGC4Y6"
+                    "AwKdxM1WgtLKhwcV1bw9coNVRnJn8iWpetXAqtcaRnqf"
                 );
             }
             if bank.slot == 64 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "96Kd7Wmomtj5XWcxnJM8pwrQzxNZfiCNDZtxUTtvChtw"
+                    "fm3QbaZvNL8XP46LKwuvkWmMM1C1X3vmC5p6ECpwQGY"
                 );
             }
             if bank.slot == 128 {
                 assert_eq!(
                     bank.hash().to_string(),
-                    "4F5cSrvzPStGQbGiMPjVvRfY9oxAYh6BBwjTpnEf11dX"
+                    "EjNvU3vpdd5zKMPiMfgd9UJfZwYuAgbxdMRc2CvAdm1p"
                 );
                 break;
             }
@@ -13453,7 +13374,7 @@ pub(crate) mod tests {
         // No more slots should be shrunk
         assert_eq!(bank2.shrink_candidate_slots(), 0);
         // alive_counts represents the count of alive accounts in the three slots 0,1,2
-        assert_eq!(alive_counts, vec![12, 1, 7]);
+        assert_eq!(alive_counts, vec![16, 1, 7]);
     }
 
     #[test]
@@ -13501,7 +13422,7 @@ pub(crate) mod tests {
             .map(|_| bank.process_stale_slot_with_budget(0, force_to_return_alive_account))
             .sum();
         // consumed_budgets represents the count of alive accounts in the three slots 0,1,2
-        assert_eq!(consumed_budgets, 13);
+        assert_eq!(consumed_budgets, 17);
     }
 
     #[test]
@@ -16208,9 +16129,6 @@ pub(crate) mod tests {
         genesis_config
             .accounts
             .remove(&feature_set::tx_wide_compute_cap::id());
-        genesis_config
-            .accounts
-            .remove(&feature_set::requestable_heap_size::id());
         let mut bank = Bank::new_for_tests(&genesis_config);
 
         fn mock_ix_processor(
@@ -16372,9 +16290,7 @@ pub(crate) mod tests {
 
         // activate all features but verify_tx_signatures_len
         activate_all_features(&mut genesis_config);
-        genesis_config
-            .accounts
-            .remove(&feature_set::verify_tx_signatures_len::id());
+
         let bank = Bank::new_for_tests(&genesis_config);
 
         let mut rng = rand::thread_rng();
@@ -16417,10 +16333,9 @@ pub(crate) mod tests {
                 Some(TransactionError::SanitizeFailure),
             );
         }
-        // Too many signatures: Success without feature switch
         {
             let tx = make_transaction(TestCase::AddSignature);
-            assert!(bank
+            assert!(!bank
                 .verify_transaction(tx.into(), TransactionVerificationMode::FullVerification)
                 .is_ok());
         }

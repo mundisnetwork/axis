@@ -240,7 +240,7 @@ impl SendTransactionService {
                 let verify_nonce_account = nonce_account::verify_nonce_account(
                     &nonce_account,
                     &durable_nonce,
-                    working_bank.separate_nonce_from_blockhash(),
+                    true,
                 );
                 if verify_nonce_account.is_none()
                     && working_bank.get_signature_status_slot(signature).is_none()

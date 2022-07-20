@@ -48,14 +48,12 @@ impl VotingService {
             .name("mun-vote-service".to_string())
             .spawn(move || {
                 for vote_op in vote_receiver.iter() {
-                    let rooted_bank = bank_forks.read().unwrap().root_bank().clone();
-                    let send_to_tpu_vote_port = rooted_bank.send_to_tpu_vote_port_enabled();
                     Self::handle_vote(
                         &cluster_info,
                         &poh_recorder,
                         tower_storage.as_ref(),
                         vote_op,
-                        send_to_tpu_vote_port,
+                        true,
                     );
                 }
             })

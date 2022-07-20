@@ -47,12 +47,9 @@ pub trait NonceKeyedAccount {
 }
 
 fn get_durable_nonce(invoke_context: &InvokeContext) -> (DurableNonce, /*separate_domains:*/ bool) {
-    let separate_nonce_from_blockhash = invoke_context
-        .feature_set
-        .is_active(&feature_set::separate_nonce_from_blockhash::id());
     let durable_nonce =
-        DurableNonce::from_blockhash(&invoke_context.blockhash, separate_nonce_from_blockhash);
-    (durable_nonce, separate_nonce_from_blockhash)
+        DurableNonce::from_blockhash(&invoke_context.blockhash, true);
+    (durable_nonce, true)
 }
 
 impl<'a> NonceKeyedAccount for KeyedAccount<'a> {

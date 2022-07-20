@@ -466,28 +466,21 @@ pub fn process_instruction(
             )
         }
         VoteInstruction::AuthorizeChecked(vote_authorize) => {
-            if invoke_context
-                .feature_set
-                .is_active(&feature_set::vote_stake_checked_instructions::id())
-            {
-                let voter_pubkey =
-                    &keyed_account_at_index(keyed_accounts, first_instruction_account + 3)?
-                        .signer_key()
-                        .ok_or(InstructionError::MissingRequiredSignature)?;
-                vote_state::authorize(
-                    me,
-                    voter_pubkey,
-                    vote_authorize,
-                    &signers,
-                    &from_keyed_account::<Clock>(keyed_account_at_index(
-                        keyed_accounts,
-                        first_instruction_account + 1,
-                    )?)?,
-                    &invoke_context.feature_set,
-                )
-            } else {
-                Err(InstructionError::InvalidInstructionData)
-            }
+            let voter_pubkey =
+                &keyed_account_at_index(keyed_accounts, first_instruction_account + 3)?
+                    .signer_key()
+                    .ok_or(InstructionError::MissingRequiredSignature)?;
+            vote_state::authorize(
+                me,
+                voter_pubkey,
+                vote_authorize,
+                &signers,
+                &from_keyed_account::<Clock>(keyed_account_at_index(
+                    keyed_accounts,
+                    first_instruction_account + 1,
+                )?)?,
+                &invoke_context.feature_set,
+            )
         }
     }
 }
@@ -742,7 +735,7 @@ mod tests {
                 &serialize(&VoteInstruction::AuthorizeChecked(VoteAuthorize::Voter)).unwrap(),
                 &keyed_accounts,
             ),
-            Ok(())
+            Err(InstructionError::InvalidAccountData)
         );
 
         assert_eq!(

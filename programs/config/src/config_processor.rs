@@ -6,7 +6,6 @@ use {
     mundis_program_runtime::{ic_msg, invoke_context::InvokeContext},
     mundis_sdk::{
         account::{ReadableAccount, WritableAccount},
-        feature_set,
         instruction::InstructionError,
         keyed_account::keyed_account_at_index,
         program_utils::limited_deserialize,
@@ -102,16 +101,11 @@ pub fn process_instruction(
         }
     }
 
-    if invoke_context
-        .feature_set
-        .is_active(&feature_set::dedupe_config_program_signers::id())
-    {
-        let total_new_keys = key_list.keys.len();
-        let unique_new_keys = key_list.keys.into_iter().collect::<BTreeSet<_>>();
-        if unique_new_keys.len() != total_new_keys {
-            ic_msg!(invoke_context, "new config contains duplicate keys");
-            return Err(InstructionError::InvalidArgument);
-        }
+    let total_new_keys = key_list.keys.len();
+    let unique_new_keys = key_list.keys.into_iter().collect::<BTreeSet<_>>();
+    if unique_new_keys.len() != total_new_keys {
+        ic_msg!(invoke_context, "new config contains duplicate keys");
+        return Err(InstructionError::InvalidArgument);
     }
 
     // Check for Config data signers not present in incoming account update

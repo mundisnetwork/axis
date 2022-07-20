@@ -87,6 +87,8 @@ mundis_sdk::pubkeys!(
     non_circulating_accounts,
     [
         // list of account pubkeys
+        "5PLJZLJiRR9vf7d1JCCg7UuWjtyN9nkab9uok6TqSyuP",
+        "FhMqMowRKxoNV3CRRwY5bkGT6Lb9cGA1xR18VGAVJPc7",
     ]
 );
 
@@ -162,7 +164,7 @@ mod tests {
             ..GenesisConfig::default()
         };
         let mut bank = Arc::new(Bank::new_for_tests(&genesis_config));
-        let sysvar_and_native_program_delta = 13;
+        let sysvar_and_native_program_delta = 17;
         assert_eq!(
             bank.capitalization(),
             (num_genesis_accounts + num_non_circulating_accounts + num_stake_accounts) * balance
