@@ -1,6 +1,6 @@
 use {
     assert_cmd::prelude::*,
-    solana_ledger::{create_new_tmp_ledger, genesis_utils::create_genesis_config},
+    mundis_ledger::{create_new_tmp_ledger, genesis_utils::create_genesis_config},
     std::process::{Command, Output},
 };
 
