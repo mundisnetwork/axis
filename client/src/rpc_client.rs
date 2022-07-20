@@ -1099,11 +1099,7 @@ impl RpcClient {
     }
 
     fn default_cluster_transaction_encoding(&self) -> Result<UiTransactionEncoding, RpcError> {
-        if self.get_node_version()? < semver::Version::new(1, 3, 16) {
-            Ok(UiTransactionEncoding::Base58)
-        } else {
-            Ok(UiTransactionEncoding::Base64)
-        }
+        Ok(UiTransactionEncoding::Base64)
     }
 
     /// Simulates sending a transaction.
