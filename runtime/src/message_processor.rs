@@ -620,8 +620,8 @@ mod tests {
         assert_eq!(
             result,
             Err(TransactionError::InstructionError(
-                1,
-                InstructionError::Custom(0xbabb1e)
+                0,
+                InstructionError::UnsupportedProgramId
             ))
         );
     }
