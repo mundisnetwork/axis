@@ -22,8 +22,11 @@ async fn test_associated_token_address() {
     let token_mint_address = Pubkey::new_unique();
     let associated_token_address =
         get_associated_token_address(&wallet_address, &token_mint_address);
+
     let (mut banks_client, payer, recent_blockhash) =
         program_test(token_mint_address).start().await;
+    let rent = banks_client.get_rent().await.unwrap();
+    let expected_token_account_balance = rent.minimum_balance(TokenAccount::LEN);
 
     // Associated account does not exist
     assert_eq!(
@@ -69,7 +72,7 @@ async fn test_associated_token_address() {
         TokenAccount::LEN
     );
     assert_eq!(associated_account.owner, mundis_token_program::id());
-    assert_eq!(associated_account.lamports, 1 as u64);
+    assert_eq!(associated_account.lamports, expected_token_account_balance as u64);
 }
 
 #[tokio::test]
@@ -81,15 +84,18 @@ async fn test_create_with_fewer_lamports() {
 
     let (mut banks_client, payer, recent_blockhash) =
         program_test(token_mint_address).start().await;
-    let expected_token_account_balance = 1 as u64;
+    let rent = banks_client.get_rent().await.unwrap();
+    let expected_token_account_balance = rent.minimum_balance(TokenAccount::LEN);
 
-    // Transfer lamports into `associated_token_address` before creating it, but not for an initialized token account
+    // Transfer lamports into `associated_token_address` before creating it - enough to be
+    // rent-exempt for 0 data, but not for an initialized token account
     let mut transaction = Transaction::new_with_payer(
-        &[system_instruction::transfer(
-            &payer.pubkey(),
-            &associated_token_address,
-            1,
-        ),
+        &[
+            system_instruction::transfer(
+                &payer.pubkey(),
+                &associated_token_address,
+                rent.minimum_balance(0),
+            ),
             initialize_mint(
                 &mundis_token_program::id(),
                 &token_mint_address,
@@ -110,7 +116,7 @@ async fn test_create_with_fewer_lamports() {
             .get_balance(associated_token_address)
             .await
             .unwrap(),
-        1 as u64
+        rent.minimum_balance(0)
     );
 
     // Check that the program adds the extra lamports
@@ -143,7 +149,8 @@ async fn test_create_with_excess_lamports() {
 
     let (mut banks_client, payer, recent_blockhash) =
         program_test(token_mint_address).start().await;
-    let expected_token_account_balance = 1;
+    let rent = banks_client.get_rent().await.unwrap();
+    let expected_token_account_balance = rent.minimum_balance(TokenAccount::LEN);
 
     // Transfer 1 lamport into `associated_token_address` before creating it
     let mut transaction = Transaction::new_with_payer(

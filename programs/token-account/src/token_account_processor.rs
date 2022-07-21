@@ -67,8 +67,24 @@ impl Processor {
         ];
 
         let signers = Pubkey::create_program_address(associated_token_account_signer_seeds, program_id)?;
+        let rent = invoke_context.get_sysvar_cache().get_rent()?;
 
         if associated_token_account_info.lamports()? > 0 {
+            let required_lamports = rent
+                .minimum_balance(TokenAccount::LEN)
+                .max(1)
+                .saturating_sub(associated_token_account_info.lamports()?);
+
+            if required_lamports > 0 {
+                invoke_context.native_invoke(
+                   system_instruction::transfer(&funder_info_key, &associated_token_account_key, required_lamports),
+                    &[
+                        funder_info_key,
+                        associated_token_account_key,
+                    ]
+                )?;
+            }
+
             invoke_context.native_invoke(
                 system_instruction::allocate(&associated_token_account_key, TokenAccount::packed_len() as u64),
                 &[signers],
@@ -81,7 +97,7 @@ impl Processor {
             invoke_context.native_invoke(system_instruction::create_account(
                 &funder_info_key,
                 &associated_token_account_key,
-                1,
+                rent.minimum_balance(TokenAccount::LEN).max(1),
                 TokenAccount::packed_len() as u64,
                 &token_program_id,
             ), &[signers])?;

@@ -30,6 +30,8 @@ use {
     },
     tokio::time::Duration,
 };
+use mundis_program::fee_calculator::FeeCalculator;
+use mundis_program::rent::Rent;
 
 #[derive(Clone)]
 pub struct BanksClient {
@@ -55,6 +57,18 @@ impl BanksClient {
     ) -> impl Future<Output = io::Result<()>> + '_ {
         self.inner
             .send_transaction_with_context(ctx, transaction)
+            .map_err(BanksClientError::from) // Remove this when return Err type updated to BanksClientError
+            .map_err(Into::into)
+    }
+
+    pub fn get_fees_with_commitment_and_context(
+        &mut self,
+        ctx: Context,
+        commitment: CommitmentLevel,
+    ) -> impl Future<Output = io::Result<(FeeCalculator, Hash, u64)>> + '_ {
+        #[allow(deprecated)]
+        self.inner
+            .get_fees_with_commitment_and_context(ctx, commitment)
             .map_err(BanksClientError::from) // Remove this when return Err type updated to BanksClientError
             .map_err(Into::into)
     }
@@ -154,6 +168,18 @@ impl BanksClient {
                 ))
                 .map_err(Into::into) // Remove this when return Err type updated to BanksClientError
         })
+    }
+
+    pub fn get_fees(
+        &mut self,
+    ) -> impl Future<Output = io::Result<(FeeCalculator, Hash, u64)>> + '_ {
+        #[allow(deprecated)]
+        self.get_fees_with_commitment_and_context(context::current(), CommitmentLevel::default())
+    }
+
+    /// Return the cluster rent
+    pub fn get_rent(&mut self) -> impl Future<Output = io::Result<Rent>> + '_ {
+        self.get_sysvar::<Rent>()
     }
 
     /// Send a transaction and return after the transaction has been rejected or
