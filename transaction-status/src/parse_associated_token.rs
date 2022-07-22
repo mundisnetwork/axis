@@ -21,11 +21,11 @@ pub fn parse_associated_token(
         _ => {
             // Runtime should prevent this from ever happening
             return Err(ParseInstructionError::InstructionKeyMismatch(
-                ParsableProgram::AnimaTokenAccount,
+                ParsableProgram::TokenAccount,
             ));
         }
     }
-    check_num_associated_token_accounts(&instruction.accounts, 7)?;
+    check_num_associated_token_accounts(&instruction.accounts, 6)?;
     Ok(ParsedInstructionEnum {
         instruction_type: "create".to_string(),
         info: json!({
@@ -35,7 +35,6 @@ pub fn parse_associated_token(
             "mint": account_keys[instruction.accounts[3] as usize].to_string(),
             "systemProgram": account_keys[instruction.accounts[4] as usize].to_string(),
             "tokenProgram": account_keys[instruction.accounts[5] as usize].to_string(),
-            "rentSysvar": account_keys[instruction.accounts[6] as usize].to_string(),
         }),
     })
 }
@@ -44,7 +43,7 @@ fn check_num_associated_token_accounts(
     accounts: &[u8],
     num: usize,
 ) -> Result<(), ParseInstructionError> {
-    check_num_accounts(accounts, num, ParsableProgram::AnimaTokenAccount)
+    check_num_accounts(accounts, num, ParsableProgram::TokenAccount)
 }
 
 #[cfg(test)]
@@ -70,7 +69,7 @@ mod test {
     #[test]
     fn test_parse_associated_token() {
         let mut keys: Vec<Pubkey> = vec![];
-        for _ in 0..7 {
+        for _ in 0..6 {
             keys.push(mundis_sdk::pubkey::new_rand());
         }
 
@@ -91,8 +90,7 @@ mod test {
                     "wallet": keys[2].to_string(),
                     "mint": keys[3].to_string(),
                     "systemProgram": keys[4].to_string(),
-                    "tokenProgram": keys[5].to_string(),
-                    "rentSysvar": keys[6].to_string(),
+                    "tokenProgram": keys[5].to_string()
                 })
             }
         );

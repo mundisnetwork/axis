@@ -254,10 +254,8 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_sdk`], [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`mundis_sdk`], [`mundis_client`] and [`anyhow`] crates.
     ///
-    /// [`mundis_sdk`]: https://docs.rs/solana-sdk
-    /// [`solana_client`]: https://docs.rs/solana-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
@@ -325,15 +323,13 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_sdk`], [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`mundis_sdk`], [`mundis_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_sdk`]: https://docs.rs/solana-sdk
-    /// [`solana_client`]: https://docs.rs/solana-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use mundis_program::example_mocks::solana_sdk;
-    /// # use mundis_program::example_mocks::solana_client;
+    /// # use mundis_program::example_mocks::mundis_sdk;
+    /// # use mundis_program::example_mocks::mundis_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use mundis_client::rpc_client::RpcClient;

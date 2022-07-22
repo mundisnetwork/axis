@@ -42,7 +42,7 @@ impl VotingService {
         cluster_info: Arc<ClusterInfo>,
         poh_recorder: Arc<Mutex<PohRecorder>>,
         tower_storage: Arc<dyn TowerStorage>,
-        bank_forks: Arc<RwLock<BankForks>>,
+        _bank_forks: Arc<RwLock<BankForks>>,
     ) -> Self {
         let thread_hdl = Builder::new()
             .name("mun-vote-service".to_string())

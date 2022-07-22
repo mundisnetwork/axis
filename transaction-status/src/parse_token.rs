@@ -17,14 +17,14 @@ pub fn parse_token(
     account_keys: &[Pubkey],
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
     let token_instruction = limited_deserialize(&instruction.data)
-        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::AnimaToken))?;
+        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::Token))?;
 
     match instruction.accounts.iter().max() {
         Some(index) if (*index as usize) < account_keys.len() => {}
         _ => {
             // Runtime should prevent this from ever happening
             return Err(ParseInstructionError::InstructionKeyMismatch(
-                ParsableProgram::AnimaToken,
+                ParsableProgram::Token,
             ));
         }
     }
@@ -432,7 +432,7 @@ fn parse_signers(
 }
 
 fn check_num_token_accounts(accounts: &[u8], num: usize) -> Result<(), ParseInstructionError> {
-    check_num_accounts(accounts, num, ParsableProgram::AnimaToken)
+    check_num_accounts(accounts, num, ParsableProgram::Token)
 }
 
 #[cfg(test)]

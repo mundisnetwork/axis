@@ -28,11 +28,11 @@ lazy_static! {
         let mut m = HashMap::new();
         m.insert(
             *ASSOCIATED_TOKEN_PROGRAM_ID,
-            ParsableProgram::AnimaTokenAccount,
+            ParsableProgram::TokenAccount,
         );
-        m.insert(*MEMO_PROGRAM_ID, ParsableProgram::AnimaMemo);
+        m.insert(*MEMO_PROGRAM_ID, ParsableProgram::Memo);
         for anima_token_id in mundis_token_ids() {
-            m.insert(anima_token_id, ParsableProgram::AnimaToken);
+            m.insert(anima_token_id, ParsableProgram::Token);
         }
         m.insert(*STAKE_PROGRAM_ID, ParsableProgram::Stake);
         m.insert(*SYSTEM_PROGRAM_ID, ParsableProgram::System);
@@ -76,9 +76,9 @@ pub struct ParsedInstructionEnum {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ParsableProgram {
-    AnimaTokenAccount,
-    AnimaMemo,
-    AnimaToken,
+    TokenAccount,
+    Memo,
+    Token,
     Stake,
     System,
     Vote,
@@ -93,11 +93,11 @@ pub fn parse(
         .get(program_id)
         .ok_or(ParseInstructionError::ProgramNotParsable)?;
     let parsed_json = match program_name {
-        ParsableProgram::AnimaTokenAccount => {
+        ParsableProgram::TokenAccount => {
             serde_json::to_value(parse_associated_token(instruction, account_keys)?)?
         }
-        ParsableProgram::AnimaMemo => parse_memo(instruction)?,
-        ParsableProgram::AnimaToken => serde_json::to_value(parse_token(instruction, account_keys)?)?,
+        ParsableProgram::Memo => parse_memo(instruction)?,
+        ParsableProgram::Token => serde_json::to_value(parse_token(instruction, account_keys)?)?,
         ParsableProgram::Stake => serde_json::to_value(parse_stake(instruction, account_keys)?)?,
         ParsableProgram::System => serde_json::to_value(parse_system(instruction, account_keys)?)?,
         ParsableProgram::Vote => serde_json::to_value(parse_vote(instruction, account_keys)?)?,
@@ -112,7 +112,7 @@ pub fn parse(
 fn parse_memo(instruction: &CompiledInstruction) -> Result<Value, ParseInstructionError> {
     parse_memo_data(&instruction.data)
         .map(Value::String)
-        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::AnimaMemo))
+        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::Memo))
 }
 
 pub fn parse_memo_data(data: &[u8]) -> Result<String, Utf8Error> {
@@ -148,7 +148,7 @@ mod test {
         assert_eq!(
             parse(&MEMO_PROGRAM_ID, &memo_instruction, &[]).unwrap(),
             ParsedInstruction {
-                program: "anima-memo".to_string(),
+                program: "memo".to_string(),
                 program_id: MEMO_PROGRAM_ID.to_string(),
                 parsed: json!("🦖"),
             }

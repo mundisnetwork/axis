@@ -546,10 +546,9 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// # let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// # let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_and_confirm_transaction(&tx)?;
-    /// # Ok::<(), ClientError>(())
+    /// let signature = rpc_client.send_and_confirm_transaction(&tx).unwrap();
     /// ```
     pub fn send_and_confirm_transaction(
         &self,
@@ -707,10 +706,9 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_transaction(&tx)?;
-    /// # Ok::<(), ClientError>(())
+    /// let signature = rpc_client.send_transaction(&tx).unwrap();
     /// ```
     pub fn send_transaction(&self, transaction: &Transaction) -> ClientResult<Signature> {
         self.send_transaction_with_config(
@@ -788,7 +786,7 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
     /// let config = RpcSendTransactionConfig {
     ///     skip_preflight: true,
@@ -797,8 +795,7 @@ impl RpcClient {
     /// let signature = rpc_client.send_transaction_with_config(
     ///     &tx,
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn send_transaction_with_config(
         &self,
@@ -920,17 +917,16 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_transaction(&tx)?;
+    /// let signature = rpc_client.send_transaction(&tx).unwrap();
     ///
     /// loop {
-    ///     let confirmed = rpc_client.confirm_transaction(&signature)?;
+    ///     let confirmed = rpc_client.confirm_transaction(&signature).unwrap();
     ///     if confirmed {
     ///         break;
     ///     }
     /// }
-    /// # Ok::<(), ClientError>(())
     /// ```
     pub fn confirm_transaction(&self, signature: &Signature) -> ClientResult<bool> {
         Ok(self
@@ -979,18 +975,17 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_transaction(&tx)?;
+    /// let signature = rpc_client.send_transaction(&tx).unwrap();
     ///
     /// loop {
     ///     let commitment_config = CommitmentConfig::processed();
-    ///     let confirmed = rpc_client.confirm_transaction_with_commitment(&signature, commitment_config)?;
+    ///     let confirmed = rpc_client.confirm_transaction_with_commitment(&signature, commitment_config).unwrap();
     ///     if confirmed.value {
     ///         break;
     ///     }
     /// }
-    /// # Ok::<(), ClientError>(())
     /// ```
     pub fn confirm_transaction_with_commitment(
         &self,
@@ -1150,11 +1145,10 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let result = rpc_client.simulate_transaction(&tx)?;
+    /// let result = rpc_client.simulate_transaction(&tx).unwrap();
     /// assert!(result.value.err.is_none());
-    /// # Ok::<(), ClientError>(())
     /// ```
     pub fn simulate_transaction(
         &self,
@@ -1226,7 +1220,7 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
     /// let config = RpcSimulateTransactionConfig {
     ///     sig_verify: true,
@@ -1235,9 +1229,8 @@ impl RpcClient {
     /// let result = rpc_client.simulate_transaction_with_config(
     ///     &tx,
     ///     config,
-    /// )?;
+    /// ).unwrap();
     /// assert!(result.value.err.is_none());
-    /// # Ok::<(), ClientError>(())
     /// ```
     pub fn simulate_transaction_with_config(
         &self,
@@ -1281,8 +1274,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let snapshot_slot_info = rpc_client.get_highest_snapshot_slot()?;
-    /// # Ok::<(), ClientError>(())
+    /// let snapshot_slot_info = rpc_client.get_highest_snapshot_slot().unwrap();
     /// ```
     pub fn get_highest_snapshot_slot(&self) -> ClientResult<RpcSnapshotSlotInfo> {
         self.send(RpcRequest::GetHighestSnapshotSlot, Value::Null)
@@ -1345,11 +1337,10 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// # let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// # let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// # let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_transaction(&tx)?;
-    /// let status = rpc_client.get_signature_status(&signature)?;
-    /// # Ok::<(), ClientError>(())
+    /// let signature = rpc_client.send_transaction(&tx).unwrap();
+    /// let status = rpc_client.get_signature_status(&signature).unwrap();
     /// ```
     pub fn get_signature_status(
         &self,
@@ -1414,12 +1405,12 @@ impl RpcClient {
     /// // Send lamports from Alice to Bob and wait for the transaction to be processed
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_transaction(&tx)?;
+    /// let signature = rpc_client.send_transaction(&tx).unwrap();
     ///
     /// let status = loop {
-    ///    let statuses = rpc_client.get_signature_statuses(&[signature])?.value;
+    ///    let statuses = rpc_client.get_signature_statuses(&[signature]).unwrap().value;
     ///    if let Some(status) = statuses[0].clone() {
     ///        break status;
     ///    }
@@ -1427,7 +1418,6 @@ impl RpcClient {
     /// };
     ///
     /// assert!(status.err.is_none());
-    /// # Ok::<(), ClientError>(())
     /// ```
     pub fn get_signature_statuses(
         &self,
@@ -1491,12 +1481,11 @@ impl RpcClient {
     /// # fn get_old_transaction_signature() -> Signature { Signature::default() }
     /// // Check if an old transaction exists
     /// let signature = get_old_transaction_signature();
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
-    /// let statuses = rpc_client.get_signature_statuses_with_history(&[signature])?.value;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
+    /// let statuses = rpc_client.get_signature_statuses_with_history(&[signature]).unwrap().value;
     /// if statuses[0].is_none() {
     ///     println!("old transaction does not exist");
     /// }
-    /// # Ok::<(), ClientError>(())
     /// ```
     pub fn get_signature_statuses_with_history(
         &self,
@@ -1559,15 +1548,14 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// # let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// # let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// # let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_and_confirm_transaction(&tx)?;
+    /// let signature = rpc_client.send_and_confirm_transaction(&tx).unwrap();
     /// let commitment_config = CommitmentConfig::processed();
     /// let status = rpc_client.get_signature_status_with_commitment(
     ///     &signature,
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_signature_status_with_commitment(
         &self,
@@ -1628,17 +1616,16 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// # let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// # let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// # let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_transaction(&tx)?;
+    /// let signature = rpc_client.send_transaction(&tx).unwrap();
     /// let commitment_config = CommitmentConfig::processed();
     /// let search_transaction_history = true;
     /// let status = rpc_client.get_signature_status_with_commitment_and_history(
     ///     &signature,
     ///     commitment_config,
     ///     search_transaction_history,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_signature_status_with_commitment_and_history(
         &self,
@@ -1676,8 +1663,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let slot = rpc_client.get_slot()?;
-    /// # Ok::<(), ClientError>(())
+    /// let slot = rpc_client.get_slot().unwrap();
     /// ```
     pub fn get_slot(&self) -> ClientResult<Slot> {
         self.get_slot_with_commitment(self.commitment())
@@ -1703,8 +1689,7 @@ impl RpcClient {
     /// # use mundis_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
-    /// let slot = rpc_client.get_slot_with_commitment(commitment_config)?;
-    /// # Ok::<(), ClientError>(())
+    /// let slot = rpc_client.get_slot_with_commitment(commitment_config).unwrap();
     /// ```
     pub fn get_slot_with_commitment(
         &self,
@@ -1734,8 +1719,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let block_height = rpc_client.get_block_height()?;
-    /// # Ok::<(), ClientError>(())
+    /// let block_height = rpc_client.get_block_height().unwrap();
     /// ```
     pub fn get_block_height(&self) -> ClientResult<u64> {
         self.get_block_height_with_commitment(self.commitment())
@@ -1763,8 +1747,7 @@ impl RpcClient {
     /// let commitment_config = CommitmentConfig::processed();
     /// let block_height = rpc_client.get_block_height_with_commitment(
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_block_height_with_commitment(
         &self,
@@ -1795,8 +1778,7 @@ impl RpcClient {
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let start_slot = 1;
     /// let limit = 3;
-    /// let leaders = rpc_client.get_slot_leaders(start_slot, limit)?;
-    /// # Ok::<(), ClientError>(())
+    /// let leaders = rpc_client.get_slot_leaders(start_slot, limit).unwrap();
     /// ```
     pub fn get_slot_leaders(&self, start_slot: Slot, limit: u64) -> ClientResult<Vec<Pubkey>> {
         self.send(RpcRequest::GetSlotLeaders, json!([start_slot, limit]))
@@ -1832,8 +1814,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let production = rpc_client.get_block_production()?;
-    /// # Ok::<(), ClientError>(())
+    /// let production = rpc_client.get_block_production().unwrap();
     /// ```
     pub fn get_block_production(&self) -> RpcResult<RpcBlockProduction> {
         self.send(RpcRequest::GetBlockProduction, Value::Null)
@@ -1864,7 +1845,7 @@ impl RpcClient {
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let start_slot = 1;
     /// # let limit = 3;
-    /// let leader = rpc_client.get_slot_leaders(start_slot, limit)?;
+    /// let leader = rpc_client.get_slot_leaders(start_slot, limit).unwrap();
     /// let leader = leader[0];
     /// let range = RpcBlockProductionConfigRange {
     ///     first_slot: start_slot,
@@ -1877,8 +1858,7 @@ impl RpcClient {
     /// };
     /// let production = rpc_client.get_block_production_with_config(
     ///     config
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_block_production_with_config(
         &self,
@@ -1919,7 +1899,7 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// // Find some vote account to delegate to
-    /// let vote_accounts = rpc_client.get_vote_accounts()?;
+    /// let vote_accounts = rpc_client.get_vote_accounts().unwrap();
     /// let vote_account = vote_accounts.current.get(0).unwrap_or_else(|| &vote_accounts.delinquent[0]);
     /// let vote_account_pubkey = &vote_account.vote_pubkey;
     /// let vote_account_pubkey = Pubkey::from_str(vote_account_pubkey).expect("pubkey");
@@ -1939,7 +1919,7 @@ impl RpcClient {
     ///     1_000_000,
     /// );
     ///
-    /// let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// let tx = Transaction::new_signed_with_payer(
     ///     &instrs,
     ///     Some(&alice.pubkey()),
@@ -1947,16 +1927,15 @@ impl RpcClient {
     ///     latest_blockhash,
     /// );
     ///
-    /// rpc_client.send_and_confirm_transaction(&tx)?;
+    /// rpc_client.send_and_confirm_transaction(&tx).unwrap();
     ///
-    /// let epoch_info = rpc_client.get_epoch_info()?;
+    /// let epoch_info = rpc_client.get_epoch_info().unwrap();
     /// let activation = rpc_client.get_stake_activation(
     ///     stake_account_pubkey,
     ///     Some(epoch_info.epoch),
-    /// )?;
+    /// ).unwrap();
     ///
     /// assert_eq!(activation.state, StakeActivationState::Activating);
-    /// # Ok::<(), ClientError>(())
     /// ```
     pub fn get_stake_activation(
         &self,
@@ -1995,8 +1974,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let supply = rpc_client.supply()?;
-    /// # Ok::<(), ClientError>(())
+    /// let supply = rpc_client.supply().unwrap();
     /// ```
     pub fn supply(&self) -> RpcResult<RpcSupply> {
         self.supply_with_commitment(self.commitment())
@@ -2022,8 +2000,7 @@ impl RpcClient {
     /// let commitment_config = CommitmentConfig::processed();
     /// let supply = rpc_client.supply_with_commitment(
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn supply_with_commitment(
         &self,
@@ -2062,8 +2039,7 @@ impl RpcClient {
     /// };
     /// let accounts = rpc_client.get_largest_accounts_with_config(
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_largest_accounts_with_config(
         &self,
@@ -2097,8 +2073,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let accounts = rpc_client.get_vote_accounts()?;
-    /// # Ok::<(), ClientError>(())
+    /// let accounts = rpc_client.get_vote_accounts().unwrap();
     /// ```
     pub fn get_vote_accounts(&self) -> ClientResult<RpcVoteAccountStatus> {
         self.get_vote_accounts_with_commitment(self.commitment())
@@ -2127,8 +2102,7 @@ impl RpcClient {
     /// let commitment_config = CommitmentConfig::processed();
     /// let accounts = rpc_client.get_vote_accounts_with_commitment(
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_vote_accounts_with_commitment(
         &self,
@@ -2176,8 +2150,7 @@ impl RpcClient {
     /// };
     /// let accounts = rpc_client.get_vote_accounts_with_config(
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_vote_accounts_with_config(
         &self,
@@ -2235,8 +2208,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let cluster_nodes = rpc_client.get_cluster_nodes()?;
-    /// # Ok::<(), ClientError>(())
+    /// let cluster_nodes = rpc_client.get_cluster_nodes().unwrap();
     /// ```
     pub fn get_cluster_nodes(&self) -> ClientResult<Vec<RpcContactInfo>> {
         self.send(RpcRequest::GetClusterNodes, Value::Null)
@@ -2266,9 +2238,8 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// # let slot = rpc_client.get_slot()?;
-    /// let block = rpc_client.get_block(slot)?;
-    /// # Ok::<(), ClientError>(())
+    /// # let slot = rpc_client.get_slot().unwrap();
+    /// let block = rpc_client.get_block(slot).unwrap();
     /// ```
     pub fn get_block(&self, slot: Slot) -> ClientResult<EncodedConfirmedBlock> {
         self.get_block_with_encoding(slot, UiTransactionEncoding::Json)
@@ -2291,13 +2262,12 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// # let slot = rpc_client.get_slot()?;
+    /// # let slot = rpc_client.get_slot().unwrap();
     /// let encoding = UiTransactionEncoding::Base58;
     /// let block = rpc_client.get_block_with_encoding(
     ///     slot,
     ///     encoding,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_block_with_encoding(
         &self,
@@ -2331,7 +2301,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// # let slot = rpc_client.get_slot()?;
+    /// # let slot = rpc_client.get_slot().unwrap();
     /// let config = RpcBlockConfig {
     ///     encoding: Some(UiTransactionEncoding::Base58),
     ///     transaction_details: Some(TransactionDetails::None),
@@ -2341,8 +2311,7 @@ impl RpcClient {
     /// let block = rpc_client.get_block_with_config(
     ///     slot,
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_block_with_config(
         &self,
@@ -2429,8 +2398,7 @@ impl RpcClient {
     /// // Get up to the first 10 blocks
     /// let start_slot = 0;
     /// let end_slot = 9;
-    /// let blocks = rpc_client.get_blocks(start_slot, Some(end_slot))?;
-    /// # Ok::<(), ClientError>(())
+    /// let blocks = rpc_client.get_blocks(start_slot, Some(end_slot)).unwrap();
     /// ```
     pub fn get_blocks(&self, start_slot: Slot, end_slot: Option<Slot>) -> ClientResult<Vec<Slot>> {
         self.send(
@@ -2492,8 +2460,7 @@ impl RpcClient {
     ///     start_slot,
     ///     Some(end_slot),
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_blocks_with_commitment(
         &self,
@@ -2544,8 +2511,7 @@ impl RpcClient {
     /// // Get the first 10 blocks
     /// let start_slot = 0;
     /// let limit = 10;
-    /// let blocks = rpc_client.get_blocks_with_limit(start_slot, limit)?;
-    /// # Ok::<(), ClientError>(())
+    /// let blocks = rpc_client.get_blocks_with_limit(start_slot, limit).unwrap();
     /// ```
     pub fn get_blocks_with_limit(&self, start_slot: Slot, limit: usize) -> ClientResult<Vec<Slot>> {
         self.send(
@@ -2592,8 +2558,7 @@ impl RpcClient {
     ///     start_slot,
     ///     limit,
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_blocks_with_limit_and_commitment(
         &self,
@@ -2718,8 +2683,7 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// let signatures = rpc_client.get_signatures_for_address(
     ///     &alice.pubkey(),
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_signatures_for_address(
         &self,
@@ -2768,9 +2732,9 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// # let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// # let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// # let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// # let signature = rpc_client.send_and_confirm_transaction(&tx)?;
+    /// # let signature = rpc_client.send_and_confirm_transaction(&tx).unwrap();
     /// let config = GetConfirmedSignaturesForAddress2Config {
     ///     before: None,
     ///     until: None,
@@ -2780,8 +2744,7 @@ impl RpcClient {
     /// let signatures = rpc_client.get_signatures_for_address_with_config(
     ///     &alice.pubkey(),
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_signatures_for_address_with_config(
         &self,
@@ -2877,14 +2840,13 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// # let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// # let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// # let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_and_confirm_transaction(&tx)?;
+    /// let signature = rpc_client.send_and_confirm_transaction(&tx).unwrap();
     /// let transaction = rpc_client.get_transaction(
     ///     &signature,
     ///     UiTransactionEncoding::Json,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_transaction(
         &self,
@@ -2936,9 +2898,9 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// # let lamports = 50;
-    /// # let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    /// # let latest_blockhash = rpc_client.get_latest_blockhash().unwrap();
     /// # let tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, latest_blockhash);
-    /// let signature = rpc_client.send_and_confirm_transaction(&tx)?;
+    /// let signature = rpc_client.send_and_confirm_transaction(&tx).unwrap();
     /// let config = RpcTransactionConfig {
     ///     encoding: Some(UiTransactionEncoding::Json),
     ///     commitment: Some(CommitmentConfig::confirmed()),
@@ -2946,8 +2908,7 @@ impl RpcClient {
     /// let transaction = rpc_client.get_transaction_with_config(
     ///     &signature,
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_transaction_with_config(
         &self,
@@ -3009,9 +2970,8 @@ impl RpcClient {
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// // Get the time of the most recent finalized block
-    /// let slot = rpc_client.get_slot()?;
-    /// let block_time = rpc_client.get_block_time(slot)?;
-    /// # Ok::<(), ClientError>(())
+    /// let slot = rpc_client.get_slot().unwrap();
+    /// let block_time = rpc_client.get_block_time(slot).unwrap();
     /// ```
     pub fn get_block_time(&self, slot: Slot) -> ClientResult<UnixTimestamp> {
         let request = RpcRequest::GetBlockTime;
@@ -3050,8 +3010,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let epoch_info = rpc_client.get_epoch_info()?;
-    /// # Ok::<(), ClientError>(())
+    /// let epoch_info = rpc_client.get_epoch_info().unwrap();
     /// ```
     pub fn get_epoch_info(&self) -> ClientResult<EpochInfo> {
         self.get_epoch_info_with_commitment(self.commitment())
@@ -3077,8 +3036,7 @@ impl RpcClient {
     /// let commitment_config = CommitmentConfig::confirmed();
     /// let epoch_info = rpc_client.get_epoch_info_with_commitment(
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_epoch_info_with_commitment(
         &self,
@@ -3111,11 +3069,10 @@ impl RpcClient {
     /// # };
     /// # use mundis_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// # let slot = rpc_client.get_slot()?;
+    /// # let slot = rpc_client.get_slot().unwrap();
     /// let leader_schedule = rpc_client.get_leader_schedule(
     ///     Some(slot),
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_leader_schedule(
         &self,
@@ -3141,13 +3098,12 @@ impl RpcClient {
     /// # };
     /// # use mundis_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// # let slot = rpc_client.get_slot()?;
+    /// # let slot = rpc_client.get_slot().unwrap();
     /// let commitment_config = CommitmentConfig::processed();
     /// let leader_schedule = rpc_client.get_leader_schedule_with_commitment(
     ///     Some(slot),
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_leader_schedule_with_commitment(
         &self,
@@ -3181,7 +3137,7 @@ impl RpcClient {
     /// # use mundis_client::rpc_config::RpcLeaderScheduleConfig;
     /// # use mundis_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// # let slot = rpc_client.get_slot()?;
+    /// # let slot = rpc_client.get_slot().unwrap();
     /// # let validator_pubkey_str = "7AYmEYBBetok8h5L3Eo3vi3bDWnjNnaFbSXfSNYV5ewB".to_string();
     /// let config = RpcLeaderScheduleConfig {
     ///     identity: Some(validator_pubkey_str),
@@ -3190,8 +3146,7 @@ impl RpcClient {
     /// let leader_schedule = rpc_client.get_leader_schedule_with_config(
     ///     Some(slot),
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_leader_schedule_with_config(
         &self,
@@ -3217,8 +3172,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let epoch_schedule = rpc_client.get_epoch_schedule()?;
-    /// # Ok::<(), ClientError>(())
+    /// let epoch_schedule = rpc_client.get_epoch_schedule();
     /// ```
     pub fn get_epoch_schedule(&self) -> ClientResult<EpochSchedule> {
         self.send(RpcRequest::GetEpochSchedule, Value::Null)
@@ -3246,8 +3200,7 @@ impl RpcClient {
     /// let limit = 10;
     /// let performance_samples = rpc_client.get_recent_performance_samples(
     ///     Some(limit),
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_recent_performance_samples(
         &self,
@@ -3272,8 +3225,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let identity = rpc_client.get_identity()?;
-    /// # Ok::<(), ClientError>(())
+    /// let identity = rpc_client.get_identity();
     /// ```
     pub fn get_identity(&self) -> ClientResult<Pubkey> {
         let rpc_identity: RpcIdentity = self.send(RpcRequest::GetIdentity, Value::Null)?;
@@ -3308,8 +3260,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let inflation_governor = rpc_client.get_inflation_governor()?;
-    /// # Ok::<(), ClientError>(())
+    /// let inflation_governor = rpc_client.get_inflation_governor();
     /// ```
     pub fn get_inflation_governor(&self) -> ClientResult<RpcInflationGovernor> {
         self.send(RpcRequest::GetInflationGovernor, Value::Null)
@@ -3331,8 +3282,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let inflation_rate = rpc_client.get_inflation_rate()?;
-    /// # Ok::<(), ClientError>(())
+    /// let inflation_rate = rpc_client.get_inflation_rate();
     /// ```
     pub fn get_inflation_rate(&self) -> ClientResult<RpcInflationRate> {
         self.send(RpcRequest::GetInflationRate, Value::Null)
@@ -3359,7 +3309,7 @@ impl RpcClient {
     /// # };
     /// # use mundis_sdk::signature::{Keypair, Signer};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// # let epoch_info = rpc_client.get_epoch_info()?;
+    /// # let epoch_info = rpc_client.get_epoch_info().unwrap();
     /// # let epoch = epoch_info.epoch;
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
@@ -3367,8 +3317,7 @@ impl RpcClient {
     /// let inflation_reward = rpc_client.get_inflation_reward(
     ///     &addresses,
     ///     Some(epoch),
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_inflation_reward(
         &self,
@@ -3391,7 +3340,7 @@ impl RpcClient {
         )
     }
 
-    /// Returns the current solana version running on the node.
+    /// Returns the current mundis version running on the node.
     ///
     /// # RPC Reference
     ///
@@ -3408,11 +3357,10 @@ impl RpcClient {
     /// # };
     /// # use mundis_sdk::signature::{Keypair, Signer};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let expected_version = semver::Version::new(1, 7, 0);
-    /// let version = rpc_client.get_version()?;
-    /// let version = semver::Version::parse(&version.mundis_core)?;
+    /// let expected_version = semver::Version::new(0, 9, 0);
+    /// let version = rpc_client.get_version().unwrap();
+    /// let version = semver::Version::parse(&version.mundis_core).unwrap();
     /// assert!(version >= expected_version);
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn get_version(&self) -> ClientResult<RpcVersionInfo> {
         self.send(RpcRequest::GetVersion, Value::Null)
@@ -3438,8 +3386,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let slot = rpc_client.minimum_ledger_slot()?;
-    /// # Ok::<(), ClientError>(())
+    /// let slot = rpc_client.minimum_ledger_slot().unwrap();
     /// ```
     pub fn minimum_ledger_slot(&self) -> ClientResult<Slot> {
         self.send(RpcRequest::MinimumLedgerSlot, Value::Null)
@@ -3485,8 +3432,7 @@ impl RpcClient {
     /// # let mocks = rpc_client::create_rpc_client_mocks();
     /// # let rpc_client = RpcClient::new_mock_with_mocks("succeeds".to_string(), mocks);
     /// let alice_pubkey = Pubkey::from_str("BgvYtJEfmZYdVKiptmMjxGzv8iQoo4MWjsP3QsTkhhxa").unwrap();
-    /// let account = rpc_client.get_account(&alice_pubkey)?;
-    /// # Ok::<(), ClientError>(())
+    /// let account = rpc_client.get_account(&alice_pubkey).unwrap();
     /// ```
     pub fn get_account(&self, pubkey: &Pubkey) -> ClientResult<Account> {
         self.get_account_with_commitment(pubkey, self.commitment())?
@@ -3529,9 +3475,8 @@ impl RpcClient {
     /// let account = rpc_client.get_account_with_commitment(
     ///     &alice_pubkey,
     ///     commitment_config,
-    /// )?;
+    /// ).unwrap();
     /// assert!(account.value.is_some());
-    /// # Ok::<(), ClientError>(())
     /// ```
     pub fn get_account_with_commitment(
         &self,
@@ -3592,8 +3537,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let slot = rpc_client.get_max_retransmit_slot()?;
-    /// # Ok::<(), ClientError>(())
+    /// let slot = rpc_client.get_max_retransmit_slot().unwrap();
     pub fn get_max_retransmit_slot(&self) -> ClientResult<Slot> {
         self.send(RpcRequest::GetMaxRetransmitSlot, Value::Null)
     }
@@ -3615,8 +3559,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
-    /// let slot = rpc_client.get_max_shred_insert_slot()?;
-    /// # Ok::<(), ClientError>(())
+    /// let slot = rpc_client.get_max_shred_insert_slot().unwrap();
     pub fn get_max_shred_insert_slot(&self) -> ClientResult<Slot> {
         self.send(RpcRequest::GetMaxShredInsertSlot, Value::Null)
     }
@@ -3648,8 +3591,7 @@ impl RpcClient {
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
     /// let pubkeys = vec![alice.pubkey(), bob.pubkey()];
-    /// let accounts = rpc_client.get_multiple_accounts(&pubkeys)?;
-    /// # Ok::<(), ClientError>(())
+    /// let accounts = rpc_client.get_multiple_accounts(&pubkeys).unwrap();
     /// ```
     pub fn get_multiple_accounts(&self, pubkeys: &[Pubkey]) -> ClientResult<Vec<Option<Account>>> {
         Ok(self
@@ -3685,8 +3627,7 @@ impl RpcClient {
     /// let accounts = rpc_client.get_multiple_accounts_with_commitment(
     ///     &pubkeys,
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_multiple_accounts_with_commitment(
         &self,
@@ -3738,8 +3679,7 @@ impl RpcClient {
     /// let accounts = rpc_client.get_multiple_accounts_with_config(
     ///     &pubkeys,
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_multiple_accounts_with_config(
         &self,
@@ -3796,8 +3736,7 @@ impl RpcClient {
     /// # let mocks = rpc_client::create_rpc_client_mocks();
     /// # let rpc_client = RpcClient::new_mock_with_mocks("succeeds".to_string(), mocks);
     /// let alice_pubkey = Pubkey::from_str("BgvYtJEfmZYdVKiptmMjxGzv8iQoo4MWjsP3QsTkhhxa").unwrap();
-    /// let account_data = rpc_client.get_account_data(&alice_pubkey)?;
-    /// # Ok::<(), ClientError>(())
+    /// let account_data = rpc_client.get_account_data(&alice_pubkey).unwrap();
     /// ```
     pub fn get_account_data(&self, pubkey: &Pubkey) -> ClientResult<Vec<u8>> {
         Ok(self.get_account(pubkey)?.data)
@@ -3821,8 +3760,7 @@ impl RpcClient {
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let data_len = 300;
-    /// let balance = rpc_client.get_minimum_balance_for_rent_exemption(data_len)?;
-    /// # Ok::<(), ClientError>(())
+    /// let balance = rpc_client.get_minimum_balance_for_rent_exemption(data_len).unwrap();
     /// ```
     pub fn get_minimum_balance_for_rent_exemption(&self, data_len: usize) -> ClientResult<u64> {
         let request = RpcRequest::GetMinimumBalanceForRentExemption;
@@ -3866,8 +3804,7 @@ impl RpcClient {
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
-    /// let balance = rpc_client.get_balance(&alice.pubkey())?;
-    /// # Ok::<(), ClientError>(())
+    /// let balance = rpc_client.get_balance(&alice.pubkey()).unwrap();
     /// ```
     pub fn get_balance(&self, pubkey: &Pubkey) -> ClientResult<u64> {
         Ok(self
@@ -3901,8 +3838,7 @@ impl RpcClient {
     /// let balance = rpc_client.get_balance_with_commitment(
     ///     &alice.pubkey(),
     ///     commitment_config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_balance_with_commitment(
         &self,
@@ -3944,8 +3880,7 @@ impl RpcClient {
     /// # };
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
-    /// let accounts = rpc_client.get_program_accounts(&alice.pubkey())?;
-    /// # Ok::<(), ClientError>(())
+    /// let accounts = rpc_client.get_program_accounts(&alice.pubkey()).unwrap();
     /// ```
     pub fn get_program_accounts(&self, pubkey: &Pubkey) -> ClientResult<Vec<(Pubkey, Account)>> {
         self.get_program_accounts_with_config(
@@ -4012,8 +3947,7 @@ impl RpcClient {
     /// let accounts = rpc_client.get_program_accounts_with_config(
     ///     &alice.pubkey(),
     ///     config,
-    /// )?;
-    /// # Ok::<(), ClientError>(())
+    /// ).unwrap();
     /// ```
     pub fn get_program_accounts_with_config(
         &self,
