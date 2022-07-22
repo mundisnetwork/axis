@@ -10,6 +10,8 @@ use mundis_sdk::instruction::InstructionError;
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum TokenError {
     // 0
+    #[error("Lamport balance below rent-exempt threshold")]
+    NotRentExempt,
     /// Insufficient funds for the operation requested.
     #[error("Insufficient funds")]
     InsufficientFunds,
@@ -74,11 +76,13 @@ pub enum TokenError {
     #[error("Instruction does not support non-native tokens")]
     NonNativeNotSupported,
 }
+
 impl From<TokenError> for InstructionError {
     fn from(e: TokenError) -> Self {
         InstructionError::Custom(e as u32)
     }
 }
+
 impl<T> DecodeError<T> for TokenError {
     fn type_of() -> &'static str {
         "TokenError"

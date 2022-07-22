@@ -6,6 +6,7 @@ use {
     mundis_sdk::pubkey::Pubkey,
     std::str::FromStr,
 };
+use mundis_sdk::program_pack::Pack;
 use mundis_token_program::state::{TokenAccount, AccountState, Mint, Multisig};
 
 // A helper function to convert anima_token::id() to mundis_sdk::pubkey::Pubkey
@@ -37,7 +38,7 @@ pub fn parse_token(
     data: &[u8],
     mint_decimals: Option<u8>,
 ) -> Result<TokenAccountType, ParseAccountError> {
-    if data.len() == TokenAccount::packed_len() {
+    if data.len() == TokenAccount::get_packed_len() {
         let account = TokenAccount::unpack(data)
             .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::Token))?;
         let decimals = mint_decimals.ok_or_else(|| {
@@ -55,6 +56,10 @@ pub fn parse_token(
             },
             state: account.state.into(),
             is_native: account.is_native(),
+            rent_exempt_reserve: match account.is_native {
+                Some(reserve) => Some(token_amount_to_ui_amount(reserve, decimals)),
+                None => None,
+            },
             delegated_amount: if account.delegate.is_none() {
                 None
             } else {
@@ -68,7 +73,7 @@ pub fn parse_token(
                 None => None,
             },
         }))
-    } else if data.len() == Mint::packed_len() {
+    } else if data.len() == Mint::get_packed_len() {
         let mint = Mint::unpack(data)
             .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::Token))?;
         Ok(TokenAccountType::Mint(UiMint {
@@ -86,7 +91,7 @@ pub fn parse_token(
                 None => None,
             },
         }))
-    } else if data.len() == Multisig::packed_len() {
+    } else if data.len() == Multisig::get_packed_len() {
         let multisig = Multisig::unpack(data)
             .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::Token))?;
         Ok(TokenAccountType::Multisig(UiMultisig {
@@ -131,6 +136,8 @@ pub struct UiTokenAccount {
     pub delegate: Option<String>,
     pub state: UiAccountState,
     pub is_native: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rent_exempt_reserve: Option<UiTokenAmount>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delegated_amount: Option<UiTokenAmount>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -240,7 +247,7 @@ pub struct UiMultisig {
 }
 
 pub fn get_token_account_mint(data: &[u8]) -> Option<Pubkey> {
-    if data.len() == TokenAccount::packed_len() {
+    if data.len() == TokenAccount::get_packed_len() {
         Some(Pubkey::new(&data[0..32]))
     } else {
         None
@@ -249,21 +256,22 @@ pub fn get_token_account_mint(data: &[u8]) -> Option<Pubkey> {
 
 #[cfg(test)]
 mod test {
+    use mundis_token_program::state::{MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH, puffed_out_string};
     use super::*;
 
     #[test]
     fn test_parse_token() {
         let mint_pubkey = Pubkey::new(&[2; 32]);
         let owner_pubkey = Pubkey::new(&[3; 32]);
-        let mut account_data = vec![0; TokenAccount::packed_len()];
-        let mut account = TokenAccount::unpack(&account_data).unwrap();
+        let mut account_data = vec![0; TokenAccount::get_packed_len()];
+        let mut account = TokenAccount::unpack_unchecked(&account_data).unwrap();
         account.mint = mint_pubkey;
         account.owner = owner_pubkey;
         account.amount = 42;
         account.state = AccountState::Initialized;
-        account.is_native = false;
+        account.is_native = None;
         account.close_authority = Some(owner_pubkey);
-        account.pack(&mut account_data).unwrap();
+        TokenAccount::pack(account, &mut account_data).unwrap();
 
         assert!(parse_token(&account_data, None).is_err());
         assert_eq!(
@@ -280,13 +288,14 @@ mod test {
                 delegate: None,
                 state: UiAccountState::Initialized,
                 is_native: false,
+                rent_exempt_reserve: None,
                 delegated_amount: None,
                 close_authority: Some(owner_pubkey.to_string()),
             }),
         );
 
-        let mut mint_data = vec![0; Mint::packed_len()];
-        let mut mint = Mint::unpack(&mint_data).unwrap();
+        let mut mint_data = vec![0; Mint::get_packed_len()];
+        let mut mint = Mint::unpack_unchecked(&mint_data).unwrap();
         mint.mint_authority = Some(owner_pubkey);
         mint.supply = 42;
         mint.decimals = 3;
@@ -294,7 +303,7 @@ mod test {
         mint.symbol = "TST".to_string();
         mint.is_initialized = true;
         mint.freeze_authority = Some(owner_pubkey);
-        mint.pack(&mut mint_data).unwrap();
+        Mint::pack(mint, &mut mint_data).unwrap();
 
         assert_eq!(
             parse_token(&mint_data, None).unwrap(),
@@ -302,8 +311,8 @@ mod test {
                 mint_authority: Some(owner_pubkey.to_string()),
                 supply: 42.to_string(),
                 decimals: 3,
-                name: "Test Token".to_string(),
-                symbol: "TST".to_string(),
+                name: puffed_out_string(&"Test Token".to_string(), MAX_NAME_LENGTH),
+                symbol: puffed_out_string(&"TST".to_string(), MAX_SYMBOL_LENGTH),
                 is_initialized: true,
                 freeze_authority: Some(owner_pubkey.to_string()),
             }),
@@ -312,17 +321,17 @@ mod test {
         let signer1 = Pubkey::new(&[1; 32]);
         let signer2 = Pubkey::new(&[2; 32]);
         let signer3 = Pubkey::new(&[3; 32]);
-        let mut multisig_data = vec![0; Multisig::packed_len()];
+        let mut multisig_data = vec![0; Multisig::get_packed_len()];
         let mut signers = [Pubkey::default(); 11];
         signers[0] = signer1;
         signers[1] = signer2;
         signers[2] = signer3;
-        let mut multisig = Multisig::unpack(&multisig_data).unwrap();
+        let mut multisig = Multisig::unpack_unchecked(&multisig_data).unwrap();
         multisig.m = 2;
         multisig.n = 3;
         multisig.is_initialized = true;
         multisig.signers = signers;
-        multisig.pack(&mut multisig_data).unwrap();
+        Multisig::pack(multisig, &mut multisig_data).unwrap();
 
         assert_eq!(
             parse_token(&multisig_data, None).unwrap(),
@@ -345,10 +354,10 @@ mod test {
     #[test]
     fn test_get_token_account_mint() {
         let mint_pubkey = Pubkey::new(&[2; 32]);
-        let mut account_data = vec![0; TokenAccount::packed_len()];
-        let mut account = TokenAccount::unpack(&account_data).unwrap();
+        let mut account_data = vec![0; TokenAccount::get_packed_len()];
+        let mut account = TokenAccount::unpack_unchecked(&account_data).unwrap();
         account.mint = mint_pubkey;
-        account.pack(&mut account_data).unwrap();
+        TokenAccount::pack(account, &mut account_data).unwrap();
 
         let expected_mint_pubkey = Pubkey::new(&[2; 32]);
         assert_eq!(

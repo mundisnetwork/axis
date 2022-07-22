@@ -4,6 +4,7 @@ use crate::check_program_account;
 use serde_derive::{Deserialize, Serialize};
 use mundis_sdk::instruction::{AccountMeta, Instruction, InstructionError};
 use mundis_sdk::pubkey::Pubkey;
+use mundis_sdk::sysvar;
 
 /// Minimum number of multisignature signers (min N)
 pub const MIN_SIGNERS: usize = 1;
@@ -404,6 +405,7 @@ pub fn initialize_mint(
         },
         vec![
             AccountMeta::new(*mint_pubkey, false),
+            AccountMeta::new_readonly(sysvar::rent::id(), false),
         ]
     ))
 }

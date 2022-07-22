@@ -8,8 +8,9 @@ use mundis_sdk::keyed_account::{keyed_account_at_index, KeyedAccount, next_keyed
 use mundis_sdk::program_utils::limited_deserialize;
 use mundis_sdk::instruction::InstructionError;
 use mundis_sdk::program_memory::{sol_memcmp, sol_memset};
-use mundis_sdk::program_pack::IsInitialized;
+use mundis_sdk::program_pack::{IsInitialized, Pack};
 use mundis_sdk::pubkey::Pubkey;
+use mundis_sdk::rent::Rent;
 
 use crate::{error::TokenError, state::{TokenAccount, AccountState, Mint, Multisig}, token_instruction::{AuthorityType, is_valid_signer_index, MAX_SIGNERS, TokenInstruction}};
 use crate::error::PrintInstructionError;
@@ -134,11 +135,15 @@ impl Processor {
     ) -> Result<(), InstructionError> {
         let accounts_iter = &mut accounts.iter();
         let mint_info = next_keyed_account(accounts_iter)?;
+        let rent = Rent::default();
 
-        let mut mint = Mint::unpack(mint_info.try_account_ref()?.data())
-            .unwrap_or(Mint::default());
+        let mut mint = Mint::unpack_unchecked(&mint_info.try_account_ref()?.data())?;
         if mint.is_initialized {
             return Err(TokenError::AlreadyInUse.into());
+        }
+
+        if !rent.is_exempt(mint_info.lamports()?, mint_info.data_len()?) {
+            return Err(TokenError::NotRentExempt.into());
         }
 
         mint.mint_authority = Some(mint_authority);
@@ -148,7 +153,7 @@ impl Processor {
         mint.is_initialized = true;
         mint.freeze_authority = freeze_authority;
 
-        mint.pack(mint_info.try_account_ref_mut()?.data_mut())
+        Mint::pack(mint, mint_info.try_account_ref_mut()?.data_as_mut_slice())
     }
 
     fn _process_initialize_account(
@@ -164,21 +169,22 @@ impl Processor {
         } else {
             next_keyed_account(accounts_iter)?.unsigned_key()
         };
-        let mut token_account = TokenAccount::unpack(new_account_info.try_account_ref()?.data())
-            .unwrap_or(TokenAccount::default());
+        let rent = Rent::default();
+
+        let mut token_account = TokenAccount::unpack_unchecked(new_account_info.try_account_ref()?.data())?;
         if token_account.is_initialized() {
             return Err(TokenError::AlreadyInUse.into());
+        }
+
+        if !rent.is_exempt(new_account_info.lamports()?, new_account_info.data_len()?) {
+            return Err(TokenError::NotRentExempt.into());
         }
 
         let is_native_mint = Self::cmp_pubkeys(mint_info.unsigned_key(), &crate::native_mint::id());
         if !is_native_mint {
             Self::check_account_owner(program_id, mint_info)?;
-            let mint = Mint::unpack(mint_info.try_account_ref()?.data())
-                .unwrap_or(Mint::default());
-
-            if !mint.is_initialized() {
-                return Err(TokenError::InvalidMint.into());
-            }
+            let _ = Mint::unpack(&mint_info.try_account_ref()?.data())
+                .map_err(|_| Into::<InstructionError>::into(TokenError::InvalidMint))?;
         }
 
         token_account.mint = *mint_info.unsigned_key();
@@ -187,15 +193,18 @@ impl Processor {
         token_account.delegated_amount = 0;
         token_account.state = AccountState::Initialized;
 
-        if *mint_info.unsigned_key() == crate::native_mint::id() {
-            token_account.is_native = true;
-            token_account.amount = new_account_info.lamports()?;
+        if is_native_mint {
+            let rent_exempt_reserve = rent.minimum_balance(new_account_info.data_len()?);
+            token_account.is_native = Some(rent_exempt_reserve);
+            token_account.amount = new_account_info.lamports()?
+                .checked_sub(rent_exempt_reserve)
+                .ok_or(TokenError::Overflow)?;
         } else {
-            token_account.is_native = false;
+            token_account.is_native = None;
             token_account.amount = 0;
         };
 
-        token_account.pack(new_account_info.try_account_ref_mut()?.data_mut())
+        TokenAccount::pack(token_account, new_account_info.try_account_ref_mut()?.data_as_mut_slice())
     }
 
     /// Processes an [InitializeAccount](enum.TokenInstruction.html) instruction.
@@ -238,7 +247,7 @@ impl Processor {
 
         multisig.is_initialized = true;
 
-        multisig.pack(multisig_info.try_account_ref_mut()?.data_mut())
+        Multisig::pack(multisig, multisig_info.try_account_ref_mut()?.data_as_mut_slice())
     }
 
     /// Processes a [Transfer](enum.TokenInstruction.html) instruction.
@@ -350,8 +359,8 @@ impl Processor {
             );
         }
 
-        source_account.pack(source_account_info.try_account_ref_mut()?.data_mut())
-            .and_then(|_| dest_account.pack(dest_account_info.try_account_ref_mut()?.data_mut()))
+        TokenAccount::pack(source_account, source_account_info.try_account_ref_mut()?.data_as_mut_slice())
+            .and_then(|_| TokenAccount::pack(dest_account, dest_account_info.try_account_ref_mut()?.data_as_mut_slice()))
     }
 
     /// Processes an [Approve](enum.TokenInstruction.html) instruction.
@@ -401,7 +410,7 @@ impl Processor {
         source_account.delegate = Some(*delegate_info.unsigned_key());
         source_account.delegated_amount = amount;
 
-        source_account.pack(source_account_info.try_account_ref_mut()?.data_mut())
+        TokenAccount::pack(source_account, source_account_info.try_account_ref_mut()?.data_as_mut_slice())
     }
 
     /// Processes an [Revoke](enum.TokenInstruction.html) instruction.
@@ -430,7 +439,7 @@ impl Processor {
         source_account.delegate = None;
         source_account.delegated_amount = 0;
 
-        source_account.pack(source_account_info.try_account_ref_mut()?.data_mut())
+        TokenAccount::pack(source_account, source_account_info.try_account_ref_mut()?.data_as_mut_slice())
     }
 
     pub fn process_set_authority(
@@ -443,7 +452,7 @@ impl Processor {
         let account_info = next_keyed_account(account_info_iter)?;
         let authority_info = next_keyed_account(account_info_iter)?;
 
-        if account_info.data_len()? == TokenAccount::packed_len() {
+        if account_info.data_len()? == TokenAccount::get_packed_len() {
             let mut account = TokenAccount::unpack(account_info.try_account_ref()?.data())?;
 
             if account.is_frozen() {
@@ -486,8 +495,8 @@ impl Processor {
                     return Err(TokenError::AuthorityTypeNotSupported.into());
                 }
             }
-            account.pack(account_info.try_account_ref_mut()?.data_mut())
-        } else if account_info.data_len()? == Mint::packed_len() {
+            TokenAccount::pack(account, account_info.try_account_ref_mut()?.data_as_mut_slice())
+        } else if account_info.data_len()? == Mint::get_packed_len() {
             let mut mint = Mint::unpack(account_info.try_account_ref()?.data())?;
             match authority_type {
                 AuthorityType::MintTokens => {
@@ -522,7 +531,7 @@ impl Processor {
                     return Err(TokenError::AuthorityTypeNotSupported.into());
                 }
             }
-            mint.pack(account_info.try_account_ref_mut()?.data_mut())
+            Mint::pack(mint, account_info.try_account_ref_mut()?.data_as_mut_slice())
         } else {
             return Err(InstructionError::InvalidArgument);
         }
@@ -585,8 +594,8 @@ impl Processor {
             .checked_add(amount)
             .ok_or(TokenError::Overflow)?;
 
-        dest_account.pack(dest_account_info.try_account_ref_mut()?.data_mut())
-            .and_then(|_| mint.pack(mint_info.try_account_ref_mut()?.data_mut()))
+        TokenAccount::pack(dest_account, dest_account_info.try_account_ref_mut()?.data_as_mut_slice())
+            .and_then(|_| Mint::pack(mint, mint_info.try_account_ref_mut()?.data_as_mut_slice()))
     }
 
     /// Processes a [Burn](enum.TokenInstruction.html) instruction.
@@ -667,8 +676,8 @@ impl Processor {
             .checked_sub(amount)
             .ok_or(TokenError::Overflow)?;
 
-        source_account.pack(source_account_info.try_account_ref_mut()?.data_mut())
-            .and_then(|_| mint.pack(mint_info.try_account_ref_mut()?.data_mut()))
+        TokenAccount::pack(source_account, source_account_info.try_account_ref_mut()?.data_as_mut_slice())
+            .and_then(|_| Mint::pack(mint, mint_info.try_account_ref_mut()?.data_as_mut_slice()))
     }
 
     /// Processes a [CloseAccount](enum.TokenInstruction.html) instruction.
@@ -751,7 +760,7 @@ impl Processor {
             AccountState::Initialized
         };
 
-        source_account.pack(source_account_info.try_account_ref_mut()?.data_mut())
+        TokenAccount::pack(source_account, source_account_info.try_account_ref_mut()?.data_as_mut_slice())
     }
 
     /// Processes a [SyncNative](enum.TokenInstruction.html) instruction
@@ -760,13 +769,22 @@ impl Processor {
         let native_account_info = next_keyed_account(account_info_iter)?;
         Self::check_account_owner(program_id, native_account_info)?;
 
-        let native_account = TokenAccount::unpack(native_account_info.try_account_ref()?.data())?;
+        let mut native_account = TokenAccount::unpack(native_account_info.try_account_ref()?.data())?;
 
-        if !native_account.is_native {
+        if let Some(rent_exempt_reserve) = native_account.is_native  {
+            let new_amount = native_account_info
+                .lamports()?
+                .checked_sub(rent_exempt_reserve)
+                .ok_or(TokenError::Overflow)?;
+            if new_amount < native_account.amount {
+                return Err(TokenError::InvalidState.into());
+            }
+            native_account.amount = new_amount;
+        }  else {
             return Err(TokenError::NonNativeNotSupported.into());
         }
 
-        native_account.pack(native_account_info.try_account_ref_mut()?.data_mut())
+        TokenAccount::pack(native_account, native_account_info.try_account_ref_mut()?.data_as_mut_slice())
     }
 
     /// Checks that the account is owned by the expected program
@@ -795,7 +813,7 @@ impl Processor {
             return Err(TokenError::OwnerMismatch.into());
         }
         if Self::cmp_pubkeys(program_id, &owner_account_info.owner()?)
-            && owner_account_info.data_len()? == Multisig::packed_len()
+            && owner_account_info.data_len()? == Multisig::get_packed_len()
         {
             let multisig = Multisig::unpack(owner_account_info.try_account_ref()?.data())?;
             let mut num_signers = 0;
@@ -828,6 +846,7 @@ impl PrintInstructionError for TokenError {
             E: 'static + std::error::Error + DecodeError<E> + PrintInstructionError + FromPrimitive,
     {
         match self {
+            TokenError::NotRentExempt => eprintln!("Error: lamport balance below rent-exempt threshold"),
             TokenError::InsufficientFunds => eprintln!("Error: insufficient funds"),
             TokenError::InvalidMint => eprintln!("Error: Invalid Mint"),
             TokenError::MintMismatch => eprintln!("Error: Account not associated with this Mint"),
@@ -873,10 +892,12 @@ mod tests {
     use mundis_program_runtime::invoke_context::mock_process_instruction;
     use mundis_sdk::account::{AccountSharedData, ReadableAccount, WritableAccount};
     use mundis_sdk::instruction::{Instruction, InstructionError};
+    use mundis_sdk::program_pack::Pack;
     use mundis_sdk::pubkey::Pubkey;
+    use mundis_sdk::rent::Rent;
 
     use crate::error::{PrintInstructionError, TokenError};
-    use crate::state::{TokenAccount, Mint, Multisig};
+    use crate::state::{TokenAccount, Mint, Multisig, puffed_out_string, MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH};
     use crate::token_instruction::*;
 
     fn process_token_instruction(
@@ -903,19 +924,19 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Custom(2)")]
+    #[should_panic(expected = "Custom(3)")]
     fn test_error_unwrap() {
         Err::<(), InstructionError>(return_token_error_as_program_error()).unwrap();
     }
 
     #[test]
     fn test_unique_account_sizes() {
-        assert_ne!(Mint::packed_len(), 0);
-        assert_ne!(Mint::packed_len(), TokenAccount::packed_len());
-        assert_ne!(Mint::packed_len(), Multisig::packed_len());
-        assert_ne!(TokenAccount::packed_len(), 0);
-        assert_ne!(TokenAccount::packed_len(), Multisig::packed_len());
-        assert_ne!(Multisig::packed_len(), 0);
+        assert_ne!(Mint::get_packed_len(), 0);
+        assert_ne!(Mint::get_packed_len(), TokenAccount::get_packed_len());
+        assert_ne!(Mint::get_packed_len(), Multisig::get_packed_len());
+        assert_ne!(TokenAccount::get_packed_len(), 0);
+        assert_ne!(TokenAccount::get_packed_len(), Multisig::get_packed_len());
+        assert_ne!(Multisig::get_packed_len(), 0);
     }
 
     #[test]
@@ -923,7 +944,12 @@ mod tests {
         let program_id = mundis_sdk::token::program::id();
         let owner_key = Pubkey::new_unique();
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
+        let rent = Rent::default();
+        let mint_account = AccountSharedData::new_ref(
+            rent.minimum_balance(Mint::get_packed_len()),
+            Mint::get_packed_len(),
+            &program_id
+        );
         let name = String::from("Test Token");
         let symbol = String::from("TST");
 
@@ -948,12 +974,13 @@ mod tests {
     #[test]
     fn test_initialize_mint_account() {
         let program_id = mundis_sdk::token::program::id();
+        let rent = Rent::default();
         let account_key = Pubkey::new_unique();
-        let account_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &program_id);
+        let account_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let owner_key = Pubkey::new_unique();
         let owner_account = AccountSharedData::new_ref(0, 0, &owner_key);
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
+        let mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
         let name = String::from("Test Token");
         let symbol = String::from("TST");
 
@@ -1001,20 +1028,21 @@ mod tests {
     #[test]
     fn test_transfer_dups() {
         let program_id = mundis_sdk::token::program::id();
+        let rent = Rent::default();
         let account1_key = Pubkey::new_unique();
-        let account1_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
+        let account1_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let account2_key = Pubkey::new_unique();
-        let account2_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
+        let account2_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let account3_key = Pubkey::new_unique();
-        let account3_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
+        let account3_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let account4_key = Pubkey::new_unique();
-        let account4_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
+        let account4_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let owner_key = Pubkey::new_unique();
-        let owner_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &owner_key);
+        let owner_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &owner_key);
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
+        let mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
         let multisig_key = Pubkey::new_unique();
-        let multisig_account = AccountSharedData::new_ref(0, Multisig::packed_len(), &program_id);
+        let multisig_account = AccountSharedData::new_ref(0, Multisig::get_packed_len(), &program_id);
 
         // create mint
         process_token_instruction(
@@ -1070,7 +1098,7 @@ mod tests {
         account.delegated_amount = 1000;
         account.delegate = Some(account1_key);
         account.owner = owner_key;
-        account.pack(account1_account.try_borrow_mut().unwrap().data_mut()).unwrap();
+        TokenAccount::pack(account, account1_account.try_borrow_mut().unwrap().data_as_mut_slice()).unwrap();
         process_token_instruction(
             &transfer(&program_id,&account1_key, &account2_key, &account1_key, &[], 500,).unwrap(),
             &[
@@ -1207,22 +1235,23 @@ mod tests {
     #[test]
     fn test_transfer() {
         let program_id = mundis_sdk::token::program::id();
+        let rent = Rent::default();
         let account_key = Pubkey::new_unique();
-        let account_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
+        let account_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let account2_key = Pubkey::new_unique();
-        let account2_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
+        let account2_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let account3_key = Pubkey::new_unique();
-        let account3_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
+        let account3_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let delegate_key = Pubkey::new_unique();
         let delegate_account = AccountSharedData::new_ref(0, 0, &delegate_key);
         let mismatch_key = Pubkey::new_unique();
-        let mismatch_account = AccountSharedData::new_ref(100, TokenAccount::packed_len(), &program_id);
+        let mismatch_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let owner_key = Pubkey::new_unique();
         let owner_account = AccountSharedData::new_ref(0, 0, &owner_key);
         let owner2_key = Pubkey::new_unique();
         let owner2_account = AccountSharedData::new_ref(0, 0, &owner2_key);
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(100, Mint::packed_len(), &program_id);
+        let mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
         let mint2_key = Pubkey::new_unique();
 
         // create mint
@@ -1275,7 +1304,7 @@ mod tests {
 
         let mut account = TokenAccount::unpack(mismatch_account.try_borrow().unwrap().data()).unwrap();
         account.mint = mint2_key;
-        account.pack(mismatch_account.try_borrow_mut().unwrap().data_mut()).unwrap();
+        TokenAccount::pack(account, mismatch_account.try_borrow_mut().unwrap().data_as_mut_slice()).unwrap();
 
         // mint to account
         process_token_instruction(
@@ -1520,16 +1549,489 @@ mod tests {
     }
 
     #[test]
+    fn test_self_transfer() {
+        let program_id = mundis_sdk::token::program::id();
+        let rent = Rent::default();
+        let account_key = Pubkey::new_unique();
+        let account_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
+        let account2_key = Pubkey::new_unique();
+        let account2_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
+        let account3_key = Pubkey::new_unique();
+        let account3_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
+        let delegate_key = Pubkey::new_unique();
+        let delegate_account = Rc::new(RefCell::new(AccountSharedData::default()));
+        let owner_key = Pubkey::new_unique();
+        let mut owner_account =  Rc::new(RefCell::new(AccountSharedData::default()));
+        let owner2_key = Pubkey::new_unique();
+        let mut owner2_account = Rc::new(RefCell::new(AccountSharedData::default()));
+        let mint_key = Pubkey::new_unique();
+        let mut mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
+
+        // create mint
+        process_token_instruction(
+            &initialize_mint(&program_id,&mint_key, &owner_key, None, &"Test Token".to_string(), &"TST".to_string(), 2).unwrap(),
+            &[
+                (true, true, mint_key, mint_account.clone()),
+            ]).unwrap();
+
+        // create account
+        process_token_instruction(
+            &initialize_account(&program_id,&account_key, &mint_key, &owner_key).unwrap(),
+            &[
+                (true, true, account_key, account_account.clone()),
+                (true, true, mint_key, mint_account.clone()),
+                (true, true, owner_key, owner_account.clone()),
+            ]).unwrap();
+
+        // create another account
+        process_token_instruction(
+            &initialize_account(&program_id,&account2_key, &mint_key, &owner_key).unwrap(),
+            &[
+                (true, true, account2_key, account2_account.clone()),
+                (true, true, mint_key, mint_account.clone()),
+                (true, true, owner_key, owner_account.clone()),
+            ]).unwrap();
+
+        // create another account
+        process_token_instruction(
+            &initialize_account(&program_id,&account3_key, &mint_key, &owner_key).unwrap(),
+            &[
+                (true, true, account3_key, account3_account.clone()),
+                (true, true, mint_key, mint_account.clone()),
+                (true, true, owner_key, owner_account.clone()),
+            ]).unwrap();
+
+        // mint to account
+        process_token_instruction(
+            &mint_to(&program_id,&mint_key, &account_key, &owner_key, &[], 1000).unwrap(),
+            &[
+                (true, true, mint_key, mint_account.clone()),
+                (true, true, account_key, account_account.clone()),
+                (true, true, owner_key, owner_account.clone()),
+            ],
+        ).unwrap();
+
+        // transfer
+        assert_eq!(
+            process_token_instruction(
+                &transfer(&program_id,&account_key, &account_key, &owner_key, &[], 1000).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Ok(())
+        );
+
+        // no balance change...
+        let account = TokenAccount::unpack_unchecked(&account_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(account.amount, 1000);
+
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &mint_key,
+                    &account_key,
+                    &owner_key,
+                    &[],
+                    1000,
+                    2
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, mint_key, mint_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Ok(())
+        );
+
+        // no balance change...
+        let account = TokenAccount::unpack_unchecked(&account_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(account.amount, 1000);
+
+        // missing signer
+        assert_eq!(
+            process_token_instruction(
+                &transfer(&program_id,&account_key, &account_key, &owner_key, &[], 1000).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (false, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Err(InstructionError::MissingRequiredSignature),
+        );
+
+        // missing signer checked
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &mint_key,
+                    &account_key,
+                    &owner_key,
+                    &[],
+                    1000,
+                    2
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, mint_key, mint_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (false, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Err(InstructionError::MissingRequiredSignature),
+        );
+
+        // missing owner
+        assert_eq!(
+            process_token_instruction(
+                &transfer(&program_id,&account_key, &account_key, &owner2_key, &[], 1000).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner2_key, owner2_account.clone()),
+                ],
+            ),
+            Err(TokenError::OwnerMismatch.into()),
+        );
+
+        // missing owner checked
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &mint_key,
+                    &account_key,
+                    &owner2_key,
+                    &[],
+                    1000,
+                    2
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, mint_key, mint_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner2_key, owner2_account.clone()),
+                ],
+            ),
+            Err(TokenError::OwnerMismatch.into()),
+        );
+
+        // insufficient funds
+        assert_eq!(
+            process_token_instruction(
+                &transfer(&program_id,&account_key, &account_key, &owner_key, &[], 1001).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Err(TokenError::InsufficientFunds.into()),
+        );
+
+        // insufficient funds checked
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &mint_key,
+                    &account_key,
+                    &owner_key,
+                    &[],
+                    1001,
+                    2
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, mint_key, mint_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Err(TokenError::InsufficientFunds.into()),
+        );
+
+        // incorrect decimals
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &mint_key,
+                    &account_key,
+                    &owner_key,
+                    &[],
+                    1,
+                    10 // <-- incorrect decimals
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, mint_key, mint_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Err(TokenError::MintDecimalsMismatch.into()),
+        );
+
+        // incorrect mint
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &account3_key, // <-- incorrect mint
+                    &account_key,
+                    &owner_key,
+                    &[],
+                    1,
+                    2
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, account3_key, account3_account.clone()), // <-- incorrect mint
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Err(TokenError::MintMismatch.into()),
+        );
+
+        // approve delegate
+        process_token_instruction(
+            &approve(
+                &program_id,
+                &account_key,
+                &delegate_key,
+                &owner_key,
+                &[],
+                100,
+            ).unwrap(),
+            &[
+                (true, true, account_key, account_account.clone()),
+                (true, true, delegate_key, delegate_account.clone()),
+                (true, true, owner_key, owner_account.clone()),
+            ],
+        ).unwrap();
+
+        // transfer via delegate
+        process_token_instruction(
+            &transfer(&program_id,&account_key, &account_key, &delegate_key, &[], 100).unwrap(),
+            &[
+                (true, true, account_key, account_account.clone()),
+                (true, true, account_key, account_account.clone()),
+                (true, true, delegate_key, delegate_account.clone()),
+            ],
+        ).unwrap();
+
+        // no balance change...
+        let account = TokenAccount::unpack_unchecked(&account_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(account.amount, 1000);
+        assert_eq!(account.delegated_amount, 100);
+
+        // delegate transfer checked
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &mint_key,
+                    &account_key,
+                    &delegate_key,
+                    &[],
+                    100,
+                    2
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, mint_key, mint_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, delegate_key, delegate_account.clone()),
+                ],
+            ),
+            Ok(())
+        );
+
+        // no balance change...
+        let account = TokenAccount::unpack_unchecked(&account_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(account.amount, 1000);
+        assert_eq!(account.delegated_amount, 100);
+
+        // delegate insufficient funds
+        assert_eq!(
+            process_token_instruction(
+                &transfer(&program_id,&account_key, &account_key, &delegate_key, &[], 101).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, delegate_key, delegate_account.clone()),
+                ],
+            ),
+            Err(TokenError::InsufficientFunds.into()),
+        );
+
+        // delegate insufficient funds checked
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &mint_key,
+                    &account_key,
+                    &delegate_key,
+                    &[],
+                    101,
+                    2
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, mint_key, mint_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, delegate_key, delegate_account.clone()),
+                ],
+            ),
+            Err(TokenError::InsufficientFunds.into()),
+        );
+
+        // owner transfer with delegate assigned
+        assert_eq!(
+            process_token_instruction(
+                &transfer(&program_id,&account_key, &account_key, &owner_key, &[], 1000).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Ok(())
+        );
+
+        // no balance change...
+        let account = TokenAccount::unpack_unchecked(&account_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(account.amount, 1000);
+
+        // owner transfer with delegate assigned checked
+        assert_eq!(
+            process_token_instruction(
+                &transfer_checked(
+                    &program_id,
+                    &account_key,
+                    &mint_key,
+                    &account_key,
+                    &owner_key,
+                    &[],
+                    1000,
+                    2
+                ).unwrap(),
+                &[
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, mint_key, mint_account.clone()),
+                    (true, true, account_key, account_account.clone()),
+                    (true, true, owner_key, owner_account.clone()),
+                ],
+            ),
+            Ok(())
+        );
+
+        // no balance change...
+        let account = TokenAccount::unpack_unchecked(&account_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(account.amount, 1000);
+    }
+
+    #[test]
+    fn test_mintable_token_with_zero_supply() {
+        let program_id = mundis_sdk::token::program::id();
+        let rent = Rent::default();
+        let account_key = Pubkey::new_unique();
+        let account_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
+        let owner_key = Pubkey::new_unique();
+        let owner_account= Rc::new(RefCell::new(AccountSharedData::default()));
+        let mint_key = Pubkey::new_unique();
+        let mut mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
+
+        // create mint-able token with zero supply
+        let decimals = 2;
+        process_token_instruction(
+            &initialize_mint(&program_id,&mint_key, &owner_key, None, &"".to_string(), &"".to_string(), decimals).unwrap(),
+            &[
+                (true, true, mint_key, mint_account.clone()),
+            ]).unwrap();
+
+        let mint = Mint::unpack_unchecked(&mint_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(
+            mint,
+            Mint {
+                mint_authority: Some(owner_key),
+                name: puffed_out_string(&"".to_string(), MAX_NAME_LENGTH),
+                symbol: puffed_out_string(&"".to_string(), MAX_SYMBOL_LENGTH),
+                supply: 0,
+                decimals,
+                is_initialized: true,
+                freeze_authority: None,
+            }
+        );
+
+        // create account
+        process_token_instruction(
+            &initialize_account(&program_id,&account_key, &mint_key, &owner_key).unwrap(),
+            &[
+                (true, true, account_key, account_account.clone()),
+                (true, true, mint_key, mint_account.clone()),
+                (true, true, owner_key, owner_account.clone()),
+            ]).unwrap();
+
+        // mint to
+        process_token_instruction(
+            &mint_to(&program_id,&mint_key, &account_key, &owner_key, &[], 42).unwrap(),
+            &[
+                (true, true, mint_key, mint_account.clone()),
+                (true, true, account_key, account_account.clone()),
+                (true, true, owner_key, owner_account.clone()),
+            ],
+        ).unwrap();
+
+        let _ = Mint::unpack(&mint_account.try_borrow().unwrap().data()).unwrap();
+        let account = TokenAccount::unpack_unchecked(&account_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(account.amount, 42);
+
+        // mint to 2
+        process_token_instruction(
+            &mint_to(&program_id,&mint_key, &account_key, &owner_key, &[], 42).unwrap(),
+            &[
+                (true, true, mint_key, mint_account.clone()),
+                (true, true, account_key, account_account.clone()),
+                (true, true, owner_key, owner_account.clone()),
+            ],
+        ).unwrap();
+
+        let _ = Mint::unpack(&mint_account.try_borrow().unwrap().data()).unwrap();
+        let account = TokenAccount::unpack_unchecked(&account_account.try_borrow().unwrap().data()).unwrap();
+        assert_eq!(account.amount, 84);
+    }
+
+   #[test]
     fn test_initialize_account2() {
         let program_id = mundis_sdk::token::program::id();
+        let rent = Rent::default();
         let account_key = Pubkey::new_unique();
-        let account_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &program_id);
+        let account_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let account2_key = Pubkey::new_unique();
-        let account2_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &program_id);
+        let account2_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let owner_key = Pubkey::new_unique();
         let owner_account = AccountSharedData::new_ref(0, 0, &owner_key);
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
+        let mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
 
         // create mint
         process_token_instruction(
@@ -1559,14 +2061,15 @@ mod tests {
     #[test]
     fn test_multisig() {
         let program_id = mundis_sdk::token::program::id();
+        let rent = Rent::default();
         let mint_key = Pubkey::new_unique();
-        let mint_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
+        let mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
 
         let multisig_key = Pubkey::new_unique();
-        let multisig_account = AccountSharedData::new_ref(42, Multisig::packed_len(), &program_id);
+        let multisig_account = AccountSharedData::new_ref(rent.minimum_balance(Multisig::get_packed_len()), Multisig::get_packed_len(), &program_id);
 
         let multisig_delegate_key = Pubkey::new_unique();
-        let multisig_delegate_account = AccountSharedData::new_ref(0, Multisig::packed_len(), &program_id);
+        let multisig_delegate_account = AccountSharedData::new_ref(rent.minimum_balance(Multisig::get_packed_len()), Multisig::get_packed_len(), &program_id);
 
         let signer_keys = vec![Pubkey::new_unique(); MAX_SIGNERS];
         let signer_key_refs: Vec<&Pubkey> = signer_keys.iter().collect();
@@ -1613,7 +2116,7 @@ mod tests {
 
         // create account with multisig owner
         let account_key = Pubkey::new_unique();
-        let account_account = AccountSharedData::new_ref(84, TokenAccount::packed_len(), &account_key);
+        let account_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &account_key);
         process_token_instruction(
             &initialize_account(&program_id,&account_key, &mint_key, &multisig_key).unwrap(),
             &[
@@ -1625,7 +2128,7 @@ mod tests {
 
         // create another account with multisig owner
         let account2_key = Pubkey::new_unique();
-        let account2_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &account2_key);
+        let account2_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &account2_key);
         process_token_instruction(
             &initialize_account(&program_id,&account2_key, &mint_key, &multisig_delegate_key).unwrap(),
             &[
@@ -1734,9 +2237,9 @@ mod tests {
 
         // freeze account
         let account3_key = Pubkey::new_unique();
-        let account3_account = AccountSharedData::new_ref(0, TokenAccount::packed_len(), &program_id);
+        let account3_account = AccountSharedData::new_ref(rent.minimum_balance(TokenAccount::get_packed_len()), TokenAccount::get_packed_len(), &program_id);
         let mint2_key = Pubkey::new_unique();
-        let mint2_account = AccountSharedData::new_ref(0, Mint::packed_len(), &program_id);
+        let mint2_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
         process_token_instruction(
             &initialize_mint(&program_id,&mint2_key, &multisig_key, Some(&multisig_key), &"Test Token".to_string(), &"TST".to_string(), 2).unwrap(),
             &[

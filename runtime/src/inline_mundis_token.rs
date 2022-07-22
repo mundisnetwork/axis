@@ -92,6 +92,7 @@ pub mod native_mint {
 
 #[cfg(test)]
 pub mod test {
+    use mundis_sdk::program_pack::Pack;
     use mundis_token_program::state::Mint;
 
     #[test]
@@ -106,8 +107,8 @@ pub mod test {
             symbol: "MUNDIS".to_string(),
         };
 
-        let mut packed: [u8; Mint::LEN] = [0; Mint::LEN];
-        mint.pack(&mut packed).unwrap();
+        let mut packed = [0 as u8; Mint::LEN];
+        Mint::pack(mint, &mut packed).unwrap();
         println!("{:?}", packed);
     }
 }

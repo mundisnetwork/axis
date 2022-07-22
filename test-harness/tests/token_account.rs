@@ -1,5 +1,7 @@
 use mundis_program::instruction::{AccountMeta, InstructionError};
+use mundis_program::program_pack::Pack;
 use mundis_program::pubkey::Pubkey;
+use mundis_program::rent::Rent;
 use mundis_program::system_instruction;
 use mundis_sdk::account::Account;
 use mundis_sdk::signer::Signer;
@@ -12,7 +14,8 @@ use mundis_token_program::token_instruction::initialize_mint;
 
 pub fn program_test(token_mint_address: Pubkey) -> ProgramTest {
     let mut pc = ProgramTest::new();
-    pc.add_account(token_mint_address, Account::new(1461600, Mint::packed_len(), &mundis_token_program::id()));
+    let rent = Rent::default();
+    pc.add_account(token_mint_address, Account::new(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &mundis_token_program::id()));
     pc
 }
 

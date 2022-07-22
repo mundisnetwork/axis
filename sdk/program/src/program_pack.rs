@@ -1,6 +1,6 @@
 //! State transition types
 
-use crate::program_error::ProgramError;
+use crate::instruction::InstructionError;
 
 /// Check if a program account state is initialized
 pub trait IsInitialized {
@@ -18,7 +18,7 @@ pub trait Pack: Sealed {
     #[doc(hidden)]
     fn pack_into_slice(&self, dst: &mut [u8]);
     #[doc(hidden)]
-    fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError>;
+    fn unpack_from_slice(src: &[u8]) -> Result<Self, InstructionError>;
 
     /// Get the packed length
     fn get_packed_len() -> usize {
@@ -26,7 +26,7 @@ pub trait Pack: Sealed {
     }
 
     /// Unpack from slice and check if initialized
-    fn unpack(input: &[u8]) -> Result<Self, ProgramError>
+    fn unpack(input: &[u8]) -> Result<Self, InstructionError>
     where
         Self: IsInitialized,
     {
@@ -34,22 +34,22 @@ pub trait Pack: Sealed {
         if value.is_initialized() {
             Ok(value)
         } else {
-            Err(ProgramError::UninitializedAccount)
+            Err(InstructionError::UninitializedAccount)
         }
     }
 
     /// Unpack from slice without checking if initialized
-    fn unpack_unchecked(input: &[u8]) -> Result<Self, ProgramError> {
+    fn unpack_unchecked(input: &[u8]) -> Result<Self, InstructionError> {
         if input.len() != Self::LEN {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(InstructionError::InvalidAccountData);
         }
         Self::unpack_from_slice(input)
     }
 
     /// Pack into slice
-    fn pack(src: Self, dst: &mut [u8]) -> Result<(), ProgramError> {
+    fn pack(src: Self, dst: &mut [u8]) -> Result<(), InstructionError> {
         if dst.len() != Self::LEN {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(InstructionError::InvalidAccountData);
         }
         src.pack_into_slice(dst);
         Ok(())

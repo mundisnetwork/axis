@@ -12,7 +12,6 @@ use {
     crossbeam_channel::{Receiver as CrossbeamReceiver, RecvTimeoutError},
     histogram::Histogram,
     itertools::Itertools,
-    retain_mut::RetainMut,
     mundis_entry::entry::hash_transactions,
     mundis_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
     mundis_ledger::blockstore_processor::TransactionStatusSender,

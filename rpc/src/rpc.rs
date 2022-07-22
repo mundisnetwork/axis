@@ -97,6 +97,7 @@ use {
         time::Duration,
     },
 };
+use mundis_sdk::program_pack::Pack;
 
 type RpcCustomResult<T> = std::result::Result<T, RpcCustomError>;
 
@@ -1821,7 +1822,7 @@ impl JsonRpcRequestProcessor {
         } else {
             // Filter on Token Account state
             filters.push(RpcFilterType::DataSize(
-                TokenAccount::packed_len() as u64
+                TokenAccount::get_packed_len() as u64
             ));
             self.get_filtered_program_accounts(&bank, &token_program_id, filters)?
         };
@@ -1911,7 +1912,7 @@ impl JsonRpcRequestProcessor {
         //
         // Filter on Token Account state
         filters.push(RpcFilterType::DataSize(
-            TokenAccount::packed_len() as u64
+            TokenAccount::get_packed_len() as u64
         ));
         // Filter on Owner address
         filters.push(RpcFilterType::Memcmp(Memcmp {
@@ -1970,7 +1971,7 @@ impl JsonRpcRequestProcessor {
         //
         // Filter on Token Account state
         filters.push(RpcFilterType::DataSize(
-            TokenAccount::packed_len() as u64
+            TokenAccount::get_packed_len() as u64
         ));
         // Filter on Mint address
         filters.push(RpcFilterType::Memcmp(Memcmp {
@@ -2254,7 +2255,7 @@ fn get_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Opt
             _ => {}
         }
     }
-    if data_size_filter == Some(TokenAccount::packed_len() as u64) {
+    if data_size_filter == Some(TokenAccount::get_packed_len() as u64) {
         if let Some(incorrect_owner_len) = incorrect_owner_len {
             info!(
                 "Incorrect num bytes ({:?}) provided for anima_token_owner_filter",
@@ -2296,7 +2297,7 @@ fn get_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Opti
             _ => {}
         }
     }
-    if data_size_filter == Some(TokenAccount::packed_len() as u64) {
+    if data_size_filter == Some(TokenAccount::get_packed_len() as u64) {
         if let Some(incorrect_mint_len) = incorrect_mint_len {
             info!(
                 "Incorrect num bytes ({:?}) provided for anima_token_mint_filter",
@@ -7161,7 +7162,7 @@ pub mod tests {
         let RpcHandler { io, meta, bank, .. } =
             start_rpc_handler_with_tx(&mundis_sdk::pubkey::new_rand());
 
-        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let mut account_data = vec![0; TokenAccount::get_packed_len()];
         let mint = Pubkey::new(&[2; 32]);
         let owner = Pubkey::new(&[3; 32]);
         let delegate = Pubkey::new(&[4; 32]);
@@ -7171,11 +7172,11 @@ pub mod tests {
             delegate: Some(delegate),
             amount: 420,
             state: TokenAccountState::Initialized,
-            is_native: false,
+            is_native: None,
             delegated_amount: 30,
             close_authority: Some(owner),
         };
-        TokenAccount::pack(&token_account, &mut account_data).unwrap();
+        TokenAccount::pack(token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
@@ -7186,7 +7187,7 @@ pub mod tests {
         bank.store_account(&token_account_pubkey, &token_account);
 
         // Add the mint
-        let mut mint_data = vec![0; Mint::packed_len()];
+        let mut mint_data = vec![0; Mint::get_packed_len()];
         let mint_state = Mint {
             mint_authority: Some(owner),
             name: "Token1".to_string(),
@@ -7196,7 +7197,7 @@ pub mod tests {
             is_initialized: true,
             freeze_authority: Some(owner),
         };
-        Mint::pack(&mint_state, &mut mint_data).unwrap();
+        Mint::pack(mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
@@ -7261,7 +7262,7 @@ pub mod tests {
         bank.store_account(&other_token_account_pubkey, &token_account);
 
         // Add another token account with the same owner and delegate but different mint
-        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let mut account_data = vec![0; TokenAccount::get_packed_len()];
         let new_mint = Pubkey::new(&[5; 32]);
         let token_account = TokenAccount {
             mint: new_mint,
@@ -7269,11 +7270,11 @@ pub mod tests {
             delegate: Some(delegate),
             amount: 42,
             state: TokenAccountState::Initialized,
-            is_native: false,
+            is_native: None,
             delegated_amount: 30,
             close_authority: Some(owner),
         };
-        TokenAccount::pack(&token_account, &mut account_data).unwrap();
+        TokenAccount::pack(token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
@@ -7486,7 +7487,7 @@ pub mod tests {
         assert!(accounts.is_empty());
 
         // Add new_mint, and another token account on new_mint with different balance
-        let mut mint_data = vec![0; Mint::packed_len()];
+        let mut mint_data = vec![0; Mint::get_packed_len()];
         let mint_state = Mint {
             mint_authority: Some(owner),
             name: "Token1".to_string(),
@@ -7496,7 +7497,7 @@ pub mod tests {
             is_initialized: true,
             freeze_authority: Some(owner),
         };
-        Mint::pack(&mint_state, &mut mint_data).unwrap();
+        Mint::pack(mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
@@ -7507,18 +7508,18 @@ pub mod tests {
             &Pubkey::from_str(&new_mint.to_string()).unwrap(),
             &mint_account,
         );
-        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let mut account_data = vec![0; TokenAccount::get_packed_len()];
         let token_account = TokenAccount {
             mint: new_mint,
             owner,
             delegate: Some(delegate),
             amount: 10,
             state: TokenAccountState::Initialized,
-            is_native: false,
+            is_native: None,
             delegated_amount: 30,
             close_authority: Some(owner),
         };
-        TokenAccount::pack(&token_account, &mut account_data).unwrap();
+        TokenAccount::pack(token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
@@ -7568,7 +7569,7 @@ pub mod tests {
         let RpcHandler { io, meta, bank, .. } =
             start_rpc_handler_with_tx(&mundis_sdk::pubkey::new_rand());
 
-        let mut account_data = vec![0; TokenAccount::packed_len()];
+        let mut account_data = vec![0; TokenAccount::get_packed_len()];
         let mint = Pubkey::new(&[2; 32]);
         let owner = Pubkey::new(&[3; 32]);
         let delegate = Pubkey::new(&[4; 32]);
@@ -7578,11 +7579,11 @@ pub mod tests {
             delegate: Some(delegate),
             amount: 420,
             state: TokenAccountState::Initialized,
-            is_native: true,
+            is_native: Some(10),
             delegated_amount: 30,
             close_authority: Some(owner),
         };
-        TokenAccount::pack(&token_account, &mut account_data).unwrap();
+        TokenAccount::pack(token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
@@ -7593,7 +7594,7 @@ pub mod tests {
         bank.store_account(&token_account_pubkey, &token_account);
 
         // Add the mint
-        let mut mint_data = vec![0; Mint::packed_len()];
+        let mut mint_data = vec![0; Mint::get_packed_len()];
         let mint_state = Mint {
             mint_authority: Some(owner),
             name: "Token1".to_string(),
@@ -7603,7 +7604,7 @@ pub mod tests {
             is_initialized: true,
             freeze_authority: Some(owner),
         };
-        Mint::pack(&mint_state, &mut mint_data).unwrap();
+        Mint::pack(mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
@@ -7623,7 +7624,7 @@ pub mod tests {
             result["result"]["value"]["data"],
             json!({
                 "program": "token",
-                "space": TokenAccount::packed_len(),
+                "space": TokenAccount::get_packed_len(),
                 "parsed": {
                     "type": "account",
                     "info": {
@@ -7662,7 +7663,7 @@ pub mod tests {
             result["result"]["value"]["data"],
             json!({
                 "program": "token",
-                "space": Mint::packed_len(),
+                "space": Mint::get_packed_len(),
                 "parsed": {
                     "type": "mint",
                     "info": {
@@ -7691,7 +7692,7 @@ pub mod tests {
                         bytes: MemcmpEncodedBytes::Bytes(owner.to_bytes().to_vec()),
                         encoding: None
                     }),
-                    RpcFilterType::DataSize(TokenAccount::packed_len() as u64)
+                    RpcFilterType::DataSize(TokenAccount::get_packed_len() as u64)
                 ],
             )
             .unwrap(),
@@ -7707,7 +7708,7 @@ pub mod tests {
                     bytes: MemcmpEncodedBytes::Bytes(owner.to_bytes().to_vec()),
                     encoding: None
                 }),
-                RpcFilterType::DataSize(TokenAccount::packed_len() as u64)
+                RpcFilterType::DataSize(TokenAccount::get_packed_len() as u64)
             ],
         )
         .is_none());

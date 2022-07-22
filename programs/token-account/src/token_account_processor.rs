@@ -2,6 +2,7 @@ use mundis_program_runtime::ic_msg;
 use mundis_program_runtime::invoke_context::InvokeContext;
 use mundis_sdk::instruction::InstructionError;
 use mundis_sdk::keyed_account::{keyed_account_at_index, next_keyed_account};
+use mundis_sdk::program_pack::Pack;
 use mundis_sdk::program_utils::limited_deserialize;
 use mundis_sdk::system_instruction;
 use mundis_token_program::state::TokenAccount;
@@ -71,7 +72,7 @@ impl Processor {
 
         if associated_token_account_info.lamports()? > 0 {
             let required_lamports = rent
-                .minimum_balance(TokenAccount::LEN)
+                .minimum_balance(TokenAccount::get_packed_len())
                 .max(1)
                 .saturating_sub(associated_token_account_info.lamports()?);
 
@@ -86,7 +87,7 @@ impl Processor {
             }
 
             invoke_context.native_invoke(
-                system_instruction::allocate(&associated_token_account_key, TokenAccount::packed_len() as u64),
+                system_instruction::allocate(&associated_token_account_key, TokenAccount::get_packed_len() as u64),
                 &[signers],
             )?;
             invoke_context.native_invoke(
@@ -98,7 +99,7 @@ impl Processor {
                 &funder_info_key,
                 &associated_token_account_key,
                 rent.minimum_balance(TokenAccount::LEN).max(1),
-                TokenAccount::packed_len() as u64,
+                TokenAccount::get_packed_len() as u64,
                 &token_program_id,
             ), &[signers])?;
         }

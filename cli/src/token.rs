@@ -25,6 +25,7 @@ use mundis_sdk::{system_instruction, system_program};
 use mundis_sdk::instruction::Instruction;
 use mundis_sdk::message::Message;
 use mundis_sdk::native_token::{lamports_to_mdis, mdis_to_lamports};
+use mundis_sdk::program_pack::Pack;
 use mundis_sdk::pubkey::Pubkey;
 use mundis_sdk::signature::Keypair;
 use mundis_sdk::signer::Signer;
@@ -1057,7 +1058,7 @@ pub fn process_create_token_command(
     println_display(config, format!("Creating token {}", token));
 
     let minimum_balance_for_rent_exemption = if !tx_info.sign_only {
-        rpc_client.get_minimum_balance_for_rent_exemption(Mint::packed_len())?
+        rpc_client.get_minimum_balance_for_rent_exemption(Mint::get_packed_len())?
     } else {
         0
     };
@@ -1069,7 +1070,7 @@ pub fn process_create_token_command(
             &config.signers[tx_info.fee_payer].pubkey(),
             &token,
             1,
-            Mint::packed_len() as u64,
+            Mint::get_packed_len() as u64,
             &mundis_token_program::id(),
         ),
         initialize_mint(
@@ -1154,7 +1155,7 @@ pub fn process_create_token_account_command(
     let fee_payer = config.signers[tx_info.fee_payer];
 
     let minimum_balance_for_rent_exemption = if !tx_info.sign_only {
-        rpc_client.get_minimum_balance_for_rent_exemption(TokenAccount::packed_len())?
+        rpc_client.get_minimum_balance_for_rent_exemption(TokenAccount::get_packed_len())?
     } else {
         0
     };
@@ -1169,7 +1170,7 @@ pub fn process_create_token_account_command(
                     &fee_payer.pubkey(),
                     &account,
                     minimum_balance_for_rent_exemption,
-                    TokenAccount::packed_len() as u64,
+                    TokenAccount::get_packed_len() as u64,
                     &mundis_token_program::id(),
                 ),
                 initialize_account(&mundis_token_program::id(), &account, &token, &owner)?,
@@ -1283,7 +1284,7 @@ pub fn process_create_multisig_token_account_command(
     );
 
     let minimum_balance_for_rent_exemption = if !tx_info.sign_only {
-        rpc_client.get_minimum_balance_for_rent_exemption(Multisig::packed_len())?
+        rpc_client.get_minimum_balance_for_rent_exemption(Multisig::get_packed_len())?
     } else {
         0
     };
@@ -1294,7 +1295,7 @@ pub fn process_create_multisig_token_account_command(
             &fee_payer.pubkey(),
             &multisig,
             minimum_balance_for_rent_exemption,
-            Multisig::packed_len() as u64,
+            Multisig::get_packed_len() as u64,
             &mundis_token_program::id(),
         ),
         initialize_multisig(
@@ -1617,7 +1618,7 @@ pub fn process_transfer_token_command(
         let recipient_account_info = rpc_client
             .get_account_with_commitment(&recipient, config.commitment)?
             .value
-            .map(|account| account.owner == mundis_token_program::id() && account.data.len() == TokenAccount::packed_len());
+            .map(|account| account.owner == mundis_token_program::id() && account.data.len() == TokenAccount::get_packed_len());
 
         if recipient_account_info.is_none() && !allow_unfunded_recipient {
             return Err("Error: The recipient address is not funded. \
@@ -1665,7 +1666,7 @@ pub fn process_transfer_token_command(
         if needs_funding {
             if fund_recipient {
                 if !tx_info.sign_only {
-                    minimum_balance_for_rent_exemption += rpc_client.get_minimum_balance_for_rent_exemption(TokenAccount::packed_len())?;
+                    minimum_balance_for_rent_exemption += rpc_client.get_minimum_balance_for_rent_exemption(TokenAccount::get_packed_len())?;
                     println_display(
                         config,
                         format!(
@@ -2151,22 +2152,22 @@ pub fn process_wrap_token_command(
     tx_info: &TxInfo,
 ) -> ProcessResult {
     let lamports = mdis_to_lamports(mdis);
-    let instructions = if let Some(wrapped_sol_account) = wrapped_sol_account {
+    let instructions = if let Some(wrapped_mdis_account) = wrapped_sol_account {
         println_display(
             config,
-            format!("Wrapping {} MUNDIS into {}", mdis, wrapped_sol_account),
+            format!("Wrapping {} MUNDIS into {}", mdis, wrapped_mdis_account),
         );
         vec![
             system_instruction::create_account(
                 &wallet_address,
-                &wrapped_sol_account,
+                &wrapped_mdis_account,
                 lamports,
-                TokenAccount::packed_len() as u64,
+                TokenAccount::get_packed_len() as u64,
                 &mundis_token_program::id(),
             ),
             initialize_account(
                 &mundis_token_program::id(),
-                &wrapped_sol_account,
+                &wrapped_mdis_account,
                 &native_mint::id(),
                 &wallet_address,
             )?,

@@ -6833,6 +6833,7 @@ pub(crate) mod tests {
         },
         std::{result, thread::Builder, time::Duration},
     };
+    use mundis_sdk::program_pack::Pack;
 
     impl Bank {
         fn cloned_stake_delegations(&self) -> StakeDelegations {
@@ -13757,7 +13758,7 @@ pub(crate) mod tests {
         let native_mint_account = bank
             .get_account(&inline_mundis_token::native_mint::id())
             .unwrap();
-        assert_eq!(native_mint_account.data().len(), mundis_token_program::state::Mint::packed_len());
+        assert_eq!(native_mint_account.data().len(), mundis_token_program::state::Mint::get_packed_len());
         assert_eq!(
             bank.get_balance(&inline_mundis_token::native_mint::id()),
             5200000000
@@ -13773,7 +13774,7 @@ pub(crate) mod tests {
         let native_mint_account = bank
             .get_account(&inline_mundis_token::native_mint::id())
             .unwrap();
-        assert_eq!(native_mint_account.data().len(), mundis_token_program::state::Mint::packed_len());
+        assert_eq!(native_mint_account.data().len(), mundis_token_program::state::Mint::get_packed_len());
         assert_eq!(
             bank.get_balance(&inline_mundis_token::native_mint::id()),
             5200000000

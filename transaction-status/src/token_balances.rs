@@ -11,6 +11,7 @@ use {
     std::collections::HashMap,
 };
 use mundis_token_program::state::{Mint, TokenAccount as TokenAccount};
+use mundis_sdk::program_pack::{Pack, Sealed};
 
 pub type TransactionTokenBalances = Vec<Vec<TransactionTokenBalance>>;
 
@@ -137,7 +138,7 @@ mod test {
         mundis_sdk::{account::Account, genesis_config::create_genesis_config},
         std::collections::BTreeMap,
     };
-
+    use mundis_sdk::program_pack::Pack;
     #[test]
     fn test_collect_token_balance_from_account() {
         let (mut genesis_config, _mint_keypair) = create_genesis_config(500);
@@ -155,7 +156,7 @@ mod test {
             freeze_authority: None,
         };
         let mut data = [0; Mint::LEN];
-        mint_data.pack(&mut data).unwrap();
+        Mint::pack(mint_data, &mut data).unwrap();
         let mint_pubkey = Pubkey::new_unique();
         let mint = Account {
             lamports: 100,
@@ -180,12 +181,12 @@ mod test {
             amount: 42,
             delegate: None,
             state: mundis_token_program::state::AccountState::Initialized,
-            is_native: true,
+            is_native: Some(100),
             delegated_amount: 0,
             close_authority: None,
         };
         let mut data = [0; TokenAccount::LEN];
-        token_data.pack(&mut data).unwrap();
+        TokenAccount::pack(token_data, &mut data).unwrap();
 
         let anima_token_account = Account {
             lamports: 100,
@@ -208,12 +209,12 @@ mod test {
             amount: 42,
             delegate: None,
             state: mundis_token_program::state::AccountState::Initialized,
-            is_native: true,
+            is_native: Some(100),
             delegated_amount: 0,
             close_authority: None,
         };
         let mut data = [0; TokenAccount::LEN];
-        other_mint_data.pack(&mut data).unwrap();
+        TokenAccount::pack(other_mint_data, &mut data).unwrap();
 
         let other_mint_token_account = Account {
             lamports: 100,
