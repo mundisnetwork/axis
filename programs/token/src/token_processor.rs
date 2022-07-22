@@ -224,11 +224,15 @@ impl Processor {
     ) -> Result<(), InstructionError> {
         let accounts_iter = &mut accounts.iter();
         let multisig_info = next_keyed_account(accounts_iter)?;
+        let rent = Rent::default();
 
-        let mut multisig = Multisig::unpack(multisig_info.try_account_ref()?.data())
-            .unwrap_or(Multisig::default());
+        let mut multisig = Multisig::unpack_unchecked(multisig_info.try_account_ref()?.data())?;
         if multisig.is_initialized {
             return Err(TokenError::AlreadyInUse.into());
+        }
+
+        if !rent.is_exempt(multisig_info.lamports()?, multisig_info.data_len()?) {
+            return Err(TokenError::NotRentExempt.into());
         }
 
         let signer_infos = accounts_iter.as_slice();
@@ -558,7 +562,7 @@ impl Processor {
         if dest_account.is_native() {
             return Err(TokenError::NativeNotSupported.into());
         }
-        if mint_info.unsigned_key() != &dest_account.mint {
+        if !Self::cmp_pubkeys(mint_info.unsigned_key(), &dest_account.mint) {
             return Err(TokenError::MintMismatch.into());
         }
 
@@ -612,7 +616,6 @@ impl Processor {
         let authority_info = next_keyed_account(account_info_iter)?;
 
         let mut source_account = TokenAccount::unpack(source_account_info.try_account_ref()?.data())?;
-
         let mut mint = Mint::unpack(mint_info.try_account_ref()?.data())?;
 
         if source_account.is_frozen() {
@@ -1042,7 +1045,7 @@ mod tests {
         let mint_key = Pubkey::new_unique();
         let mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
         let multisig_key = Pubkey::new_unique();
-        let multisig_account = AccountSharedData::new_ref(0, Multisig::get_packed_len(), &program_id);
+        let multisig_account = AccountSharedData::new_ref(rent.minimum_balance(Multisig::get_packed_len()), Multisig::get_packed_len(), &program_id);
 
         // create mint
         process_token_instruction(
