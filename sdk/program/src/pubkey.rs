@@ -251,173 +251,6 @@ impl Pubkey {
     /// - the number of provided seeds is greater than, _or equal to_,  [`MAX_SEEDS`],
     /// - any individual seed's length is greater than [`MAX_SEED_LEN`].
     ///
-    /// # Examples
-    ///
-    /// This example illustrates a simple case of creating a "vault" account
-    /// which is derived from the payer account, but owned by an on-chain
-    /// program. The program derived address is derived in an off-chain client
-    /// program, which invokes an on-chain Mundis program that uses the address
-    /// to create a new account owned and controlled by the program itself.
-    ///
-    /// By convention, the on-chain program will be compiled for use in two
-    /// different contexts: both on-chain, to interpret a custom program
-    /// instruction as a Mundis transaction; and off-chain, as a library, so
-    /// that clients can share the instruction data structure, constructors, and
-    /// other common code.
-    ///
-    /// First the on-chain Mundis program:
-    ///
-    /// ```
-    /// # use borsh::{BorshSerialize, BorshDeserialize};
-    /// # use mundis_program::{
-    /// #     pubkey::Pubkey,
-    /// #     entrypoint::ProgramResult,
-    /// #     program::invoke_signed,
-    /// #     system_instruction,
-    /// #     account_info::{
-    /// #         AccountInfo,
-    /// #         next_account_info,
-    /// #     },
-    /// # };
-    /// // The custom instruction processed by our program. It includes the
-    /// // PDA's bump seed, which is derived by the client program. This
-    /// // definition is also imported into the off-chain client program.
-    /// // The computed address of the PDA will be passed to this program via
-    /// // the `accounts` vector of the `Instruction` type.
-    /// #[derive(BorshSerialize, BorshDeserialize, Debug)]
-    /// pub struct InstructionData {
-    ///     pub vault_bump_seed: u8,
-    ///     pub lamports: u64,
-    /// }
-    ///
-    /// // The size in bytes of a vault account. The client program needs
-    /// // this information to calculate the quantity of lamports necessary
-    /// // to pay for the account's rent.
-    /// pub static VAULT_ACCOUNT_SIZE: u64 = 1024;
-    ///
-    /// // The entrypoint of the on-chain program, as provided to the
-    /// // `entrypoint!` macro.
-    /// fn process_instruction(
-    ///     program_id: &Pubkey,
-    ///     accounts: &[AccountInfo],
-    ///     instruction_data: &[u8],
-    /// ) -> ProgramResult {
-    ///     let account_info_iter = &mut accounts.iter();
-    ///     let payer = next_account_info(account_info_iter)?;
-    ///     // The vault PDA, derived from the payer's address
-    ///     let vault = next_account_info(account_info_iter)?;
-    ///
-    ///     let mut instruction_data = instruction_data;
-    ///     let instr = InstructionData::deserialize(&mut instruction_data)?;
-    ///     let vault_bump_seed = instr.vault_bump_seed;
-    ///     let lamports = instr.lamports;
-    ///     let vault_size = VAULT_ACCOUNT_SIZE;
-    ///
-    ///     // Invoke the system program to create an account while virtually
-    ///     // signing with the vault PDA, which is owned by this caller program.
-    ///     invoke_signed(
-    ///         &system_instruction::create_account(
-    ///             &payer.key,
-    ///             &vault.key,
-    ///             lamports,
-    ///             vault_size,
-    ///             &program_id,
-    ///         ),
-    ///         &[
-    ///             payer.clone(),
-    ///             vault.clone(),
-    ///         ],
-    ///         // A slice of seed slices, each seed slice being the set
-    ///         // of seeds used to generate one of the PDAs required by the
-    ///         // callee program, the final seed being a single-element slice
-    ///         // containing the `u8` bump seed.
-    ///         &[
-    ///             &[
-    ///                 b"vault",
-    ///                 payer.key.as_ref(),
-    ///                 &[vault_bump_seed],
-    ///             ],
-    ///         ]
-    ///     )?;
-    ///
-    ///     Ok(())
-    /// }
-    /// ```
-    ///
-    /// The client program:
-    ///
-    /// ```ignore
-    /// # // NB: This example depends on mundis_sdk and mundis_client, and adding
-    /// # // those as dev-dependencies would create an unpublishable circular
-    /// # // dependency, hence it is ignored.
-    /// #
-    /// # use borsh::{BorshSerialize, BorshDeserialize};
-    /// # use mundis_program::pubkey::Pubkey;
-    /// # use mundis_program::instruction::Instruction;
-    /// # use mundis_program::hash::Hash;
-    /// # use mundis_program::instruction::AccountMeta;
-    /// # use mundis_program::system_program;
-    /// # use mundis_sdk::signature::Keypair;
-    /// # use mundis_sdk::signature::{Signer, Signature};
-    /// # use mundis_sdk::transaction::Transaction;
-    /// # use mundis_client::rpc_client::RpcClient;
-    /// # use std::convert::TryFrom;
-    /// #
-    /// # #[derive(BorshSerialize, BorshDeserialize, Debug)]
-    /// # struct InstructionData {
-    /// #    pub vault_bump_seed: u8,
-    /// #    pub lamports: u64,
-    /// # }
-    /// #
-    /// # pub static VAULT_ACCOUNT_SIZE: u64 = 1024;
-    /// # let program_id = Pubkey::new_unique();
-    /// # let payer = Keypair::new();
-    /// # let rpc_client = RpcClient::new("no-run".to_string());
-    /// #
-    /// // Derive the PDA from the payer account, a string representing the unique
-    /// // purpose of the account ("vault"), and the address of our on-chain program.
-    /// let (vault_pubkey, vault_bump_seed) = Pubkey::find_program_address(
-    ///     &[b"vault", payer.pubkey().as_ref()],
-    ///     &program_id
-    /// );
-    ///
-    /// // Get the amount of lamports needed to pay for the vault's rent
-    /// let vault_account_size = usize::try_from(VAULT_ACCOUNT_SIZE)?;
-    /// let lamports = rpc_client.get_minimum_balance_for_rent_exemption(vault_account_size)?;
-    ///
-    /// // The on-chain program's instruction data, imported from that program's crate.
-    /// let instr_data = InstructionData {
-    ///     vault_bump_seed,
-    ///     lamports,
-    /// };
-    ///
-    /// // The accounts required by both our on-chain program and the system program's
-    /// // `create_account` instruction, including the vault's address.
-    /// let accounts = vec![
-    ///     AccountMeta::new(payer.pubkey(), true),
-    ///     AccountMeta::new(vault_pubkey, false),
-    ///     AccountMeta::new(system_program::ID, false),
-    /// ];
-    ///
-    /// // Create the instruction by serializing our instruction data via borsh
-    /// let instruction = Instruction::new_with_borsh(
-    ///     program_id,
-    ///     &instr_data,
-    ///     accounts,
-    /// );
-    ///
-    /// let blockhash = rpc_client.get_latest_blockhash()?;
-    ///
-    /// let transaction = Transaction::new_signed_with_payer(
-    ///     &[instruction],
-    ///     Some(&payer.pubkey()),
-    ///     &[&payer],
-    ///     blockhash,
-    /// );
-    ///
-    /// rpc_client.send_and_confirm_transaction(&transaction)?;
-    /// # Ok::<(), anyhow::Error>(())
-    /// ```
     pub fn find_program_address(seeds: &[&[u8]], program_id: &Pubkey) -> (Pubkey, u8) {
         Self::try_find_program_address(seeds, program_id)
             .unwrap_or_else(|| panic!("Unable to find a viable program address bump seed"))
@@ -437,53 +270,20 @@ impl Pubkey {
     /// [`find_program_address`]: Pubkey::find_program_address
     #[allow(clippy::same_item_push)]
     pub fn try_find_program_address(seeds: &[&[u8]], program_id: &Pubkey) -> Option<(Pubkey, u8)> {
-        // Perform the calculation inline, calling this from within a program is
-        // not supported
-        #[cfg(not(target_arch = "bpf"))]
-        {
-            let mut bump_seed = [std::u8::MAX];
-            for _ in 0..std::u8::MAX {
-                {
-                    let mut seeds_with_bump = seeds.to_vec();
-                    seeds_with_bump.push(&bump_seed);
-                    match Self::create_program_address(&seeds_with_bump, program_id) {
-                        Ok(address) => return Some((address, bump_seed[0])),
-                        Err(PubkeyError::InvalidSeeds) => (),
-                        _ => break,
-                    }
+        let mut bump_seed = [std::u8::MAX];
+        for _ in 0..std::u8::MAX {
+            {
+                let mut seeds_with_bump = seeds.to_vec();
+                seeds_with_bump.push(&bump_seed);
+                match Self::create_program_address(&seeds_with_bump, program_id) {
+                    Ok(address) => return Some((address, bump_seed[0])),
+                    Err(PubkeyError::InvalidSeeds) => (),
+                    _ => break,
                 }
-                bump_seed[0] -= 1;
             }
-            None
+            bump_seed[0] -= 1;
         }
-        // Call via a system call to perform the calculation
-        #[cfg(target_arch = "bpf")]
-        {
-            extern "C" {
-                fn sol_try_find_program_address(
-                    seeds_addr: *const u8,
-                    seeds_len: u64,
-                    program_id_addr: *const u8,
-                    address_bytes_addr: *const u8,
-                    bump_seed_addr: *const u8,
-                ) -> u64;
-            }
-            let mut bytes = [0; 32];
-            let mut bump_seed = std::u8::MAX;
-            let result = unsafe {
-                sol_try_find_program_address(
-                    seeds as *const _ as *const u8,
-                    seeds.len() as u64,
-                    program_id as *const _ as *const u8,
-                    &mut bytes as *mut _ as *mut u8,
-                    &mut bump_seed as *mut _ as *mut u8,
-                )
-            };
-            match result {
-                crate::entrypoint::SUCCESS => Some((Pubkey::new(&bytes), bump_seed)),
-                _ => None,
-            }
-        }
+        None
     }
 
     /// Create a valid [program derived address][pda] without searching for a bump seed.
@@ -541,48 +341,18 @@ impl Pubkey {
             }
         }
 
-        // Perform the calculation inline, calling this from within a program is
-        // not supported
-        #[cfg(not(target_arch = "bpf"))]
-        {
-            let mut hasher = crate::hash::Hasher::default();
-            for seed in seeds.iter() {
-                hasher.hash(seed);
-            }
-            hasher.hashv(&[program_id.as_ref(), PDA_MARKER]);
-            let hash = hasher.result();
-
-            if bytes_are_curve_point(hash) {
-                return Err(PubkeyError::InvalidSeeds);
-            }
-
-            Ok(Pubkey::new(hash.as_ref()))
+        let mut hasher = crate::hash::Hasher::default();
+        for seed in seeds.iter() {
+            hasher.hash(seed);
         }
-        // Call via a system call to perform the calculation
-        #[cfg(target_arch = "bpf")]
-        {
-            extern "C" {
-                fn sol_create_program_address(
-                    seeds_addr: *const u8,
-                    seeds_len: u64,
-                    program_id_addr: *const u8,
-                    address_bytes_addr: *const u8,
-                ) -> u64;
-            }
-            let mut bytes = [0; 32];
-            let result = unsafe {
-                sol_create_program_address(
-                    seeds as *const _ as *const u8,
-                    seeds.len() as u64,
-                    program_id as *const _ as *const u8,
-                    &mut bytes as *mut _ as *mut u8,
-                )
-            };
-            match result {
-                crate::entrypoint::SUCCESS => Ok(Pubkey::new(&bytes)),
-                _ => Err(result.into()),
-            }
+        hasher.hashv(&[program_id.as_ref(), PDA_MARKER]);
+        let hash = hasher.result();
+
+        if bytes_are_curve_point(hash) {
+            return Err(PubkeyError::InvalidSeeds);
         }
+
+        Ok(Pubkey::new(hash.as_ref()))
     }
 
     pub fn to_bytes(self) -> [u8; 32] {
@@ -595,16 +365,7 @@ impl Pubkey {
 
     /// Log a `Pubkey` from a program
     pub fn log(&self) {
-        #[cfg(target_arch = "bpf")]
-        {
-            extern "C" {
-                fn sol_log_pubkey(pubkey_addr: *const u8);
-            }
-            unsafe { sol_log_pubkey(self.as_ref() as *const _ as *const u8) };
-        }
-
-        #[cfg(not(target_arch = "bpf"))]
-        crate::program_stubs::sol_log(&self.to_string());
+        println!("{}", &self.to_string());
     }
 }
 

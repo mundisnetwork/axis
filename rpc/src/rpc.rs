@@ -1811,7 +1811,7 @@ impl JsonRpcRequestProcessor {
             }),
             // Filter on Delegate address
             RpcFilterType::Memcmp(Memcmp {
-                offset: 73,
+                offset: 76,
                 bytes: MemcmpEncodedBytes::Bytes(delegate.to_bytes().into()),
                 encoding: None,
             }),
@@ -1826,6 +1826,10 @@ impl JsonRpcRequestProcessor {
             ));
             self.get_filtered_program_accounts(&bank, &token_program_id, filters)?
         };
+        for (pk, acct) in keyed_accounts.iter() {
+            println!("{:?}", acct.data());
+        }
+
         let accounts = if encoding == UiAccountEncoding::JsonParsed {
             get_parsed_token_accounts(bank.clone(), keyed_accounts.into_iter()).collect()
         } else {
@@ -7639,6 +7643,12 @@ pub mod tests {
                         "delegate": delegate.to_string(),
                         "state": "initialized",
                         "isNative": true,
+                        "rentExemptReserve": {
+                            "uiAmount": 0.1,
+                            "decimals": 2,
+                            "amount": "10",
+                            "uiAmountString": "0.1",
+                        },
                         "delegatedAmount": {
                             "uiAmount": 0.3,
                             "decimals": 2,

@@ -11,7 +11,7 @@ use {
     std::collections::HashMap,
 };
 use mundis_token_program::state::{Mint, TokenAccount as TokenAccount};
-use mundis_sdk::program_pack::{Pack, Sealed};
+use mundis_sdk::program_pack::Pack;
 
 pub type TransactionTokenBalances = Vec<Vec<TransactionTokenBalance>>;
 

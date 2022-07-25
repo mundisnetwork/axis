@@ -7,10 +7,10 @@ use mundis_sdk::decode_error::DecodeError;
 use mundis_sdk::keyed_account::{keyed_account_at_index, KeyedAccount, next_keyed_account};
 use mundis_sdk::program_utils::limited_deserialize;
 use mundis_sdk::instruction::InstructionError;
-use mundis_sdk::program_memory::{sol_memcmp, sol_memset};
 use mundis_sdk::program_pack::{IsInitialized, Pack};
 use mundis_sdk::pubkey::Pubkey;
 use mundis_sdk::rent::Rent;
+use mundis_sdk::usafe_memory_utils::{unsafe_memcmp, unsafe_memset};
 
 use crate::{error::TokenError, state::{TokenAccount, AccountState, Mint, Multisig}, token_instruction::{AuthorityType, is_valid_signer_index, MAX_SIGNERS, TokenInstruction}};
 use crate::error::PrintInstructionError;
@@ -718,7 +718,7 @@ impl Processor {
 
         source_account_info.try_account_ref_mut()?.set_lamports(0);
 
-        sol_memset(source_account_info.try_account_ref_mut()?.data_mut(), 0, TokenAccount::LEN);
+        unsafe_memset(source_account_info.try_account_ref_mut()?.data_mut(), 0, TokenAccount::LEN);
 
         Ok(())
     }
@@ -800,9 +800,9 @@ impl Processor {
     }
 
     /// Checks two pubkeys for equality in a computationally cheap way using
-    /// `sol_memcmp`
+    /// `unsafe_memcmp`
     pub fn cmp_pubkeys(a: &Pubkey, b: &Pubkey) -> bool {
-        sol_memcmp(a.as_ref(), b.as_ref(), mundis_sdk::pubkey::PUBKEY_BYTES) == 0
+        unsafe_memcmp(a.as_ref(), b.as_ref(), mundis_sdk::pubkey::PUBKEY_BYTES) == 0
     }
 
     /// Validates owner(s) are present
@@ -1564,11 +1564,11 @@ mod tests {
         let delegate_key = Pubkey::new_unique();
         let delegate_account = Rc::new(RefCell::new(AccountSharedData::default()));
         let owner_key = Pubkey::new_unique();
-        let mut owner_account =  Rc::new(RefCell::new(AccountSharedData::default()));
+        let owner_account =  Rc::new(RefCell::new(AccountSharedData::default()));
         let owner2_key = Pubkey::new_unique();
-        let mut owner2_account = Rc::new(RefCell::new(AccountSharedData::default()));
+        let owner2_account = Rc::new(RefCell::new(AccountSharedData::default()));
         let mint_key = Pubkey::new_unique();
-        let mut mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
+        let mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
 
         // create mint
         process_token_instruction(
@@ -1961,7 +1961,7 @@ mod tests {
         let owner_key = Pubkey::new_unique();
         let owner_account= Rc::new(RefCell::new(AccountSharedData::default()));
         let mint_key = Pubkey::new_unique();
-        let mut mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
+        let mint_account = AccountSharedData::new_ref(rent.minimum_balance(Mint::get_packed_len()), Mint::get_packed_len(), &program_id);
 
         // create mint-able token with zero supply
         let decimals = 2;

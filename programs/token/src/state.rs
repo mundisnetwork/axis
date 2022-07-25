@@ -2,7 +2,6 @@
 
 use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
 use num_enum::TryFromPrimitive;
-use serde_derive::{Deserialize, Serialize};
 use mundis_sdk::instruction::InstructionError;
 use mundis_sdk::program_pack::{IsInitialized, Pack, Sealed};
 use mundis_sdk::pubkey::Pubkey;
@@ -13,7 +12,7 @@ pub const MAX_SYMBOL_LENGTH: usize = 10;
 
 /// Mint data.
 #[repr(C)]
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Mint {
     /// Optional authority used to mint new tokens. The mint authority may only be provided during
     /// mint creation. If no mint authority is present then the mint has a fixed supply and no
@@ -107,7 +106,7 @@ impl Pack for Mint {
 }
 
 /// Account data.
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TokenAccount {
     /// The mint associated with this account
     pub mint: Pubkey,
@@ -204,7 +203,7 @@ impl Pack for TokenAccount {
 
 /// Account state.
 #[repr(u8)]
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, TryFromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, TryFromPrimitive)]
 pub enum AccountState {
     /// Account is not yet initialized
     Uninitialized,
@@ -223,7 +222,7 @@ impl Default for AccountState {
 }
 
 /// Multisignature data.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Multisig {
     /// Number of signers required
     pub m: u8,
@@ -286,59 +285,101 @@ mod tests {
     use std::str::from_utf8;
     use mundis_sdk::program_pack::Pack;
     use mundis_sdk::pubkey::Pubkey;
-    use crate::state::{TokenAccount, AccountState, Mint, Multisig, MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH};
+    use crate::InstructionError;
+    use crate::state::{TokenAccount, AccountState, Mint, Multisig, MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH, unpack_option_u64, unpack_option_key};
     use crate::token_instruction::MAX_SIGNERS;
 
     #[test]
-    fn test_pack_unpack() {
-        let max_name_str = from_utf8(&['a' as u8; MAX_NAME_LENGTH]).unwrap();
-        let max_symbol_str = from_utf8(&['a' as u8; MAX_SYMBOL_LENGTH]).unwrap();
+    fn test_mint_unpack_from_slice() {
+        let src: [u8; 124] = [0; 124];
+        let mint = Mint::unpack_from_slice(&src).unwrap();
+        assert!(!mint.is_initialized);
 
-        // Mint
-        let check = Mint {
-            name: String::from(max_name_str),
-            symbol: String::from(max_symbol_str),
-            mint_authority: Some(Pubkey::new(&[1; 32])),
-            supply: 42,
-            decimals: 7,
-            is_initialized: true,
-            freeze_authority: Some(Pubkey::new(&[2; 32])),
+        let mut src: [u8; 124] = [0; 124];
+        src[0] = 2;
+        let mint = Mint::unpack_from_slice(&src).unwrap_err();
+        assert_eq!(mint, InstructionError::InvalidAccountData);
+    }
+
+    #[test]
+    fn test_account_state() {
+        let account_state = AccountState::default();
+        assert_eq!(account_state, AccountState::Uninitialized);
+    }
+
+    #[test]
+    fn test_multisig_unpack_from_slice() {
+        let src: [u8; 355] = [0; 355];
+        let multisig = Multisig::unpack_from_slice(&src).unwrap();
+        assert_eq!(multisig.m, 0);
+        assert_eq!(multisig.n, 0);
+        assert!(!multisig.is_initialized);
+
+        let mut src: [u8; 355] = [0; 355];
+        src[0] = 1;
+        src[1] = 1;
+        src[2] = 1;
+        let multisig = Multisig::unpack_from_slice(&src).unwrap();
+        assert_eq!(multisig.m, 1);
+        assert_eq!(multisig.n, 1);
+        assert!(multisig.is_initialized);
+
+        let mut src: [u8; 355] = [0; 355];
+        src[2] = 2;
+        let multisig = Multisig::unpack_from_slice(&src).unwrap_err();
+        assert_eq!(multisig, InstructionError::InvalidAccountData);
+    }
+
+    #[test]
+    fn test_unpack_option_key() {
+        let src: [u8; 36] = [0; 36];
+        let result = unpack_option_key(&src).unwrap();
+        assert_eq!(result, None);
+
+        let mut src: [u8; 36] = [0; 36];
+        src[1] = 1;
+        let result = unpack_option_key(&src).unwrap_err();
+        assert_eq!(result, InstructionError::InvalidAccountData);
+    }
+
+    #[test]
+    fn test_unpack_option_u64() {
+        let src: [u8; 12] = [0; 12];
+        let result = unpack_option_u64(&src).unwrap();
+        assert_eq!(result, None);
+
+        let mut src: [u8; 12] = [0; 12];
+        src[0] = 1;
+        let result = unpack_option_u64(&src).unwrap();
+        assert_eq!(result, Some(0));
+
+        let mut src: [u8; 12] = [0; 12];
+        src[1] = 1;
+        let result = unpack_option_u64(&src).unwrap_err();
+        assert_eq!(result, InstructionError::InvalidAccountData);
+    }
+
+    #[test]
+    fn test_pack_unpack_token_account() {
+        let mint = Pubkey::new(&[2; 32]);
+        let owner = Pubkey::new(&[3; 32]);
+        let delegate = Pubkey::new(&[4; 32]);
+
+        let mut dst = [0; TokenAccount::LEN];
+        let token_account = TokenAccount {
+            mint,
+            owner,
+            delegate: Some(delegate),
+            amount: 420,
+            state: AccountState::Initialized,
+            is_native: None,
+            delegated_amount: 30,
+            close_authority: Some(owner),
         };
-        let packed_len = bincode::serialized_size(&check).unwrap();
-        assert!(packed_len <= Mint::get_packed_len() as u64);
+        TokenAccount::pack(token_account.clone(), &mut dst).unwrap();
 
-        let packed = bincode::serialize(&check).unwrap();
-        assert_eq!(check, bincode::deserialize::<Mint>(&packed).unwrap());
-
-        // Account
-        let check = TokenAccount {
-            mint: Pubkey::new(&[1; 32]),
-            owner: Pubkey::new(&[2; 32]),
-            amount: 3,
-            delegate: Some(Pubkey::new(&[4; 32])),
-            state: AccountState::Frozen,
-            is_native: Some(0),
-            delegated_amount: 6,
-            close_authority: Some(Pubkey::new(&[7; 32])),
-        };
-        let packed_len = bincode::serialized_size(&check).unwrap();
-        assert!(packed_len <= TokenAccount::get_packed_len() as u64);
-
-        let packed = bincode::serialize(&check).unwrap();
-        assert_eq!(check, bincode::deserialize::<TokenAccount>(&packed).unwrap());
-
-        // Multisig
-        let check = Multisig {
-            m: 1,
-            n: 2,
-            is_initialized: true,
-            signers: [Pubkey::new(&[3; 32]); MAX_SIGNERS],
-        };
-        let packed_len = bincode::serialized_size(&check).unwrap();
-        assert!(packed_len <= Multisig::get_packed_len() as u64);
-
-        let packed = bincode::serialize(&check).unwrap();
-        assert_eq!(check, bincode::deserialize::<Multisig>(&packed).unwrap());
+        let unpacked = TokenAccount::unpack(&dst).unwrap();
+        assert_eq!(token_account, unpacked);
     }
 }
 

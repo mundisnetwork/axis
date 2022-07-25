@@ -5661,25 +5661,6 @@ pub mod tests {
     }
 
     #[test]
-    #[ignore]
-    fn test_duplicate_rollback_then_vote_on_other_duplicate_different_slot_locked_out() {
-        let SelectVoteAndResetForkResult {
-            vote_bank,
-            reset_bank,
-            heaviest_fork_failures,
-        } = run_test_duplicate_rollback_then_vote_on_other_duplicate(4);
-
-        // If we vote on 4 first then try to vote on 5 descended from another version
-        // of 4, lockout should fail
-        assert!(vote_bank.is_none());
-        assert_eq!(reset_bank.unwrap().slot(), 5);
-        assert_eq!(
-            heaviest_fork_failures,
-            vec![HeaviestForkFailures::LockedOut(5)]
-        );
-    }
-
-    #[test]
     fn test_gossip_vote_doesnt_affect_fork_choice() {
         let (
             VoteSimulator {

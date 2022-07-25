@@ -349,30 +349,6 @@ mod tests {
     };
 
     #[test]
-    #[ignore]
-    // test that stage will exit when flag is set
-    fn test_exit() {
-        let exit = Arc::new(AtomicBool::new(false));
-        let tn = Node::new_localhost();
-        let cluster_info = ClusterInfo::new(
-            tn.info.clone(),
-            Arc::new(Keypair::new()),
-            SocketAddrSpace::Unspecified,
-        );
-        let c = Arc::new(cluster_info);
-        let d = GossipService::new(
-            &c,
-            None,
-            tn.sockets.gossip,
-            None,
-            true, // should_check_duplicate_instance
-            &exit,
-        );
-        exit.store(true, Ordering::Relaxed);
-        d.join().unwrap();
-    }
-
-    #[test]
     fn test_gossip_services_spy() {
         const TIMEOUT: Duration = Duration::from_secs(5);
         let keypair = Keypair::new();

@@ -18,18 +18,6 @@ use {
 
 pub type ProgramResult = ResultGeneric<(), ProgramError>;
 
-/// User implemented function to process an instruction
-///
-/// program_id: Program ID of the currently executing program accounts: Accounts
-/// passed as part of the instruction instruction_data: Instruction data
-pub type ProcessInstruction =
-    fn(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult;
-
-/// Programs indicate success with a return value of 0
-pub const SUCCESS: u64 = 0;
-
-/// Start address of the memory region used for program heap.
-pub const HEAP_START_ADDRESS: u64 = 0x300000000;
 /// Length of the heap memory region used for program heap.
 pub const HEAP_LENGTH: usize = 32 * 1024;
 

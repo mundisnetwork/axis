@@ -10,7 +10,6 @@ pub mod token_account_instruction;
 pub mod token_account_processor;
 
 pub use mundis_sdk::token_account::program::{check_id, id};
-pub use mundis_sdk::program as mundis_program;
 
 pub(crate) fn get_associated_token_address_and_bump_seed(
     wallet_address: &Pubkey,

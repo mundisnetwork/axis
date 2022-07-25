@@ -4,18 +4,14 @@
 
 use {
     crate::{
-        clone_zeroed, copy_field, fee_calculator::FeeCalculator, impl_sysvar_get,
-        program_error::ProgramError, sysvar::Sysvar,
+        clone_zeroed, copy_field, fee_calculator::FeeCalculator,
+        sysvar::Sysvar,
     },
     std::mem::MaybeUninit,
 };
 
 crate::declare_deprecated_sysvar_id!("SysvarFees111111111111111111111111111111111", Fees);
 
-#[deprecated(
-    since = "1.9.0",
-    note = "Please do not use, will no longer be available in the future"
-)]
 #[repr(C)]
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub struct Fees {
@@ -42,9 +38,7 @@ impl Fees {
     }
 }
 
-impl Sysvar for Fees {
-    impl_sysvar_get!(sol_get_fees_sysvar);
-}
+impl Sysvar for Fees {}
 
 #[cfg(test)]
 mod tests {

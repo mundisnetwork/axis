@@ -584,19 +584,3 @@ fn test_with_partitions(
     let trunk = calc_newest_trunk(&converge_map);
     assert_eq!(trunk.1, len);
 }
-
-#[test]
-#[ignore]
-fn test_3_partitions() {
-    test_with_partitions(3, 0.0, 0, 0.0, true)
-}
-#[test]
-#[ignore]
-fn test_3_partitions_large_packet_drop() {
-    test_with_partitions(3, 0.9, 0, 0.0, false)
-}
-#[test]
-#[ignore]
-fn test_all_partitions() {
-    test_with_partitions(100, 0.0, 5, 0.25, false)
-}

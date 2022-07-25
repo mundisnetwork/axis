@@ -76,6 +76,8 @@ pub fn parse_token(
     } else if data.len() == Mint::get_packed_len() {
         let mint = Mint::unpack(data)
             .map_err(|_| ParseAccountError::AccountNotParsable(ParsableAccount::Token))?;
+        let name = mint.name.trim_end_matches(char::from(0));
+        let symbol = mint.symbol.trim_end_matches(char::from(0));
         Ok(TokenAccountType::Mint(UiMint {
             mint_authority: match mint.mint_authority {
                 Some(pubkey) => Some(pubkey.to_string()),
@@ -83,8 +85,8 @@ pub fn parse_token(
             },
             supply: mint.supply.to_string(),
             decimals: mint.decimals,
-            name: mint.name,
-            symbol: mint.symbol,
+            name: name.to_string(),
+            symbol: symbol.to_string(),
             is_initialized: mint.is_initialized,
             freeze_authority: match mint.freeze_authority {
                 Some(pubkey) => Some(pubkey.to_string()),
@@ -256,7 +258,6 @@ pub fn get_token_account_mint(data: &[u8]) -> Option<Pubkey> {
 
 #[cfg(test)]
 mod test {
-    use mundis_token_program::state::{MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH, puffed_out_string};
     use super::*;
 
     #[test]
@@ -311,8 +312,8 @@ mod test {
                 mint_authority: Some(owner_pubkey.to_string()),
                 supply: 42.to_string(),
                 decimals: 3,
-                name: puffed_out_string(&"Test Token".to_string(), MAX_NAME_LENGTH),
-                symbol: puffed_out_string(&"TST".to_string(), MAX_SYMBOL_LENGTH),
+                name: "Test Token".to_string(),
+                symbol: "TST".to_string(),
                 is_initialized: true,
                 freeze_authority: Some(owner_pubkey.to_string()),
             }),

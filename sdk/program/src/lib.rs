@@ -14,7 +14,6 @@ pub mod debug_account_data;
 pub mod decode_error;
 pub mod ed25519_program;
 pub mod entrypoint;
-pub mod entrypoint_deprecated;
 pub mod epoch_schedule;
 pub mod example_mocks;
 pub mod feature;
@@ -28,11 +27,8 @@ pub mod log;
 pub mod message;
 pub mod native_token;
 pub mod nonce;
-pub mod program;
 pub mod program_error;
-pub mod program_memory;
 pub mod program_pack;
-pub mod program_stubs;
 pub mod program_utils;
 pub mod pubkey;
 pub mod rent;
@@ -48,6 +44,7 @@ pub mod stake_history;
 pub mod system_instruction;
 pub mod system_program;
 pub mod sysvar;
+pub mod usafe_memory_utils;
 
 #[cfg(target_arch = "bpf")]
 pub use mundis_sdk_macro::wasm_bindgen_stub as wasm_bindgen;

@@ -19,7 +19,6 @@ pub mod derivation_path;
 pub mod deserialize_utils;
 pub mod ed25519_instruction;
 pub mod entrypoint;
-pub mod entrypoint_deprecated;
 pub mod epoch_info;
 pub mod example_mocks;
 pub mod exit;
@@ -97,7 +96,7 @@ pub use mundis_sdk_macro::pubkeys;
 pub use mundis_sdk_macro::respan;
 
 #[deprecated(
-    since = "1.9.0",
+    since = "0.9.0",
     note = "use only to break https://github.com/rust-lang/rust/issues/92987. remove when we move to Rust 1.60.0"
 )]
 #[doc(hidden)]

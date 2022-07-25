@@ -51,7 +51,7 @@ pub struct BanksTransactionResultWithSimulation {
 pub trait Banks {
     async fn send_transaction_with_context(transaction: Transaction);
     #[deprecated(
-    since = "1.9.0",
+    since = "0.9.0",
     note = "Please use `get_fee_for_message_with_commitment_and_context` instead"
     )]
     async fn get_fees_with_commitment_and_context(
