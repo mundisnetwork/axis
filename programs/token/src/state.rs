@@ -282,12 +282,10 @@ impl IsInitialized for Multisig {
 
 #[cfg(test)]
 mod tests {
-    use std::str::from_utf8;
     use mundis_sdk::program_pack::Pack;
     use mundis_sdk::pubkey::Pubkey;
     use crate::InstructionError;
-    use crate::state::{TokenAccount, AccountState, Mint, Multisig, MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH, unpack_option_u64, unpack_option_key};
-    use crate::token_instruction::MAX_SIGNERS;
+    use crate::state::{TokenAccount, AccountState, Mint, Multisig, unpack_option_u64, unpack_option_key};
 
     #[test]
     fn test_mint_unpack_from_slice() {

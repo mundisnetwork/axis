@@ -246,28 +246,28 @@ impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
 /// iterator.
 ///
 /// This is simply a wrapper around [`Iterator::next`] that returns a
-/// [`ProgramError`] instead of an option.
+/// [`InstructionError`] instead of an option.
 ///
 /// # Errors
 ///
-/// Returns [`ProgramError::NotEnoughAccountKeys`] if there are no more items in
+/// Returns [`InstructionError::NotEnoughAccountKeys`] if there are no more items in
 /// the iterator.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use mundis_program::{
 ///    account_info::{AccountInfo, next_account_info},
-///    entrypoint::ProgramResult,
 ///    pubkey::Pubkey,
 /// };
+/// use mundis_program::instruction::InstructionError;
 /// # use mundis_program::program_error::ProgramError;
 ///
 /// pub fn process_instruction(
 ///     program_id: &Pubkey,
 ///     accounts: &[AccountInfo],
 ///     instruction_data: &[u8],
-/// ) -> ProgramResult {
+/// ) -> Result<(), InstructionError> {
 ///     let accounts_iter = &mut accounts.iter();
 ///     let signer = next_account_info(accounts_iter)?;
 ///     let payer = next_account_info(accounts_iter)?;
@@ -286,7 +286,6 @@ impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
 /// #    accounts,
 /// #    &[],
 /// # )?;
-/// # Ok::<(), ProgramError>(())
 /// ```
 pub fn next_account_info<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
     iter: &mut I,
@@ -306,19 +305,19 @@ pub fn next_account_info<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use mundis_program::{
 ///    account_info::{AccountInfo, next_account_info, next_account_infos},
-///    entrypoint::ProgramResult,
 ///    pubkey::Pubkey,
 /// };
+/// use mundis_program::instruction::{Instruction, InstructionError};
 /// # use mundis_program::program_error::ProgramError;
 ///
 /// pub fn process_instruction(
 ///     program_id: &Pubkey,
 ///     accounts: &[AccountInfo],
 ///     instruction_data: &[u8],
-/// ) -> ProgramResult {
+/// ) -> Result<(), InstructionError> {
 ///     let accounts_iter = &mut accounts.iter();
 ///     let signer = next_account_info(accounts_iter)?;
 ///     let payer = next_account_info(accounts_iter)?;
@@ -338,7 +337,6 @@ pub fn next_account_info<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
 /// #    accounts,
 /// #    &[],
 /// # )?;
-/// # Ok::<(), ProgramError>(())
 /// ```
 pub fn next_account_infos<'a, 'b: 'a>(
     iter: &mut std::slice::Iter<'a, AccountInfo<'b>>,

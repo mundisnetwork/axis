@@ -18,7 +18,6 @@ pub mod compute_budget;
 pub mod derivation_path;
 pub mod deserialize_utils;
 pub mod ed25519_instruction;
-pub mod entrypoint;
 pub mod epoch_info;
 pub mod example_mocks;
 pub mod exit;
