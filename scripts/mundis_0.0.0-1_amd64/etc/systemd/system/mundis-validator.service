@@ -1,12 +1,12 @@
 [Unit]
 Description=Mundis Validator
-After=network.target
-StartLimitIntervalSec=0
+After=local-fs.target network-online.target
+StartLimitIntervalSec=10
 
 [Service]
 Type=simple
 Restart=always
-RestartSec=1
+RestartSec=5
 User=mundis
 LimitNOFILE=1000000
 LogRateLimitIntervalSec=0
