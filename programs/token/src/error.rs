@@ -3,6 +3,7 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use thiserror::Error;
+
 use mundis_sdk::decode_error::DecodeError;
 use mundis_sdk::instruction::InstructionError;
 
@@ -100,34 +101,66 @@ impl PrintInstructionError for InstructionError {
         where
             E: 'static + std::error::Error + DecodeError<E> + PrintInstructionError + FromPrimitive,
     {
+        // do nothing
+    }
+}
+
+impl PrintInstructionError for TokenError {
+    fn print<E>(&self)
+        where
+            E: 'static + std::error::Error + DecodeError<E> + PrintInstructionError + FromPrimitive,
+    {
         match self {
-            Self::Custom(error) => {
-                if let Some(custom_error) = E::decode_custom_error_to_enum(*error) {
-                    custom_error.print::<E>();
-                } else {
-                    eprintln!("Error: Unknown");
-                }
+            TokenError::NotRentExempt => eprintln!("Error: lamport balance below rent-exempt threshold"),
+            TokenError::InsufficientFunds => eprintln!("Error: insufficient funds"),
+            TokenError::InvalidMint => eprintln!("Error: Invalid Mint"),
+            TokenError::MintMismatch => eprintln!("Error: Account not associated with this Mint"),
+            TokenError::OwnerMismatch => eprintln!("Error: owner does not match"),
+            TokenError::FixedSupply => eprintln!("Error: the total supply of this token is fixed"),
+            TokenError::AlreadyInUse => eprintln!("Error: account or token already in use"),
+            TokenError::InvalidNumberOfProvidedSigners => {
+                eprintln!("Error: Invalid number of provided signers")
             }
-            Self::InvalidArgument => eprintln!("Error: InvalidArgument"),
-            Self::InvalidInstructionData => eprintln!("Error: InvalidInstructionData"),
-            Self::InvalidAccountData => eprintln!("Error: InvalidAccountData"),
-            Self::AccountDataTooSmall => eprintln!("Error: AccountDataTooSmall"),
-            Self::InsufficientFunds => eprintln!("Error: InsufficientFunds"),
-            Self::IncorrectProgramId => eprintln!("Error: IncorrectProgramId"),
-            Self::MissingRequiredSignature => eprintln!("Error: MissingRequiredSignature"),
-            Self::AccountAlreadyInitialized => eprintln!("Error: AccountAlreadyInitialized"),
-            Self::UninitializedAccount => eprintln!("Error: UninitializedAccount"),
-            Self::NotEnoughAccountKeys => eprintln!("Error: NotEnoughAccountKeys"),
-            Self::AccountBorrowFailed => eprintln!("Error: AccountBorrowFailed"),
-            Self::MaxSeedLengthExceeded => eprintln!("Error: MaxSeedLengthExceeded"),
-            Self::InvalidSeeds => eprintln!("Error: InvalidSeeds"),
-            Self::BorshIoError(_) => eprintln!("Error: BorshIoError"),
-            Self::AccountNotRentExempt => eprintln!("Error: AccountNotRentExempt"),
-            Self::UnsupportedSysvar => eprintln!("Error: UnsupportedSysvar"),
-            Self::IllegalOwner => eprintln!("Error: IllegalOwner"),
-            Self::MaxAccountsDataSizeExceeded => eprintln!("Error: MaxAccountsDataSizeExceeded"),
-            Self::ActiveVoteAccountClose => eprintln!("Error: ActiveVoteAccountClose"),
-            _ => {}
+            TokenError::InvalidNumberOfRequiredSigners => {
+                eprintln!("Error: Invalid number of required signers")
+            }
+            TokenError::UninitializedState => eprintln!("Error: State is uninitialized"),
+            TokenError::NativeNotSupported => {
+                eprintln!("Error: Instruction does not support native tokens")
+            }
+            TokenError::NonNativeHasBalance => {
+                eprintln!("Error: Non-native account can only be closed if its balance is zero")
+            }
+            TokenError::InvalidInstruction => eprintln!("Error: Invalid instruction"),
+            TokenError::InvalidState => eprintln!("Error: Invalid account state for operation"),
+            TokenError::Overflow => eprintln!("Error: Operation overflowed"),
+            TokenError::AuthorityTypeNotSupported => {
+                eprintln!("Error: Account does not support specified authority type")
+            }
+            TokenError::MintCannotFreeze => eprintln!("Error: This token mint cannot freeze accounts"),
+            TokenError::AccountFrozen => eprintln!("Error: Account is frozen"),
+            TokenError::MintDecimalsMismatch => {
+                eprintln!("Error: decimals different from the Mint decimals")
+            }
+            TokenError::NonNativeNotSupported => {
+                eprintln!("Error: Instruction does not support non-native tokens")
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::error::{PrintInstructionError, TokenError};
+
+    fn generate_error() -> Result<(), TokenError> {
+        Err(TokenError::AccountFrozen)
+    }
+
+    #[test]
+    fn test_token_error() {
+        if let Err(error) = generate_error() {
+            error.print::<TokenError>()
         }
     }
 }

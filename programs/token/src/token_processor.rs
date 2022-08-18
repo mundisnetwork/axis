@@ -1,18 +1,15 @@
-use num_traits::FromPrimitive;
 use mundis_program_runtime::ic_msg;
-
 use mundis_program_runtime::invoke_context::InvokeContext;
 use mundis_sdk::account::{ReadableAccount, WritableAccount};
-use mundis_sdk::decode_error::DecodeError;
-use mundis_sdk::keyed_account::{keyed_account_at_index, KeyedAccount, next_keyed_account};
-use mundis_sdk::program_utils::limited_deserialize;
 use mundis_sdk::instruction::InstructionError;
+use mundis_sdk::keyed_account::{keyed_account_at_index, KeyedAccount, next_keyed_account};
 use mundis_sdk::program_pack::{IsInitialized, Pack};
+use mundis_sdk::program_utils::limited_deserialize;
 use mundis_sdk::pubkey::Pubkey;
 use mundis_sdk::rent::Rent;
 use mundis_sdk::usafe_memory_utils::{unsafe_memcmp, unsafe_memset};
 
-use crate::{error::TokenError, state::{TokenAccount, AccountState, Mint, Multisig}, token_instruction::{AuthorityType, is_valid_signer_index, MAX_SIGNERS, TokenInstruction}};
+use crate::{error::TokenError, state::{AccountState, Mint, Multisig, TokenAccount}, token_instruction::{AuthorityType, is_valid_signer_index, MAX_SIGNERS, TokenInstruction}};
 use crate::error::PrintInstructionError;
 
 pub fn process_instruction(
@@ -843,50 +840,6 @@ impl Processor {
     }
 }
 
-impl PrintInstructionError for TokenError {
-    fn print<E>(&self)
-        where
-            E: 'static + std::error::Error + DecodeError<E> + PrintInstructionError + FromPrimitive,
-    {
-        match self {
-            TokenError::NotRentExempt => eprintln!("Error: lamport balance below rent-exempt threshold"),
-            TokenError::InsufficientFunds => eprintln!("Error: insufficient funds"),
-            TokenError::InvalidMint => eprintln!("Error: Invalid Mint"),
-            TokenError::MintMismatch => eprintln!("Error: Account not associated with this Mint"),
-            TokenError::OwnerMismatch => eprintln!("Error: owner does not match"),
-            TokenError::FixedSupply => eprintln!("Error: the total supply of this token is fixed"),
-            TokenError::AlreadyInUse => eprintln!("Error: account or token already in use"),
-            TokenError::InvalidNumberOfProvidedSigners => {
-                eprintln!("Error: Invalid number of provided signers")
-            }
-            TokenError::InvalidNumberOfRequiredSigners => {
-                eprintln!("Error: Invalid number of required signers")
-            }
-            TokenError::UninitializedState => eprintln!("Error: State is uninitialized"),
-            TokenError::NativeNotSupported => {
-                eprintln!("Error: Instruction does not support native tokens")
-            }
-            TokenError::NonNativeHasBalance => {
-                eprintln!("Error: Non-native account can only be closed if its balance is zero")
-            }
-            TokenError::InvalidInstruction => eprintln!("Error: Invalid instruction"),
-            TokenError::InvalidState => eprintln!("Error: Invalid account state for operation"),
-            TokenError::Overflow => eprintln!("Error: Operation overflowed"),
-            TokenError::AuthorityTypeNotSupported => {
-                eprintln!("Error: Account does not support specified authority type")
-            }
-            TokenError::MintCannotFreeze => eprintln!("Error: This token mint cannot freeze accounts"),
-            TokenError::AccountFrozen => eprintln!("Error: Account is frozen"),
-            TokenError::MintDecimalsMismatch => {
-                eprintln!("Error: decimals different from the Mint decimals")
-            }
-            TokenError::NonNativeNotSupported => {
-                eprintln!("Error: Instruction does not support non-native tokens")
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
@@ -900,7 +853,7 @@ mod tests {
     use mundis_sdk::rent::Rent;
 
     use crate::error::{PrintInstructionError, TokenError};
-    use crate::state::{TokenAccount, Mint, Multisig, puffed_out_string, MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH};
+    use crate::state::{MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH, Mint, Multisig, puffed_out_string, TokenAccount};
     use crate::token_instruction::*;
 
     fn process_token_instruction(
