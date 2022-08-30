@@ -1,6 +1,7 @@
 use mundis_program_runtime::ic_msg;
 use mundis_program_runtime::invoke_context::InvokeContext;
 use mundis_sdk::account::{ReadableAccount, WritableAccount};
+use mundis_sdk::decode_error::PrintInstructionError;
 use mundis_sdk::instruction::InstructionError;
 use mundis_sdk::keyed_account::{keyed_account_at_index, KeyedAccount, next_keyed_account};
 use mundis_sdk::program_pack::{IsInitialized, Pack};
@@ -10,7 +11,6 @@ use mundis_sdk::rent::Rent;
 use mundis_sdk::usafe_memory_utils::{unsafe_memcmp, unsafe_memset};
 
 use crate::{error::TokenError, state::{AccountState, Mint, Multisig, TokenAccount}, token_instruction::{AuthorityType, is_valid_signer_index, MAX_SIGNERS, TokenInstruction}};
-use crate::error::PrintInstructionError;
 
 pub fn process_instruction(
     first_instruction_account: usize,
@@ -847,12 +847,13 @@ mod tests {
 
     use mundis_program_runtime::invoke_context::mock_process_instruction;
     use mundis_sdk::account::{AccountSharedData, ReadableAccount, WritableAccount};
+    use mundis_sdk::decode_error::PrintInstructionError;
     use mundis_sdk::instruction::{Instruction, InstructionError};
     use mundis_sdk::program_pack::Pack;
     use mundis_sdk::pubkey::Pubkey;
     use mundis_sdk::rent::Rent;
 
-    use crate::error::{PrintInstructionError, TokenError};
+    use crate::error::TokenError;
     use crate::state::{MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH, Mint, Multisig, puffed_out_string, TokenAccount};
     use crate::token_instruction::*;
 
